@@ -36,7 +36,7 @@ flowchart TD
 
     N1 --> OK["UP 通道 _next_seqno 推进到 N+1"]
     N3 --> OK
-    OK --> SAFE["后续 chunk 正常派发<br/>✔ 不卡死 · 不错配"]
+    OK --> SAFE["后续请求正常派发<br/>✔ 不卡死 · 不错配"]
 
     EN --> DD["DOWN 通道：天然排空（本设计不改）"]
     DD --> DD1["云 sample → DOWN 组包<br/>collector.has_slot 过滤已终止请求"]
@@ -44,7 +44,7 @@ flowchart TD
     DD2 --> DD3["lwd_edge_deliver_tokens<br/>已终止请求不在 awaiting<br/>→ 幂等丢弃"]
 ```
 
-**读图要点**：`D` 是唯一判断点（请求是否已被 abort 释放）；两个分支都汇入 `OK`，通道号都推进，所以后续 chunk 不卡死。DOWN 分支独立于 `D`。
+**读图要点**：`D` 是唯一判断点（请求是否已被 abort 释放）；两个分支都汇入 `OK`，通道号都推进，所以后续请求不卡死。DOWN 分支独立于 `D`。
 
 ### 代码走读索引（图 1）
 
@@ -84,12 +84,14 @@ flowchart TD
 > **触发①的注册前提**：`/abort_requests` 仅在启动参数 `tokens_only=True`（`--tokens-only`，默认 `False`）时才注册（`vllm/vllm/entrypoints/serve/disagg/api_router.py:80`；参数定义见 `vllm/vllm/engine/arg_utils.py:708`、`vllm/vllm/entrypoints/openai/cli_args.py:154`）。若 LWD 部署未开该参数，HTTP 层没有显式 abort 入口，图 1 的触发①不成立，实际只有触发②（客户端断连）可用。
 >
 > **两条路径汇合前的唯一差异**：`internal` 标志——①为 `False`，②为 `True`；它传入 `output_processor.abort_requests(request_ids, internal)`，影响外部 req_id 与内部 req_id 的映射处理。
+>
+> **前提事实（单块约束）**：边侧无 KV cache ⇒ chunked prefill 被强制关闭（`vllm/v1/engine/core.py:138-143`），因此**每个请求的整段 prompt 恰好占 1 个 UP seqno、只发一次**；`prompt > max_num_batched_tokens` 的请求不会被边侧接纳。图里的 `seqno=N` 是"某个请求的整段 prompt"，`N+1` 是**下一个请求**的。洞的触发窗口因此只有"边侧发出载荷 → 云侧 pop 到该 Notify"这一个云侧调度步；确定性复现见设计文档 §7.4 的临时插桩。
 
 ## 图 2：为什么要"排空"而不是"跳过"
 
 ```mermaid
 flowchart LR
-    subgraph BAD["❌ 只丢弃预告（原缺陷）"]
+    subgraph BAD["❌ 只丢弃 Notify（原缺陷）"]
         direction TB
         A1["边 send(seqno=N) 已在途"] --> A2["云丢弃 RangeNotify(N)<br/>不 post recv"]
         A2 --> A3["云 _next_seqno 停在 N"]
@@ -100,7 +102,7 @@ flowchart LR
         direction TB
         B1["边 send(seqno=N) 已在途"] --> B2["云登记 drain 条目 (N, num_tokens)"]
         B2 --> B3["worker submit_recv(N, num_tokens×H)<br/>按原尺寸收后丢弃"]
-        B3 --> B4["云 _next_seqno 推进到 N+1<br/>后续 chunk 正常配对"]
+        B3 --> B4["云 _next_seqno 推进到 N+1<br/>后续请求正常配对"]
     end
 ```
 
@@ -110,7 +112,7 @@ flowchart LR
 |---|---|---|---|
 | 边侧"发布+派发"同步 | `vllm/vllm/v1/lwd_control/control_edge_scheduler/lwd_edge_scheduler.py` | 171-225 | `lwd_edge_notify`：`seqno = self._lwd_seqno` → publish 成功才 `+= 1`（peek-then-advance）→ 同方法内挂 `lwd_batch(seqno=N)` |
 | 边侧 send | `vllm-ascend-po_abort/vllm_ascend/worker/lwd_edge_worker.py` | 147-173 | `_execute_lwd_embed`：`embed_input_ids` → `submit_send(seqno=N)`，`numel = total_N × H` |
-| 洞：丢弃预告（修复点） | `vllm/vllm/v1/lwd_control/control_cloud_scheduler/lwd_cloud_phase_scheduler.py` | 99-107 | 修改前此处直接 `notify = None`（不排空）；现改为登记 `drain_entry` |
+| 洞：丢弃 Notify（修复点） | `vllm/vllm/v1/lwd_control/control_cloud_scheduler/lwd_cloud_phase_scheduler.py` | 99-107 | 修改前此处直接 `notify = None`（不排空）；现改为登记 `drain_entry` |
 | 阻塞：held 扣留 | `vllm-ascend-po_abort/vllm_ascend/distributed/lwd_comm/channel.py` | 152-164 | `seqno > _next_seqno` → `LwdCommFuture.deferred` 放进 `self._held`，等前驱 |
 | skip 只对未 post 号有效 | `vllm-ascend-po_abort/vllm_ascend/distributed/lwd_comm/channel.py` | 60-82 | `skip_seqno`：`if seqno < self._next_seqno: return`（已 post 直接 no-op） |
 | skip 推进逻辑 | `vllm-ascend-po_abort/vllm_ascend/distributed/lwd_comm/channel.py` | 84-92 | `_advance_past_skipped`：越过被跳过的号并执行 held 条目 |
@@ -144,7 +146,7 @@ sequenceDiagram
     C->>W: SchedulerOutput.lwd_up_drain_entries = [(N, num_tokens)]
     W->>W: _lwd_up_drain → submit_recv(N, num_tokens×H)
     Note over W: 与边侧在途 send(N) 精确配对；收后丢弃<br/>future 由 poll_completions 惰性回收
-    Note over C,W: UP 通道 _next_seqno → N+1，后续 chunk 不卡死
+    Note over C,W: UP 通道 _next_seqno → N+1，后续请求不卡死
     C-->>U: 被终止请求不再产出任何 token
 ```
 
@@ -157,7 +159,7 @@ sequenceDiagram
 | ② 边侧 abort | `vllm/vllm/v1/lwd_control/control_edge_scheduler/lwd_edge_engine.py`<br>`vllm/vllm/v1/lwd_control/control_edge_scheduler/lwd_edge_scheduler.py` | 187-190<br>290-307 | 覆写入口；发 `LwdAbortNotify` + 摘 awaiting |
 | ③ 控制面（边→云） | `vllm/vllm/v1/lwd_control/control_communication/lwd_notify.py` | 15-22 / 54-57 | `LwdRangeNotify` / `LwdAbortNotify` 定义（`msgspec` tag 复用） |
 | ④ 云侧 abort | `vllm/vllm/v1/lwd_control/control_cloud_scheduler/lwd_cloud_engine.py` | 151-176 | `_lwd_dispatch` → `aborts_queue` + `input_queue`(ABORT) |
-| ⑤ 调度器 pop 预告 | `vllm/vllm/v1/lwd_control/control_cloud_scheduler/lwd_cloud_phase_scheduler.py` | 92-118 | `_schedule_pure_prefill` 队首 pop + 陈旧判定 |
+| ⑤ 调度器 pop Notify | `vllm/vllm/v1/lwd_control/control_cloud_scheduler/lwd_cloud_phase_scheduler.py` | 92-118 | `_schedule_pure_prefill` 队首 pop + 陈旧判定 |
 | ⑥ 下发 worker | `vllm/vllm/v1/core/sched/output.py`<br>`vllm-ascend-po_abort/vllm_ascend/worker/lwd_cloud/lwd_cloud_worker.py` | 280-282<br>130-145 | SO 字段定义；`execute_model` 读取并调用 |
 | ⑦ 排空 recv | `vllm-ascend-po_abort/vllm_ascend/worker/lwd_cloud/lwd_cloud_worker.py`<br>`vllm-ascend-po_abort/vllm_ascend/distributed/lwd_comm/service.py` | 197-230<br>55-59 | `_lwd_up_drain` → `submit_recv` |
 | ⑧ 通道推进 | `vllm-ascend-po_abort/vllm_ascend/distributed/lwd_comm/channel.py` | 125-171 | `_submit_sequenced`：配对 + `_next_seqno += 1` |
@@ -170,7 +172,7 @@ flowchart TD
     Q{"云调度器消费 RangeNotify(N)<br/>与 abort 生效的先后"}
 
     Q -- "abort 先生效" --> P1["req 已不在 self.requests<br/>→ 走 drain 分支（图 1 的 N2/N3）"]
-    Q -- "消费预告先发生" --> P2["req 仍在 → 正常 post recv(N)<br/>随后 abort：注入对已死 req 是 no-op<br/>embeds 缓冲由 _lwd_cloud_flush_finished 释放"]
+    Q -- "消费 Notify 先发生" --> P2["req 仍在 → 正常 post recv(N)<br/>随后 abort：注入对已死 req 是 no-op<br/>embeds 缓冲由 _lwd_cloud_flush_finished 释放"]
 
     P1 --> R["两种顺序均：无 seqno 空洞、无尺寸失配"]
     P2 --> R
@@ -181,7 +183,7 @@ flowchart TD
 | 路径 | 文件 | 行 | 作用 |
 |---|---|---|---|
 | P1：abort 先生效 → drain | `vllm/vllm/v1/lwd_control/control_cloud_scheduler/lwd_cloud_phase_scheduler.py` | 99-118 | `notify.request_id not in self.requests` 判定 + drain 登记 |
-| P2：预告先消费 → 正常 recv | `vllm/vllm/v1/lwd_control/control_cloud_scheduler/lwd_cloud_phase_scheduler.py`<br>`vllm-ascend-po_abort/vllm_ascend/worker/lwd_cloud/lwd_cloud_worker.py` | 119-139<br>156-195 | 挂 `lwd_batch`；`_lwd_up_post_recvs` post recv |
+| P2：Notify 先消费 → 正常 recv | `vllm/vllm/v1/lwd_control/control_cloud_scheduler/lwd_cloud_phase_scheduler.py`<br>`vllm-ascend-po_abort/vllm_ascend/worker/lwd_cloud/lwd_cloud_worker.py` | 119-139<br>156-195 | 挂 `lwd_batch`；`_lwd_up_post_recvs` post recv |
 | P2：注入对已死 req 为 no-op | `vllm-ascend-po_abort/vllm_ascend/worker/lwd_cloud/lwd_cloud_model_runner.py` | 109-164（判定在 142） | `idx = input_batch.req_id_to_index.get(req_id)`；`idx is None` 即跳过注入，仅 `row += n` 前移 |
 | P2：embeds 缓冲释放 | `vllm-ascend-po_abort/vllm_ascend/worker/lwd_cloud/lwd_cloud_worker.py` | 314-335 | `_lwd_cloud_flush_finished`：`collector.drop` + `embeds_map.pop(idx)` |
 | 云 worker 收 recv 结果 | `vllm-ascend-po_abort/vllm_ascend/worker/lwd_cloud/lwd_cloud_worker.py` | 232-254 | `take_lwd_up_embeds`：`future.wait()` 后 `view(-1, H)` |
@@ -192,5 +194,5 @@ flowchart TD
 | # | 文件 | 行 | 改动 |
 |---|---|---|---|
 | 1 | `vllm/vllm/v1/core/sched/output.py` | 280-282、297 | 新增 `lwd_up_drain_entries` 字段并补 `make_empty()` |
-| 2 | `vllm/vllm/v1/lwd_control/control_cloud_scheduler/lwd_cloud_phase_scheduler.py` | 95-96、98、100-107、115-118 | 陈旧预告改登记 drain 条目（原来直接丢弃） |
+| 2 | `vllm/vllm/v1/lwd_control/control_cloud_scheduler/lwd_cloud_phase_scheduler.py` | 95-96、98、100-107、115-118 | 陈旧 Notify 改登记 drain 条目（原来直接丢弃） |
 | 3 | `vllm-ascend-po_abort/vllm_ascend/worker/lwd_cloud/lwd_cloud_worker.py` | 143-145、197-230 | 新增 `_lwd_up_drain` 并在 `execute_model` 接入 |
