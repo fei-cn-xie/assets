@@ -355,14 +355,42 @@ sequenceDiagram
 
 ## 7. 测试与验证
 
-### 7.1 单元测试（无需 NPU 的逻辑层）
+### 7.1 单元测试（逻辑层）
 
-1. `_schedule_pure_prefill`：构造 `notify.request_id` 不在 `self.requests` 的场景，断言返回的 `SchedulerOutput.lwd_up_drain_entries == [(seqno, num_tokens)]` 且 `lwd_batch is None`；
-2. 正常路径：请求存活时 `lwd_up_drain_entries is None` 且 `lwd_batch.seqno == notify.seqno`；
-3. KV 压力空步：`num_scheduled_tokens` 为空时 Notify 回插、无 drain 无 batch；
-4. `_lwd_up_drain`：给定带 `lwd_up_drain_entries` 的 SO，断言 `submit_recv` 被调用且 `num_elements == num_tokens * hidden_size`、`seqno` 正确（mock `get_lwd_comm_service`）。
+按改动归属分放两个文件，共 10 条用例：
 
-> **UT 是主要验证手段**：e2e 的触发窗口只有一个云侧调度步（§2.1 前提事实），纯靠抢时序极难稳定复现；上面 4 条 UT 直接锁死改动①②③的行为，无需 NPU、无需竞态。e2e 用 §7.4 的插桩做确定性复现。
+| 改动 | 文件 | 仓 |
+|---|---|---|
+| ①② `_schedule_pure_prefill` 的 drain 登记 | `tests/v1/lwd_control/test_lwd_cloud_phase_scheduler_drain.py` | `vllm` |
+| ③ `_lwd_up_drain` 的挂空收 | `tests/ut/worker/a2/test_lwd_cloud_worker_abort_drain.py` | `vllm-ascend-po_abort` |
+
+| # | 用例 | 断言 |
+|---|---|---|
+| 1 | `test_empty_notify_queue_is_a_plain_empty_step` | 队列空 ⇒ 普通空步：`lwd_up_drain_entries is None`、`lwd_batch is None`，原生命中 `[]`（无预告不得凭空产生 drain） |
+| 2 | `test_stale_notify_registers_drain_entry_and_skips_scheduling` | 请求已释放 ⇒ `lwd_up_drain_entries == [(seqno, num_tokens)]`、`lwd_batch is None`、原生命中 `[]`（死请求绝不进准入）、预告不再回插（被消费的 Notify 不重复排空） |
+| 3 | `test_live_notify_registers_no_drain_and_dispatches_batch` | 请求存活 ⇒ 无 drain；`lwd_batch.seqno == notify.seqno`、`batch_type is LWD_EMBED`、`batch_meta.req_ids == [req_id]`、`token_ids == [[0] * num_tokens]`（长度即 recv 尺寸） |
+| 4 | `test_unadmitted_live_notify_is_requeued_without_drain` | KV 压力空步 ⇒ 预告回插**队首**且后继次序不变、无 drain 无 batch |
+| 5 | `test_stale_notify_drains_alone_while_next_notify_stays_queued` | 陈旧队首只排空自己，后继预告留队——一步一条，号不跳 |
+| 6 | `test_consecutive_stale_notifies_drain_one_seqno_per_step` | 连续 3 条陈旧 ⇒ 分 3 步各排 1 条，条目 seqno 连续 `(0,1,2)`（§6 不变量 4） |
+| 7 | `test_drain_posts_exact_size_recv` | `submit_recv` 恰一次：`channel is UP`、`op == "recv"`、`seqno` 原样、`num_elements == num_tokens * hidden_size`、`tensor is None`；不写 `_lwd_up_recv_futures`（drain future 永不被 `take_lwd_up_embeds` 消费）；不调 `skip_seqno` |
+| 8 | `test_drain_is_noop_without_entries` | `None` / `[]` ⇒ 不提交任何 recv |
+| 9 | `test_drain_posts_one_recv_per_entry_in_order` | 多条条目 ⇒ 按序遍历、各发一条、尺寸各自独立 |
+| 10 | `test_drain_skips_non_positive_token_counts` | `num_tokens <= 0` 跳过（无在途 send 可配对），正数照发 |
+
+```bash
+# vllm 仓（改动①②）—— --noconftest 见下方说明
+pytest -sv --noconftest tests/v1/lwd_control/test_lwd_cloud_phase_scheduler_drain.py
+# vllm-ascend-po_abort 仓（改动③）
+pytest -sv tests/ut/worker/a2/test_lwd_cloud_worker_abort_drain.py
+```
+
+> **为什么第 ①② 组要加 `--noconftest`**：本用例只 import 纯 vllm 类型、不用任何 fixture，但 `pytest` 默认会加载祖先目录的 `tests/conftest.py`，而上游那份 1768 行的全量测试 conftest 顶层就有 `from tblib import pickling_support`——`tblib`（traceback library，纯 Python、无依赖）的作用是让**子进程里失败的 traceback 也能被 pickle 回父进程**：vllm 大量用例必须在 fork 出的子进程里跑（`tests/utils.py:1484` 的 `fork_new_process_for_each_test`，子进程把异常写临时文件、父进程 `raise` 回来），故 conftest 在 import 期就执行 `pickling_support.install()`（`tests/conftest.py:7,14`），这是模块级硬依赖，与"我们这个从不开子进程"的用例无关。它只列在上游测试依赖里（`requirements/test/cuda.txt:959` `tblib==3.1.0`，`cuda.in:27` 注明 "for pickling test exceptions"），只装 vllm 运行时的环境没有它，于是**用例还没开始收集就 ImportError**（2026-09-17 实测即此现象）。两条路可选：`pip install tblib`，或加 `--noconftest` 跳过整条上游 conftest 链（本用例不依赖其中任何 fixture，故安全）。
+
+> **实测记录（2026-09-17，A2 容器）**：改动③ 的 4 条用例 `pytest -sv tests/ut/worker/a2/test_lwd_cloud_worker_abort_drain.py` → **4 passed**（0.63s），且 drain 日志按预期打出 `[Lwd][cloud-worker] draining aborted UP chunk seqno=N tokens=M`（`lwd_cloud_worker.py:226`）；改动①② 的 6 条用例因上条原因需加 `--noconftest` 后重跑。
+
+> **为什么 worker 侧用例放在 `a2/` 目录**：两组用例本身都不碰设备（`object.__new__` 造骨架 + mock 通信服务），但导入口径不同——`vllm_ascend.worker.worker` 顶层 `from torch_npu.op_plugin.atb._atb_ops import ...`，CPU UT runner 上没有真 `torch_npu`（`tests/ut/conftest.py` 只把 `torch_npu` 造成空壳模块，其 `__path__` 为空，子模块导入必失败），因此该文件必须落在 NPU 路由目录（`tests/ut/.+/a2` → `a2_x1`，见 `.github/workflows/scripts/test_config.yaml` 的 `runner_mapping`）；第 ①② 组导入的是纯 vllm 侧类型，可留在默认 CPU UT 里跑。
+
+> **UT 是主要验证手段**：e2e 的触发窗口只有一个云侧调度步（§2.1 前提事实），纯靠抢时序极难稳定复现；上面 10 条 UT 直接锁死改动①②③的行为，无需竞态、无需真实 `torch_npu` 通信。e2e 用 §7.4 的插桩做确定性复现。
 
 ### 7.2 端到端测试（NPU，边云两节点）
 
