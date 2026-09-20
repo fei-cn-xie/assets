@@ -1,0 +1,146 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1320" height="1000"
+     viewBox="0 0 1320 1000" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif">
+<defs>
+  <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7"
+          markerHeight="7" orient="auto-start-reverse">
+    <path d="M 0 0 L 10 5 L 0 10 z" fill="#4A5568"/>
+  </marker>
+</defs>
+<rect width="1320" height="1000" fill="#FFFFFF"/>
+<text x="660" y="36" text-anchor="middle" font-size="23" font-weight="700"
+      fill="#1A202C">vLLM main 分支：全局分层架构</text>
+
+<rect x="30" y="60" width="1000" height="86" rx="12" fill="none" stroke="#4A5568" stroke-width="1.4" stroke-dasharray="6 4"/><text x="44" y="81" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="15" font-weight="700" fill="#4A5568">客户端</text>
+<rect x="48" y="88" width="180" height="44" rx="8" fill="#E8F1FB" stroke="#2B6CB0" stroke-width="1.6"/>
+<text x="138" y="114" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#2B6CB0">OpenAI 兼容 SDK</text>
+<rect x="244" y="88" width="180" height="44" rx="8" fill="#E8F1FB" stroke="#2B6CB0" stroke-width="1.6"/>
+<text x="334" y="114" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#2B6CB0">Anthropic SDK</text>
+<rect x="440" y="88" width="180" height="44" rx="8" fill="#E8F1FB" stroke="#2B6CB0" stroke-width="1.6"/>
+<text x="530" y="114" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#2B6CB0">gRPC 客户端</text>
+<rect x="636" y="88" width="180" height="44" rx="8" fill="#E8F1FB" stroke="#2B6CB0" stroke-width="1.6"/>
+<text x="726" y="114" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#2B6CB0">实时音频 WebSocket</text>
+<rect x="832" y="88" width="180" height="44" rx="8" fill="#E8F1FB" stroke="#2B6CB0" stroke-width="1.6"/>
+<text x="922" y="114" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#2B6CB0">Python 离线 API / CLI</text>
+<rect x="30" y="168" width="1000" height="120" rx="12" fill="none" stroke="#4A5568" stroke-width="1.4" stroke-dasharray="6 4"/><text x="44" y="189" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="15" font-weight="700" fill="#4A5568">接入层  vllm/entrypoints/</text>
+<rect x="48" y="198" width="226" height="74" rx="8" fill="#EAF7EE" stroke="#2F855A" stroke-width="1.6"/>
+<text x="161" y="231" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#2F855A">api_router.py</text>
+<text x="161" y="248" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="400" fill="#3D4852">协议解析 / 校验 / SSE 组包</text>
+<rect x="294" y="198" width="226" height="74" rx="8" fill="#EAF7EE" stroke="#2F855A" stroke-width="1.6"/>
+<text x="407" y="231" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#2F855A">serving.py</text>
+<text x="407" y="248" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="400" fill="#3D4852">chat 模板 / 分词 / 采样参数</text>
+<rect x="540" y="198" width="226" height="74" rx="8" fill="#EAF7EE" stroke="#2F855A" stroke-width="1.6"/>
+<text x="653" y="231" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#2F855A">renderers/ + tokenizers/</text>
+<text x="653" y="248" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="400" fill="#3D4852">渲染与分词</text>
+<rect x="786" y="198" width="226" height="74" rx="8" fill="#EAF7EE" stroke="#2F855A" stroke-width="1.6"/>
+<text x="899" y="231" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#2F855A">offline LLM 类 + CLI</text>
+<text x="899" y="248" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="400" fill="#3D4852">离线与命令行入口</text>
+<rect x="30" y="310" width="1000" height="132" rx="12" fill="none" stroke="#4A5568" stroke-width="1.4" stroke-dasharray="6 4"/><text x="44" y="331" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="15" font-weight="700" fill="#4A5568">引擎层  vllm/v1/engine/</text>
+<rect x="48" y="342" width="180" height="82" rx="8" fill="#FFF4E6" stroke="#C05621" stroke-width="1.6"/>
+<text x="138" y="379" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#C05621">EngineClient</text>
+<text x="138" y="396" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="400" fill="#3D4852">统一抽象 protocol.py</text>
+<rect x="244" y="342" width="180" height="82" rx="8" fill="#FFF4E6" stroke="#C05621" stroke-width="1.6"/>
+<text x="334" y="379" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#C05621">AsyncLLM / LLMEngine</text>
+<text x="334" y="396" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="400" fill="#3D4852">在线 / 离线门面</text>
+<rect x="440" y="342" width="180" height="82" rx="8" fill="#FFF4E6" stroke="#C05621" stroke-width="1.6"/>
+<text x="530" y="379" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#C05621">InputProcessor</text>
+<text x="530" y="396" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="400" fill="#3D4852">生成 EngineCoreRequest</text>
+<rect x="636" y="342" width="180" height="82" rx="8" fill="#FFF4E6" stroke="#C05621" stroke-width="1.6"/>
+<text x="726" y="379" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#C05621">OutputProcessor</text>
+<text x="726" y="396" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="400" fill="#3D4852">Detokenizer 反分词</text>
+<rect x="832" y="342" width="180" height="82" rx="8" fill="#FFF4E6" stroke="#C05621" stroke-width="1.6"/>
+<text x="922" y="379" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#C05621">EngineCoreClient</text>
+<text x="922" y="396" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="400" fill="#3D4852">Inproc / AsyncMP / DP</text>
+<rect x="30" y="464" width="1000" height="132" rx="12" fill="none" stroke="#4A5568" stroke-width="1.4" stroke-dasharray="6 4"/><text x="44" y="485" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="15" font-weight="700" fill="#4A5568">引擎核心  EngineCore（独立进程）</text>
+<rect x="48" y="496" width="180" height="82" rx="8" fill="#FDECEC" stroke="#C53030" stroke-width="1.6"/>
+<text x="138" y="533" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#C53030">EngineCoreProc</text>
+<text x="138" y="550" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="400" fill="#3D4852">busy loop + 2 个 IO 线程</text>
+<rect x="244" y="496" width="180" height="82" rx="8" fill="#FDECEC" stroke="#C53030" stroke-width="1.6"/>
+<text x="334" y="533" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#C53030">Scheduler</text>
+<text x="334" y="550" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="400" fill="#3D4852">排队 / 批调度 / 结束判定</text>
+<rect x="440" y="496" width="180" height="82" rx="8" fill="#FDECEC" stroke="#C53030" stroke-width="1.6"/>
+<text x="530" y="533" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#C53030">KVCacheManager</text>
+<text x="530" y="550" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="400" fill="#3D4852">块分配与前缀缓存</text>
+<rect x="636" y="496" width="180" height="82" rx="8" fill="#FDECEC" stroke="#C53030" stroke-width="1.6"/>
+<text x="726" y="533" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#C53030">EncoderCacheManager</text>
+<text x="726" y="550" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="400" fill="#3D4852">多模态 encoder 缓存</text>
+<rect x="832" y="496" width="180" height="82" rx="8" fill="#FDECEC" stroke="#C53030" stroke-width="1.6"/>
+<text x="922" y="533" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#C53030">StructuredOutputManager</text>
+<text x="922" y="550" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="400" fill="#3D4852">grammar 与 bitmask</text>
+<rect x="30" y="618" width="1000" height="132" rx="12" fill="none" stroke="#4A5568" stroke-width="1.4" stroke-dasharray="6 4"/><text x="44" y="639" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="15" font-weight="700" fill="#4A5568">执行层与 Worker  vllm/v1/executor/ + vllm/v1/worker/</text>
+<rect x="48" y="650" width="180" height="82" rx="8" fill="#F0EBFF" stroke="#553C9A" stroke-width="1.6"/>
+<text x="138" y="687" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#553C9A">UniProcExecutor</text>
+<text x="138" y="704" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="400" fill="#3D4852">单卡同进程</text>
+<rect x="244" y="650" width="180" height="82" rx="8" fill="#F0EBFF" stroke="#553C9A" stroke-width="1.6"/>
+<text x="334" y="687" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#553C9A">MultiprocExecutor</text>
+<text x="334" y="704" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="400" fill="#3D4852">多卡多进程 MessageQueue</text>
+<rect x="440" y="650" width="180" height="82" rx="8" fill="#F0EBFF" stroke="#553C9A" stroke-width="1.6"/>
+<text x="530" y="687" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#553C9A">RayExecutor / V2</text>
+<text x="530" y="704" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="400" fill="#3D4852">跨节点</text>
+<rect x="636" y="650" width="180" height="82" rx="8" fill="#F0EBFF" stroke="#553C9A" stroke-width="1.6"/>
+<text x="726" y="687" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#553C9A">Worker</text>
+<text x="726" y="704" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="400" fill="#3D4852">设备初始化 · 显存 · KV</text>
+<rect x="832" y="650" width="180" height="82" rx="8" fill="#F0EBFF" stroke="#553C9A" stroke-width="1.6"/>
+<text x="922" y="687" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#553C9A">GPUModelRunner V1 / V2</text>
+<text x="922" y="704" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="400" fill="#3D4852">默认 V1，V2 需显式开启</text>
+<rect x="30" y="772" width="1000" height="190" rx="12" fill="none" stroke="#4A5568" stroke-width="1.4" stroke-dasharray="6 4"/><text x="44" y="793" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="15" font-weight="700" fill="#4A5568">模型、算子与内核  vllm/model_executor/ + vllm/v1/ + vllm/compilation/</text>
+<rect x="48" y="806" width="226" height="66" rx="8" fill="#E6FFFA" stroke="#2C7A7B" stroke-width="1.6"/>
+<text x="161" y="835" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#2C7A7B">models/</text>
+<text x="161" y="852" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="400" fill="#3D4852">模型定义与注册表</text>
+<rect x="294" y="806" width="226" height="66" rx="8" fill="#E6FFFA" stroke="#2C7A7B" stroke-width="1.6"/>
+<text x="407" y="835" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#2C7A7B">layers/</text>
+<text x="407" y="852" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="400" fill="#3D4852">Linear / MoE / RoPE / Pooler</text>
+<rect x="540" y="806" width="226" height="66" rx="8" fill="#E6FFFA" stroke="#2C7A7B" stroke-width="1.6"/>
+<text x="653" y="835" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#2C7A7B">model_loader/</text>
+<text x="653" y="852" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="400" fill="#3D4852">权重加载</text>
+<rect x="786" y="806" width="226" height="66" rx="8" fill="#E6FFFA" stroke="#2C7A7B" stroke-width="1.6"/>
+<text x="899" y="835" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#2C7A7B">quantization/</text>
+<text x="899" y="852" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="400" fill="#3D4852">量化方法</text>
+<rect x="48" y="884" width="226" height="66" rx="8" fill="#E6FFFA" stroke="#2C7A7B" stroke-width="1.6"/>
+<text x="161" y="913" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#2C7A7B">v1/attention/</text>
+<text x="161" y="930" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="400" fill="#3D4852">后端选择与 paged attention</text>
+<rect x="294" y="884" width="226" height="66" rx="8" fill="#E6FFFA" stroke="#2C7A7B" stroke-width="1.6"/>
+<text x="407" y="913" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#2C7A7B">v1/sample/ + spec_decode</text>
+<text x="407" y="930" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="400" fill="#3D4852">logits 处理 / 拒绝采样</text>
+<rect x="540" y="884" width="226" height="66" rx="8" fill="#E6FFFA" stroke="#2C7A7B" stroke-width="1.6"/>
+<text x="653" y="913" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#2C7A7B">kernels/ + _custom_ops</text>
+<text x="653" y="930" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="400" fill="#3D4852">triton 与 C++ 算子</text>
+<rect x="786" y="884" width="226" height="66" rx="8" fill="#E6FFFA" stroke="#2C7A7B" stroke-width="1.6"/>
+<text x="899" y="913" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#2C7A7B">compilation/</text>
+<text x="899" y="930" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="400" fill="#3D4852">torch.compile 与 CUDA Graph</text>
+<rect x="1050" y="60" width="240" height="902" rx="12" fill="none" stroke="#4A5568" stroke-width="1.4" stroke-dasharray="6 4"/><text x="1064" y="81" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="15" font-weight="700" fill="#4A5568">支撑子系统</text>
+<rect x="1066" y="88" width="208" height="88" rx="8" fill="#F2F4F7" stroke="#4A5568" stroke-width="1.6"/>
+<text x="1170" y="128" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="600" fill="#4A5568">config/ + envs.py</text>
+<text x="1170" y="145" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="11" font-weight="400" fill="#3D4852">VllmConfig 配置树</text>
+<rect x="1066" y="194" width="208" height="88" rx="8" fill="#F2F4F7" stroke="#4A5568" stroke-width="1.6"/>
+<text x="1170" y="234" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="600" fill="#4A5568">platforms/</text>
+<text x="1170" y="251" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="11" font-weight="400" fill="#3D4852">设备抽象与选择</text>
+<rect x="1066" y="300" width="208" height="88" rx="8" fill="#F2F4F7" stroke="#4A5568" stroke-width="1.6"/>
+<text x="1170" y="340" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="600" fill="#4A5568">distributed/</text>
+<text x="1170" y="357" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="11" font-weight="400" fill="#3D4852">TP / PP / DP / EP + NCCL</text>
+<rect x="1066" y="406" width="208" height="88" rx="8" fill="#F2F4F7" stroke="#4A5568" stroke-width="1.6"/>
+<text x="1170" y="446" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="600" fill="#4A5568">distributed/kv_transfer/</text>
+<text x="1170" y="463" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="11" font-weight="400" fill="#3D4852">P/D 分离连接器</text>
+<rect x="1066" y="512" width="208" height="88" rx="8" fill="#F2F4F7" stroke="#4A5568" stroke-width="1.6"/>
+<text x="1170" y="552" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="600" fill="#4A5568">v1/kv_offload/</text>
+<text x="1170" y="569" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="11" font-weight="400" fill="#3D4852">KV 卸载与分层缓存</text>
+<rect x="1066" y="618" width="208" height="88" rx="8" fill="#F2F4F7" stroke="#4A5568" stroke-width="1.6"/>
+<text x="1170" y="658" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="600" fill="#4A5568">v1/metrics/ + profiler/</text>
+<text x="1170" y="675" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="11" font-weight="400" fill="#3D4852">观测与性能模型</text>
+<rect x="1066" y="724" width="208" height="88" rx="8" fill="#F2F4F7" stroke="#4A5568" stroke-width="1.6"/>
+<text x="1170" y="764" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="600" fill="#4A5568">lora/ + plugins/</text>
+<text x="1170" y="781" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="11" font-weight="400" fill="#3D4852">适配器与扩展点</text>
+<rect x="1066" y="830" width="208" height="88" rx="8" fill="#F2F4F7" stroke="#4A5568" stroke-width="1.6"/>
+<text x="1170" y="870" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="600" fill="#4A5568">utils/ + transformers_utils/</text>
+<text x="1170" y="887" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="11" font-weight="400" fill="#3D4852">横切工具与 HF 适配</text>
+<line x1="530" y1="146" x2="530" y2="198" stroke="#A0AEC0" stroke-width="2.5" marker-end="url(#arrow)"/>
+<line x1="530" y1="288" x2="530" y2="342" stroke="#A0AEC0" stroke-width="2.5" marker-end="url(#arrow)"/>
+<line x1="530" y1="442" x2="530" y2="496" stroke="#A0AEC0" stroke-width="2.5" marker-end="url(#arrow)"/>
+<line x1="530" y1="596" x2="530" y2="650" stroke="#A0AEC0" stroke-width="2.5" marker-end="url(#arrow)"/>
+<line x1="530" y1="732" x2="530" y2="806" stroke="#A0AEC0" stroke-width="2.5" marker-end="url(#arrow)"/>
+<text x="546" y="176" font-size="11.5" fill="#718096">HTTP / gRPC / WS</text>
+<text x="546" y="318" font-size="11.5" fill="#718096">EngineClient</text>
+<text x="546" y="472" font-size="11.5" fill="#718096">ZMQ msgpack</text>
+<text x="546" y="626" font-size="11.5" fill="#718096">execute_model</text>
+<text x="546" y="782" font-size="11.5" fill="#718096">model forward</text>
+<line x1="1032" y1="530" x2="1064" y2="530" stroke="#A0AEC0" stroke-width="1.6" stroke-dasharray="5 4"/>
+</svg>

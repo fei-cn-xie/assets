@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700"
+     viewBox="0 0 1200 700" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif">
+<defs>
+  <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7"
+          markerHeight="7" orient="auto-start-reverse">
+    <path d="M 0 0 L 10 5 L 0 10 z" fill="#4A5568"/>
+  </marker>
+</defs>
+<rect width="1200" height="700" fill="#FFFFFF"/>
+<text x="600" y="36" text-anchor="middle" font-size="23" font-weight="700"
+      fill="#1A202C">并行维度：每个维度切分什么</text>
+
+<rect x="40" y="84" width="250" height="68" rx="8" fill="#FFF4E6" stroke="#C05621" stroke-width="1.6"/>
+<text x="165" y="122" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="14" font-weight="600" fill="#C05621">TP  张量并行</text>
+<rect x="300" y="84" width="470" height="68" rx="8" fill="#F2F4F7" stroke="#4A5568" stroke-width="1.6"/>
+<text x="535" y="122" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12.5" font-weight="600" fill="#4A5568">权重矩阵按行/列切 + hidden 维 sequence parallel</text>
+<rect x="780" y="84" width="380" height="68" rx="8" fill="#F2F4F7" stroke="#4A5568" stroke-width="1.6"/>
+<text x="970" y="122" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="11.5" font-weight="600" fill="#4A5568">Column / Row / QKV ParallelLinear</text>
+<rect x="40" y="168" width="250" height="68" rx="8" fill="#FFF4E6" stroke="#C05621" stroke-width="1.6"/>
+<text x="165" y="206" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="14" font-weight="600" fill="#C05621">PP  流水并行</text>
+<rect x="300" y="168" width="470" height="68" rx="8" fill="#F2F4F7" stroke="#4A5568" stroke-width="1.6"/>
+<text x="535" y="206" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12.5" font-weight="600" fill="#4A5568">按层切（layer stage），其余层用 PPMissingLayer 占位</text>
+<rect x="780" y="168" width="380" height="68" rx="8" fill="#F2F4F7" stroke="#4A5568" stroke-width="1.6"/>
+<text x="970" y="206" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="11.5" font-weight="600" fill="#4A5568">make_layers:620 与 get_pp_indices</text>
+<rect x="40" y="252" width="250" height="68" rx="8" fill="#EAF7EE" stroke="#2F855A" stroke-width="1.6"/>
+<text x="165" y="290" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="14" font-weight="600" fill="#2F855A">DP  数据并行</text>
+<rect x="300" y="252" width="470" height="68" rx="8" fill="#F2F4F7" stroke="#4A5568" stroke-width="1.6"/>
+<text x="535" y="290" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12.5" font-weight="600" fill="#4A5568">切请求与批次；每 rank 一份完整权重</text>
+<rect x="780" y="252" width="380" height="68" rx="8" fill="#F2F4F7" stroke="#4A5568" stroke-width="1.6"/>
+<text x="970" y="290" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="11.5" font-weight="600" fill="#4A5568">DPAsyncMPClient / DPLBAsyncMPClient</text>
+<rect x="40" y="336" width="250" height="68" rx="8" fill="#FDECEC" stroke="#C53030" stroke-width="1.6"/>
+<text x="165" y="374" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="14" font-weight="600" fill="#C53030">EP  专家并行</text>
+<rect x="300" y="336" width="470" height="68" rx="8" fill="#F2F4F7" stroke="#4A5568" stroke-width="1.6"/>
+<text x="535" y="374" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12.5" font-weight="600" fill="#4A5568">切 MoE 专家（仅 MoE 模型建组）；= DP×PCP×TP</text>
+<rect x="780" y="336" width="380" height="68" rx="8" fill="#F2F4F7" stroke="#4A5568" stroke-width="1.6"/>
+<text x="970" y="374" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="11.5" font-weight="600" fill="#4A5568">FusedMoE(tp_size, ep_size) / ExpertMapManager</text>
+<rect x="40" y="420" width="250" height="68" rx="8" fill="#FFFBEA" stroke="#B7791F" stroke-width="1.6"/>
+<text x="165" y="458" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="14" font-weight="600" fill="#B7791F">EPLB</text>
+<rect x="300" y="420" width="470" height="68" rx="8" fill="#F2F4F7" stroke="#4A5568" stroke-width="1.6"/>
+<text x="535" y="458" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12.5" font-weight="600" fill="#4A5568">专家副本与重排（冗余专家）</text>
+<rect x="780" y="420" width="380" height="68" rx="8" fill="#F2F4F7" stroke="#4A5568" stroke-width="1.6"/>
+<text x="970" y="458" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="11.5" font-weight="600" fill="#4A5568">EplbState:210 + DefaultEplbPolicy</text>
+<rect x="40" y="504" width="250" height="68" rx="8" fill="#E6FFFA" stroke="#2C7A7B" stroke-width="1.6"/>
+<text x="165" y="542" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="14" font-weight="600" fill="#2C7A7B">PCP  prefill 上下文</text>
+<rect x="300" y="504" width="470" height="68" rx="8" fill="#F2F4F7" stroke="#4A5568" stroke-width="1.6"/>
+<text x="535" y="542" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12.5" font-weight="600" fill="#4A5568">prefill 阶段的序列/上下文切分</text>
+<rect x="780" y="504" width="380" height="68" rx="8" fill="#F2F4F7" stroke="#4A5568" stroke-width="1.6"/>
+<text x="970" y="542" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="11.5" font-weight="600" fill="#4A5568">get_pcp_group:1616</text>
+<rect x="40" y="588" width="250" height="68" rx="8" fill="#E6FFFA" stroke="#2C7A7B" stroke-width="1.6"/>
+<text x="165" y="626" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="14" font-weight="600" fill="#2C7A7B">DCP  decode 上下文</text>
+<rect x="300" y="588" width="470" height="68" rx="8" fill="#F2F4F7" stroke="#4A5568" stroke-width="1.6"/>
+<text x="535" y="626" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12.5" font-weight="600" fill="#4A5568">decode 阶段的 KV head 切分（dcp_size ≤ tp_size）</text>
+<rect x="780" y="588" width="380" height="68" rx="8" fill="#F2F4F7" stroke="#4A5568" stroke-width="1.6"/>
+<text x="970" y="626" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="11.5" font-weight="600" fill="#4A5568">get_dcp_group:1594</text>
+<text x="40" y="672" font-size="12.5" fill="#4A5568">组布局顺序：ExternalDP × DP × PP × PCP × TP；本版本没有独立的 CP 组，context parallel 拆成 PCP 与 DCP。</text>
+</svg>

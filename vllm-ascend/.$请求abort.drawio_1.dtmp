@@ -194,6 +194,12 @@
         <mxCell id="8NPdWiq1z-qlTRngg04N-8" parent="1" style="rounded=1;whiteSpace=wrap;html=1;" value="控制面消息- ZMQ" vertex="1">
           <mxGeometry height="60" width="120" x="1730" y="300" as="geometry" />
         </mxCell>
+        <mxCell id="8NPdWiq1z-qlTRngg04N-28" edge="1" parent="1" source="8NPdWiq1z-qlTRngg04N-22" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="8NPdWiq1z-qlTRngg04N-26">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="8NPdWiq1z-qlTRngg04N-29" edge="1" parent="1" source="8NPdWiq1z-qlTRngg04N-22" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="8NPdWiq1z-qlTRngg04N-27">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
         <mxCell id="8NPdWiq1z-qlTRngg04N-22" parent="1" style="text;whiteSpace=wrap;html=1;strokeColor=default;fillColor=#000000;" value="&lt;div style=&quot;color: rgb(187, 190, 191); background-color: rgb(18, 19, 20); font-family: Consolas, &amp;quot;Courier New&amp;quot;, monospace; font-weight: normal; font-size: 14px; line-height: 19px; white-space: pre;&quot;&gt;&lt;div style=&quot;line-height: 19px;&quot;&gt;&lt;span style=&quot;color: rgb(201, 209, 217);&quot;&gt;msg&lt;/span&gt; &lt;span style=&quot;color: rgb(212, 212, 212);&quot;&gt;=&lt;/span&gt; &lt;span style=&quot;color: rgb(201, 209, 217);&quot;&gt;self&lt;/span&gt;.&lt;span style=&quot;color: rgb(201, 209, 217);&quot;&gt;_lwd_subscriber&lt;/span&gt;.&lt;span style=&quot;color: rgb(210, 168, 255);&quot;&gt;recv&lt;/span&gt;(&lt;span style=&quot;color: rgb(255, 166, 87);&quot;&gt;timeout_ms&lt;/span&gt;)&lt;/div&gt;&lt;/div&gt;" vertex="1">
           <mxGeometry height="40" width="340" x="1900" y="700" as="geometry" />
         </mxCell>

@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="470"
+     viewBox="0 0 1240 470" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif">
+<defs>
+  <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7"
+          markerHeight="7" orient="auto-start-reverse">
+    <path d="M 0 0 L 10 5 L 0 10 z" fill="#4A5568"/>
+  </marker>
+</defs>
+<rect width="1240" height="470" fill="#FFFFFF"/>
+<text x="620" y="36" text-anchor="middle" font-size="23" font-weight="700"
+      fill="#1A202C">执行器拓扑与默认选择规则</text>
+
+<rect x="30" y="66" width="380" height="330" rx="12" fill="none" stroke="#553C9A" stroke-width="1.4" stroke-dasharray="6 4"/><text x="44" y="87" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="15" font-weight="700" fill="#553C9A">uni：world_size == 1</text>
+<rect x="56" y="106" width="328" height="74" rx="8" fill="#F0EBFF" stroke="#553C9A" stroke-width="1.6"/>
+<text x="220" y="139" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#553C9A">UniProcExecutor</text>
+<text x="220" y="156" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="400" fill="#3D4852">同进程直接调用</text>
+<line x1="220" y1="180" x2="220" y2="210" stroke="#553C9A" stroke-width="1.8" marker-end="url(#arrow)"/>
+<rect x="56" y="212" width="328" height="74" rx="8" fill="#F0EBFF" stroke="#553C9A" stroke-width="1.6"/>
+<text x="220" y="245" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#553C9A">Worker</text>
+<text x="220" y="262" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="400" fill="#3D4852">持有 CUDA context 与权重</text>
+<line x1="220" y1="286" x2="220" y2="316" stroke="#553C9A" stroke-width="1.8" marker-end="url(#arrow)"/>
+<rect x="56" y="318" width="328" height="60" rx="8" fill="#F0EBFF" stroke="#553C9A" stroke-width="1.6"/>
+<text x="220" y="352" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#553C9A">GPUModelRunner</text>
+<rect x="430" y="66" width="380" height="330" rx="12" fill="none" stroke="#C53030" stroke-width="1.4" stroke-dasharray="6 4"/><text x="444" y="87" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="15" font-weight="700" fill="#C53030">mp：多卡同机</text>
+<rect x="456" y="106" width="328" height="74" rx="8" fill="#FDECEC" stroke="#C53030" stroke-width="1.6"/>
+<text x="620" y="139" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#C53030">MultiprocExecutor</text>
+<text x="620" y="156" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="400" fill="#3D4852">collective_rpc</text>
+<line x1="620" y1="180" x2="620" y2="210" stroke="#C53030" stroke-width="1.8" marker-end="url(#arrow)"/>
+<text x="620" y="199" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="11.5" fill="#C53030">MessageQueue 广播</text>
+<rect x="456" y="212" width="328" height="74" rx="8" fill="#FDECEC" stroke="#C53030" stroke-width="1.6"/>
+<text x="620" y="245" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#C53030">WorkerProc 0..N-1</text>
+<text x="620" y="262" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="400" fill="#3D4852">每个 rank 独立进程</text>
+<line x1="620" y1="286" x2="620" y2="316" stroke="#C53030" stroke-width="1.8" marker-end="url(#arrow)"/>
+<rect x="456" y="318" width="328" height="60" rx="8" fill="#FDECEC" stroke="#C53030" stroke-width="1.6"/>
+<text x="620" y="352" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#C53030">各自 CUDA context / 权重分片 / KV</text>
+<rect x="830" y="66" width="380" height="330" rx="12" fill="none" stroke="#2F855A" stroke-width="1.4" stroke-dasharray="6 4"/><text x="844" y="87" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="15" font-weight="700" fill="#2F855A">ray：跨节点</text>
+<rect x="856" y="106" width="328" height="74" rx="8" fill="#EAF7EE" stroke="#2F855A" stroke-width="1.6"/>
+<text x="1020" y="139" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#2F855A">RayExecutorV2</text>
+<text x="1020" y="156" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="400" fill="#3D4852">Ray Actor 即 Worker</text>
+<line x1="1020" y1="180" x2="1020" y2="210" stroke="#2F855A" stroke-width="1.8" marker-end="url(#arrow)"/>
+<rect x="856" y="212" width="328" height="74" rx="8" fill="#EAF7EE" stroke="#2F855A" stroke-width="1.6"/>
+<text x="1020" y="245" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#2F855A">Ray placement group</text>
+<text x="1020" y="262" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="400" fill="#3D4852">跨节点 GPU 编排</text>
+<line x1="1020" y1="286" x2="1020" y2="316" stroke="#2F855A" stroke-width="1.8" marker-end="url(#arrow)"/>
+<rect x="856" y="318" width="328" height="60" rx="8" fill="#EAF7EE" stroke="#2F855A" stroke-width="1.6"/>
+<text x="1020" y="352" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#2F855A">NCCL / IB 通信</text>
+<text x="40" y="428" font-size="12.5" fill="#4A5568">默认选择（config/parallel.py:831-876）：CUDA 且多节点强制 mp；本机 GPU 数不足直接报错；world_size 为 1 时用 uni。</text>
+</svg>

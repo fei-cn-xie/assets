@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1320" height="760"
+     viewBox="0 0 1320 760" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif">
+<defs>
+  <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7"
+          markerHeight="7" orient="auto-start-reverse">
+    <path d="M 0 0 L 10 5 L 0 10 z" fill="#4A5568"/>
+  </marker>
+</defs>
+<rect width="1320" height="760" fill="#FFFFFF"/>
+<text x="660" y="36" text-anchor="middle" font-size="23" font-weight="700"
+      fill="#1A202C">vLLM 进程、线程与通信拓扑</text>
+
+<rect x="30" y="60" width="380" height="620" rx="12" fill="none" stroke="#2B6CB0" stroke-width="1.4" stroke-dasharray="6 4"/><text x="44" y="81" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="15" font-weight="700" fill="#2B6CB0">进程 1：API Server（asyncio + uvicorn）</text>
+<rect x="48" y="96" width="344" height="88" rx="8" fill="#E8F1FB" stroke="#2B6CB0" stroke-width="1.6"/>
+<text x="220" y="136" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#2B6CB0">uvicorn 事件循环</text>
+<text x="220" y="153" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="400" fill="#3D4852">FastAPI 路由 + 中间件</text>
+<rect x="48" y="208" width="344" height="88" rx="8" fill="#E8F1FB" stroke="#2B6CB0" stroke-width="1.6"/>
+<text x="220" y="248" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#2B6CB0">AsyncLLM</text>
+<text x="220" y="265" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="400" fill="#3D4852">引擎门面</text>
+<rect x="48" y="320" width="344" height="88" rx="8" fill="#E8F1FB" stroke="#2B6CB0" stroke-width="1.6"/>
+<text x="220" y="360" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#2B6CB0">OutputProcessor / Detokenizer</text>
+<text x="220" y="377" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="400" fill="#3D4852">组包 RequestOutput</text>
+<rect x="48" y="432" width="344" height="88" rx="8" fill="#E8F1FB" stroke="#2B6CB0" stroke-width="1.6"/>
+<text x="220" y="472" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#2B6CB0">output_handler 后台 asyncio 任务</text>
+<text x="220" y="489" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="400" fill="#3D4852">消费 EngineCoreOutputs</text>
+<rect x="48" y="544" width="344" height="88" rx="8" fill="#E8F1FB" stroke="#2B6CB0" stroke-width="1.6"/>
+<text x="220" y="584" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#2B6CB0">EngineCoreClient</text>
+<text x="220" y="601" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="400" fill="#3D4852">ROUTER + PULL 套接字</text>
+<rect x="470" y="60" width="380" height="620" rx="12" fill="none" stroke="#C53030" stroke-width="1.4" stroke-dasharray="6 4"/><text x="484" y="81" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="15" font-weight="700" fill="#C53030">进程 2：EngineCore（DP 时每 rank 一个）</text>
+<rect x="488" y="96" width="344" height="88" rx="8" fill="#FDECEC" stroke="#C53030" stroke-width="1.6"/>
+<text x="660" y="136" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#C53030">IO 线程 process_input_sockets</text>
+<text x="660" y="153" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="400" fill="#3D4852">解帧 / ADD 预处理</text>
+<rect x="488" y="208" width="344" height="88" rx="8" fill="#FDECEC" stroke="#C53030" stroke-width="1.6"/>
+<text x="660" y="248" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#C53030">IO 线程 process_output_sockets</text>
+<text x="660" y="265" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="400" fill="#3D4852">EngineCoreOutputs 回传</text>
+<rect x="488" y="320" width="344" height="88" rx="8" fill="#FDECEC" stroke="#C53030" stroke-width="1.6"/>
+<text x="660" y="360" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#C53030">主线程 run_busy_loop</text>
+<text x="660" y="377" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="400" fill="#3D4852">step() 循环</text>
+<rect x="488" y="432" width="344" height="88" rx="8" fill="#FDECEC" stroke="#C53030" stroke-width="1.6"/>
+<text x="660" y="472" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#C53030">Scheduler + KVCacheManager</text>
+<text x="660" y="489" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="400" fill="#3D4852">排队与 KV 分配</text>
+<rect x="488" y="544" width="344" height="88" rx="8" fill="#FDECEC" stroke="#C53030" stroke-width="1.6"/>
+<text x="660" y="584" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#C53030">input_queue / aborts_queue / output_queue</text>
+<text x="660" y="601" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="400" fill="#3D4852">线程间解耦</text>
+<rect x="910" y="60" width="380" height="620" rx="12" fill="none" stroke="#553C9A" stroke-width="1.4" stroke-dasharray="6 4"/><text x="924" y="81" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="15" font-weight="700" fill="#553C9A">进程 3..N：Worker（每 rank 一个）</text>
+<rect x="928" y="96" width="344" height="88" rx="8" fill="#F0EBFF" stroke="#553C9A" stroke-width="1.6"/>
+<text x="1100" y="136" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#553C9A">WorkerProc.worker_main</text>
+<text x="1100" y="153" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="400" fill="#3D4852">子进程入口</text>
+<rect x="928" y="208" width="344" height="88" rx="8" fill="#F0EBFF" stroke="#553C9A" stroke-width="1.6"/>
+<text x="1100" y="248" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#553C9A">GPUModelRunner V1 / V2</text>
+<text x="1100" y="265" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="400" fill="#3D4852">前向与采样</text>
+<rect x="928" y="320" width="344" height="88" rx="8" fill="#F0EBFF" stroke="#553C9A" stroke-width="1.6"/>
+<text x="1100" y="360" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#553C9A">CUDA context + 权重分片</text>
+<text x="1100" y="377" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="400" fill="#3D4852">设备资源</text>
+<rect x="928" y="432" width="344" height="88" rx="8" fill="#F0EBFF" stroke="#553C9A" stroke-width="1.6"/>
+<text x="1100" y="472" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#553C9A">KV cache 张量</text>
+<text x="1100" y="489" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="400" fill="#3D4852">按 KVCacheConfig 分配</text>
+<rect x="928" y="544" width="344" height="88" rx="8" fill="#F0EBFF" stroke="#553C9A" stroke-width="1.6"/>
+<text x="1100" y="584" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#553C9A">NCCL 通信组</text>
+<text x="1100" y="601" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12" font-weight="400" fill="#3D4852">TP / PP / DP / EP</text>
+<line x1="410" y1="150" x2="470" y2="150" stroke="#2B6CB0" stroke-width="1.8" marker-end="url(#arrow)"/>
+<text x="440" y="140" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="11.5" fill="#2B6CB0">ADD / ABORT / UTILITY</text>
+<line x1="470" y1="262" x2="410" y2="262" stroke="#C53030" stroke-width="1.8" marker-end="url(#arrow)"/>
+<text x="440" y="252" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="11.5" fill="#C53030">EngineCoreOutputs</text>
+<line x1="850" y1="150" x2="910" y2="150" stroke="#C53030" stroke-width="1.8" marker-end="url(#arrow)"/>
+<text x="880" y="140" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="11.5" fill="#C53030">SchedulerOutput</text>
+<line x1="910" y1="262" x2="850" y2="262" stroke="#553C9A" stroke-width="1.8" marker-end="url(#arrow)"/>
+<text x="880" y="252" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="11.5" fill="#553C9A">ModelRunnerOutput</text>
+<text x="40" y="712" font-size="12.5" fill="#4A5568">· 输入通道：ZMQ ROUTER(bind) → DEALER(identity=engine_id)，msgspec msgpack</text>
+<text x="700" y="712" font-size="12.5" fill="#4A5568">· 输出通道：ZMQ PUSH(linger=4000) → PULL，按 client 分帧</text>
+<text x="40" y="736" font-size="12.5" fill="#4A5568">· EngineCore 内部：两个 IO daemon 线程与主 busy loop 之间只经 queue.Queue</text>
+<text x="700" y="736" font-size="12.5" fill="#4A5568">· EngineCore → Worker：multiprocessing.Process + MessageQueue 共享内存广播；单卡走同进程直调</text>
+<text x="40" y="760" font-size="12.5" fill="#4A5568">· 张量跨进程：tensor IPC 零拷贝 + zmq.MessageTracker 保引用</text>
+</svg>

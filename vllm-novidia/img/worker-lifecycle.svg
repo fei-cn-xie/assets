@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="414"
+     viewBox="0 0 1240 414" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif">
+<defs>
+  <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7"
+          markerHeight="7" orient="auto-start-reverse">
+    <path d="M 0 0 L 10 5 L 0 10 z" fill="#4A5568"/>
+  </marker>
+</defs>
+<rect width="1240" height="414" fill="#FFFFFF"/>
+<text x="620" y="36" text-anchor="middle" font-size="23" font-weight="700"
+      fill="#1A202C">Worker 生命周期（gpu_worker.py）</text>
+
+<rect x="40" y="92" width="272" height="78" rx="8" fill="#F0EBFF" stroke="#553C9A" stroke-width="1.6"/>
+<text x="176" y="127" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12.5" font-weight="600" fill="#553C9A">Worker.__init__</text>
+<text x="176" y="143" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="11.5" font-weight="400" fill="#3D4852">精度设置 / elastic EP / weight transfer</text>
+<rect x="336" y="92" width="272" height="78" rx="8" fill="#F0EBFF" stroke="#553C9A" stroke-width="1.6"/>
+<text x="472" y="127" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12.5" font-weight="600" fill="#553C9A">init_device</text>
+<text x="472" y="143" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="11.5" font-weight="400" fill="#3D4852">设备与 dtype 校验，先建 NCCL 再取显存快照</text>
+<rect x="632" y="92" width="272" height="78" rx="8" fill="#F0EBFF" stroke="#553C9A" stroke-width="1.6"/>
+<text x="768" y="127" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12.5" font-weight="600" fill="#553C9A">load_model</text>
+<text x="768" y="143" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="11.5" font-weight="400" fill="#3D4852">CuMem weights pool + allocator 调参</text>
+<rect x="928" y="92" width="272" height="78" rx="8" fill="#F0EBFF" stroke="#553C9A" stroke-width="1.6"/>
+<text x="1064" y="127" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12.5" font-weight="600" fill="#553C9A">determine_available_memory</text>
+<text x="1064" y="143" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="11.5" font-weight="400" fill="#3D4852">profile_run + CUDA Graph 显存估算</text>
+<rect x="40" y="244" width="272" height="78" rx="8" fill="#F0EBFF" stroke="#553C9A" stroke-width="1.6"/>
+<text x="176" y="279" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12.5" font-weight="600" fill="#553C9A">initialize_from_config</text>
+<text x="176" y="295" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="11.5" font-weight="400" fill="#3D4852">分配 KV 张量，初始化 KV connector</text>
+<rect x="336" y="244" width="272" height="78" rx="8" fill="#F0EBFF" stroke="#553C9A" stroke-width="1.6"/>
+<text x="472" y="279" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12.5" font-weight="600" fill="#553C9A">compile_or_warm_up_model</text>
+<text x="472" y="295" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="11.5" font-weight="400" fill="#3D4852">kernel warmup，捕获 CUDA Graph</text>
+<rect x="632" y="244" width="272" height="78" rx="8" fill="#F0EBFF" stroke="#553C9A" stroke-width="1.6"/>
+<text x="768" y="279" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12.5" font-weight="600" fill="#553C9A">execute_model / sample_tokens</text>
+<text x="768" y="295" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="11.5" font-weight="400" fill="#3D4852">循环执行：前向与采样</text>
+<rect x="928" y="244" width="272" height="78" rx="8" fill="#F0EBFF" stroke="#553C9A" stroke-width="1.6"/>
+<text x="1064" y="279" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12.5" font-weight="600" fill="#553C9A">sleep / wake_up / shutdown</text>
+<text x="1064" y="295" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="11.5" font-weight="400" fill="#3D4852">CuMem pool 换入换出与退出</text>
+<line x1="312" y1="131.0" x2="336" y2="131.0" stroke="#4A5568" stroke-width="1.8" marker-end="url(#arrow)"/>
+<line x1="608" y1="131.0" x2="632" y2="131.0" stroke="#4A5568" stroke-width="1.8" marker-end="url(#arrow)"/>
+<line x1="904" y1="131.0" x2="928" y2="131.0" stroke="#4A5568" stroke-width="1.8" marker-end="url(#arrow)"/>
+<polyline points="1064,170 1064,207 176,207 176,244" fill="none" stroke="#4A5568" stroke-width="1.8" marker-end="url(#arrow)"/>
+<line x1="312" y1="283.0" x2="336" y2="283.0" stroke="#4A5568" stroke-width="1.8" marker-end="url(#arrow)"/>
+<line x1="608" y1="283.0" x2="632" y2="283.0" stroke="#4A5568" stroke-width="1.8" marker-end="url(#arrow)"/>
+<line x1="904" y1="283.0" x2="928" y2="283.0" stroke="#4A5568" stroke-width="1.8" marker-end="url(#arrow)"/>
+<text x="40" y="388" font-size="12.5" fill="#4A5568">调用点：v1/worker/gpu_worker.py:107 / :239 / :338 / :354 / :539 / :574 / :783 / :160</text>
+</svg>

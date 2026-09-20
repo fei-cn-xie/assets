@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="414"
+     viewBox="0 0 1240 414" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif">
+<defs>
+  <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7"
+          markerHeight="7" orient="auto-start-reverse">
+    <path d="M 0 0 L 10 5 L 0 10 z" fill="#4A5568"/>
+  </marker>
+</defs>
+<rect width="1240" height="414" fill="#FFFFFF"/>
+<text x="620" y="36" text-anchor="middle" font-size="23" font-weight="700"
+      fill="#1A202C">输入侧总管线：从 HTTP 请求到 EngineInput</text>
+
+<rect x="40" y="92" width="272" height="78" rx="8" fill="#EAF7EE" stroke="#2F855A" stroke-width="1.6"/>
+<text x="176" y="127" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12.5" font-weight="600" fill="#2F855A">HTTP chat 请求</text>
+<text x="176" y="143" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="11.5" font-weight="400" fill="#3D4852">messages 含文本与图片/音频/视频</text>
+<rect x="336" y="92" width="272" height="78" rx="8" fill="#EAF7EE" stroke="#2F855A" stroke-width="1.6"/>
+<text x="472" y="127" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12.5" font-weight="600" fill="#2F855A">chat_utils</text>
+<text x="472" y="143" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="11.5" font-weight="400" fill="#3D4852">解析 content part，下载媒体，注入占位符</text>
+<rect x="632" y="92" width="272" height="78" rx="8" fill="#EAF7EE" stroke="#2F855A" stroke-width="1.6"/>
+<text x="768" y="127" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12.5" font-weight="600" fill="#2F855A">Renderer.render_chat_async</text>
+<text x="768" y="143" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="11.5" font-weight="400" fill="#3D4852">chat 模板 + 分词（renderers/base.py:998）</text>
+<rect x="928" y="92" width="272" height="78" rx="8" fill="#EAF7EE" stroke="#2F855A" stroke-width="1.6"/>
+<text x="1064" y="127" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12.5" font-weight="600" fill="#2F855A">_process_multimodal</text>
+<text x="1064" y="143" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="11.5" font-weight="400" fill="#3D4852">调 HF processor 产出 mm_kwargs</text>
+<rect x="40" y="244" width="272" height="78" rx="8" fill="#EAF7EE" stroke="#2F855A" stroke-width="1.6"/>
+<text x="176" y="279" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12.5" font-weight="600" fill="#2F855A">BaseMultiModalProcessor.apply</text>
+<text x="176" y="295" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="11.5" font-weight="400" fill="#3D4852">processor.py:1663 计算 mm_hashes</text>
+<rect x="336" y="244" width="272" height="78" rx="8" fill="#EAF7EE" stroke="#2F855A" stroke-width="1.6"/>
+<text x="472" y="279" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12.5" font-weight="600" fill="#2F855A">MultiModalInput</text>
+<text x="472" y="295" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="11.5" font-weight="400" fill="#3D4852">mm_kwargs / mm_hashes / mm_placeholders</text>
+<rect x="632" y="244" width="272" height="78" rx="8" fill="#EAF7EE" stroke="#2F855A" stroke-width="1.6"/>
+<text x="768" y="279" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12.5" font-weight="600" fill="#2F855A">InputProcessor.process_inputs</text>
+<text x="768" y="295" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="11.5" font-weight="400" fill="#3D4852">展平为 mm_features 列表</text>
+<rect x="928" y="244" width="272" height="78" rx="8" fill="#EAF7EE" stroke="#2F855A" stroke-width="1.6"/>
+<text x="1064" y="279" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="12.5" font-weight="600" fill="#2F855A">EngineCoreRequest</text>
+<text x="1064" y="295" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif" font-size="11.5" font-weight="400" fill="#3D4852">进入调度与 encoder 缓存</text>
+<line x1="312" y1="131.0" x2="336" y2="131.0" stroke="#4A5568" stroke-width="1.8" marker-end="url(#arrow)"/>
+<line x1="608" y1="131.0" x2="632" y2="131.0" stroke="#4A5568" stroke-width="1.8" marker-end="url(#arrow)"/>
+<line x1="904" y1="131.0" x2="928" y2="131.0" stroke="#4A5568" stroke-width="1.8" marker-end="url(#arrow)"/>
+<polyline points="1064,170 1064,207 176,207 176,244" fill="none" stroke="#4A5568" stroke-width="1.8" marker-end="url(#arrow)"/>
+<line x1="312" y1="283.0" x2="336" y2="283.0" stroke="#4A5568" stroke-width="1.8" marker-end="url(#arrow)"/>
+<line x1="608" y1="283.0" x2="632" y2="283.0" stroke="#4A5568" stroke-width="1.8" marker-end="url(#arrow)"/>
+<line x1="904" y1="283.0" x2="928" y2="283.0" stroke="#4A5568" stroke-width="1.8" marker-end="url(#arrow)"/>
+<text x="40" y="388" font-size="12.5" fill="#4A5568">相关缓存：处理器缓存在 API Server 进程（CPU/shm），encoder 缓存在 Worker（GPU 张量）</text>
+</svg>
