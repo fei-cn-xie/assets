@@ -954,7 +954,7 @@
         <mxCell id="k7hIs7d_19STomE8GAQt-6" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=none;fillColor=#d5e8d4;strokeColor=#82b366;verticalAlign=middle;arcSize=4;" value="OutputProcessor初始化" vertex="1">
           <mxGeometry height="36" width="202" x="350" y="403" as="geometry" />
         </mxCell>
-        <mxCell id="k7hIs7d_19STomE8GAQt-7" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=none;fillColor=#d5e8d4;strokeColor=#82b366;verticalAlign=middle;arcSize=4;" value="&lt;div style=&quot;font-family: Consolas, &amp;quot;Courier New&amp;quot;, monospace; font-size: 14px; line-height: 19px; white-space: pre;&quot;&gt;&lt;span style=&quot;color: rgb(0, 0, 0);&quot;&gt;EngineCoreClient 初始化&lt;/span&gt;&lt;/div&gt;" vertex="1">
+        <mxCell id="k7hIs7d_19STomE8GAQt-7" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=none;fillColor=#d5e8d4;strokeColor=#82b366;verticalAlign=middle;arcSize=4;align=center;fontColor=default;" value="&lt;div style=&quot;font-family: Consolas, &amp;quot;Courier New&amp;quot;, monospace; font-size: 14px; line-height: 19px; white-space: pre;&quot;&gt;&lt;span style=&quot;color: rgb(0, 0, 0);&quot;&gt;EngineCoreClient 初始化&lt;/span&gt;&lt;/div&gt;" vertex="1">
           <mxGeometry height="36" width="202" x="345" y="472" as="geometry" />
         </mxCell>
       </root>
