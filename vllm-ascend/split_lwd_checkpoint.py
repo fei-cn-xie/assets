@@ -28,21 +28,13 @@
           + mtp.* / model.mtp.*(开启投机解码时)
           (云侧不建视觉塔 visual)
 
-非权重文件(所有 *.json / tokenizer / *.jinja / preprocessor 配置)默认整份
-拷贝:总量只有几十 MB,而且**两侧都必须留**,不是只有边侧需要 ——
-真源是 side 无关的:`GPUModelRunner.__init__` 会调
-`MultiModalRegistry.supports_multimodal_inputs()`(gpu_model_runner.py:503),
-后者用 `cached_tokenizer_from_config()` 真的去加载 tokenizer
-(multimodal/registry.py:115 -> 193-196),并要读 preprocessor 配置来构造
-处理信息。缺这些文件的后果是:要么 transformers 抛错导致 worker 起不来,
-要么被 registry 的 `except ValueError` 吞掉,把 `supports_mm_inputs` 悄悄
-降级成 False —— 那会改变云侧 `_model_forward` 里的 SP 切分分支。仅跳过
-.git*、README.md、LICENSE。
+非权重文件按角色拷贝(--metadata auto,默认):边侧要对外服务并自己跑视觉塔,
+所以 tokenizer/processor/chat_template 等全拷;云侧配套 vllm 的 LWD 改动
+(强制 skip_tokenizer_init + mm_encoder_remote,云侧不再建 tokenizer 与多模态
+processor),因此**只拷 config.json**。若云侧仍跑未打补丁的 vllm,用
+--metadata all 回到"全拷"。两侧都跳过 .git*、README.md、LICENSE、.gitattributes。
 
-例外(云侧):配套的 vllm 改动为 LWD 云侧强制 `skip_tokenizer_init` 与
-`mm_encoder_remote`,云侧不再建 tokenizer/多模态 processor,因此**云侧目录
-除 config.json(+ index/权重) 外都可以不再拷**;此脚本仍默认全拷(保守),
-云侧可以按需再删。
+(若不用 --metadata auto 而想让云侧也具备完整配置:--metadata all。)
 
 输出:按 --max-shard-gb 切成若干 model-XXXXX-of-YYYYY.safetensors;多于一个
 分片时写新的 model.safetensors.index.json,只有一个分片则不写(避免留下会
@@ -82,6 +74,15 @@ ROLE_RULES: dict[str, tuple[str, ...]] = {
 SKIP_FILE_EXACT = {"README.md", "LICENSE", ".gitattributes"}
 SKIP_FILE_PREFIX = (".git", INDEX_NAME)
 
+# 每侧需要拷贝的非权重文件("auto" 策略)。
+# 边侧对外服务、并且自己跑视觉塔编码 -> 全部配置/分词文件都要。
+# 云侧配套 vllm 侧 LWD 改动(强制 skip_tokenizer_init + mm_encoder_remote):
+# 不建 tokenizer、不建多模态 processor、不对外服务 -> 只需要 config.json。
+METADATA_RULES: dict[str, tuple[str, ...]] = {
+    "edge": ("*",),
+    "cloud": ("config.json",),
+}
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -90,6 +91,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--role", required=True, choices=sorted(ROLE_RULES))
     parser.add_argument("--max-shard-gb", type=float, default=5.0, help="输出分片上限(默认 5GB;内存紧张就调小)")
     parser.add_argument("--keep-prefix", action="append", default=[], help="追加保留前缀(可重复)")
+    parser.add_argument(
+        "--metadata",
+        choices=("auto", "all"),
+        default="auto",
+        help="非权重文件策略:auto=按角色(云侧只拷 config.json);all=全拷(云侧仍跑未打补丁的 vllm 时用)",
+    )
     parser.add_argument("--dry-run", action="store_true", help="只打印将保留/丢弃的清单,不写文件")
     return parser.parse_args()
 
@@ -213,13 +220,31 @@ def report(
     return keep_size
 
 
-def copy_metadata(src: str, dst: str) -> list[str]:
-    copied = []
+def _metadata_candidates(src: str) -> list[str]:
+    """候选非权重文件(已排除 *.safetensors / index / .git* / README / LICENSE)。"""
+    names = []
     for name in sorted(os.listdir(src)):
         if name.endswith(".safetensors") or name.startswith(SKIP_FILE_PREFIX):
             continue
         if name in SKIP_FILE_EXACT:
             continue
+        if not os.path.isfile(os.path.join(src, name)):
+            continue
+        names.append(name)
+    return names
+
+
+def plan_metadata(src: str, role: str, mode: str) -> tuple[list[str], list[str]]:
+    """返回 (要拷贝的文件, 主动跳过的文件)。"""
+    allowed = ("*",) if mode == "all" else METADATA_RULES[role]
+    wanted = [name for name in _metadata_candidates(src) if "*" in allowed or name in allowed]
+    skipped = [name for name in _metadata_candidates(src) if name not in wanted]
+    return wanted, skipped
+
+
+def copy_metadata(src: str, dst: str, names: list[str]) -> list[str]:
+    copied = []
+    for name in names:
         source_path = os.path.join(src, name)
         if not os.path.isfile(source_path):
             continue
@@ -331,6 +356,14 @@ def main() -> int:
     if matched == 0:
         print("\n没有任何张量命中保留规则,请用 --keep-prefix 指定正确前缀。", file=sys.stderr)
         return 3
+
+    meta_copy, meta_skip = plan_metadata(src, args.role, args.metadata)
+    print(f"\n[meta] 将拷贝 {len(meta_copy)} 个非权重文件: {meta_copy}")
+    if meta_skip:
+        print(f"[meta] 主动跳过 {len(meta_skip)} 个: {meta_skip}")
+    if args.metadata == "auto" and args.role == "cloud":
+        print("[meta] 云侧最小化依赖 vllm 的 LWD 改动(skip_tokenizer_init + mm_encoder_remote);"
+              "若云侧仍跑未打补丁的 vllm,请加 --metadata all")
     if args.dry_run:
         return 0
 
@@ -365,7 +398,7 @@ def main() -> int:
 
     os.makedirs(dst, exist_ok=True)
 
-    copied = copy_metadata(src, dst)
+    copied = copy_metadata(src, dst, meta_copy)
     print(f"\n[copy] {len(copied)} metadata file(s): {copied}")
 
     keep = {key for keys in grouped.values() for key in keys}
