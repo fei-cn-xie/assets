@@ -191,7 +191,7 @@ if __name__ == "__main__":
                   [0]], dtype=float)
 
     # 创建网络：2 个输入、4 个隐藏神经元、1 个输出，学习率 0.5
-    net = NeuralNetwork(n_input=2, n_hidden=4, n_output=1, lr=0.5)
+    net = NeuralNetwork(n_input=2, n_hidden=4, n_output=1, lr=0.1)
 
     # 训练 10000 轮
     net.train(X, y, epochs=10000)
