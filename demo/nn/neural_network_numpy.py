@@ -161,14 +161,18 @@ class NeuralNetwork:
         :param epochs:  迭代轮数
         :param verbose: 是否打印训练过程
         """
-        for i in range(epochs):
+        # for i in range(epochs):
+        loss = 1
+        i = 0
+        while loss > 0.000001:
             self.forward(X)   # 1. 前向传播，计算预测值（同时缓存中间结果）
             self.backward(y)  # 2. 反向传播，计算梯度并更新参数
 
             # 每隔 1000 轮打印一次损失，方便观察训练效果
             if verbose and i % 1000 == 0:
                 loss = np.mean((self.a2 - y) ** 2)  # 均方误差
-                print(f"epoch {i:6d}  loss = {loss:.6f}")
+                print(f"epoch {i:6d}  loss = {loss:.8f}")
+            i += 1
 
     def predict(self, X):
         """预测：只做前向传播，不更新参数"""
