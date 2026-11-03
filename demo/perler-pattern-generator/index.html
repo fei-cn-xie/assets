@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>拼豆图纸生成器</title>
+<style>
+:root{ --bg:#f4f1ec; --card:#ffffff; --ink:#333; --muted:#888; --acc:#e8467c; }
+*{box-sizing:border-box}
+body{margin:0;font-family:"Segoe UI","Microsoft YaHei",system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+header{background:linear-gradient(120deg,#e8467c,#f57e20);color:#fff;padding:18px 24px}
+header h1{margin:0;font-size:20px} header p{margin:4px 0 0;font-size:12px;opacity:.9}
+.wrap{max-width:1200px;margin:0 auto;padding:16px;display:grid;grid-template-columns:340px 1fr;gap:16px}
+.panel{background:var(--card);border-radius:12px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.panel h2{font-size:15px;margin:0 0 12px}
+label{display:block;font-size:12px;color:var(--muted);margin:10px 0 4px}
+input[type=number],select{width:100%;padding:7px 9px;border:1px solid #ddd;border-radius:8px;font-size:13px}
+input[type=range]{width:100%}
+.row{display:flex;gap:10px}.row>div{flex:1}
+.check{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink);margin:8px 0}
+.drop{border:2px dashed #ccc;border-radius:12px;padding:22px 10px;text-align:center;color:var(--muted);font-size:13px;cursor:pointer;transition:.2s}
+.drop.has{border-color:var(--acc);color:var(--acc)}
+.drop img{max-width:100%;max-height:130px;border-radius:8px;display:block;margin:0 auto 6px}
+button{width:100%;padding:11px;border:0;border-radius:10px;background:var(--acc);color:#fff;font-size:14px;font-weight:600;cursor:pointer;margin-top:12px}
+button:hover{filter:brightness(1.08)} button:disabled{background:#ccc;cursor:not-allowed}
+button.ghost{background:#fff;color:var(--acc);border:1px solid var(--acc)}
+#result{display:none}
+.tabs{display:flex;gap:8px;margin-bottom:10px}
+.tabs button{width:auto;padding:7px 14px;margin:0;background:#eee;color:var(--ink)}
+.tabs button.on{background:var(--acc);color:#fff}
+#imgbox{background:#fafafa;border-radius:10px;overflow:auto;max-height:70vh;text-align:center}
+#imgbox img{max-width:100%}
+table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+th,td{padding:5px 8px;border-bottom:1px solid #eee;text-align:left}
+th{color:var(--muted);font-weight:500}
+.sw{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px;border:1px solid #0002}
+.stats{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}
+.stat{background:#fafafa;border-radius:10px;padding:8px 14px;font-size:12px;color:var(--muted)}
+.stat b{display:block;font-size:17px;color:var(--ink)}
+.note{font-size:11px;color:var(--muted);line-height:1.7;margin-top:10px}
+.err{background:#fde8e8;color:#c0392b;padding:10px;border-radius:8px;font-size:13px;display:none}
+@media(max-width:860px){.wrap{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <h1>🧸 拼豆图纸生成器</h1>
+  <p>上传照片 → 选网格尺寸 → 生成可照着拼的图纸（真实拼豆色板 · 豆数清单 · 行列标注）</p>
+</header>
+<div class="wrap">
+  <section class="panel">
+    <h2>① 上传图片</h2>
+    <div class="drop" id="drop">点击选择或拖拽图片到此处<br><small>支持 JPG / PNG / WebP，建议主体清晰的照片</small></div>
+    <input type="file" id="file" accept="image/*" hidden>
+    <div class="err" id="err"></div>
+
+    <h2 style="margin-top:18px">② 图纸设置</h2>
+    <div class="row">
+      <div><label>宽（格）</label><input type="number" id="w" value="58" min="4" max="400"></div>
+      <div><label>高（格）</label><input type="number" id="h" value="58" min="4" max="400"></div>
+    </div>
+    <div class="row">
+      <div><label>快速选板</label>
+        <select id="preset">
+          <option value="">— 选择规格 —</option>
+          <option value="29x29">29×29（1 块小板）</option>
+          <option value="58x58">58×58（4 块小板）</option>
+          <option value="87x87">87×87（9 块小板）</option>
+          <option value="29x41">29×41（1 块异形板）</option>
+        </select></div>
+      <div><label>格线像素</label><input type="number" id="cell" value="18" min="8" max="60"></div>
+    </div>
+    <label>亮度 <span id="v-br"></span></label><input type="range" id="br" min="0.5" max="1.5" step="0.05" value="1">
+    <label>饱和度 <span id="v-sa"></span></label><input type="range" id="sa" min="0" max="2" step="0.05" value="1">
+    <label>对比度 <span id="v-co"></span></label><input type="range" id="co" min="0.5" max="1.5" step="0.05" value="1">
+    <div class="check"><input type="checkbox" id="dither"><label for="dither" style="margin:0;color:var(--ink)">抖动模式（渐变更平滑，颜色更碎）</label></div>
+    <div class="check"><input type="checkbox" id="labels" checked><label for="labels" style="margin:0;color:var(--ink)">行列坐标标注（每 5 格）</label></div>
+    <div class="check"><input type="checkbox" id="symbols"><label for="symbols" style="margin:0;color:var(--ink)">符号模式（中心画深浅线，黑白打印可辨）</label></div>
+    <button id="go" disabled>✨ 生成拼豆图纸</button>
+    <p class="note">提示：初次建议先用 29×29 小图试拼；人物/卡通图选「关抖动」色块更干净；风景照片选「抖动」层次更好。</p>
+  </section>
+
+  <section class="panel" id="result">
+    <h2>③ 图纸预览</h2>
+    <div class="tabs">
+      <button class="on" data-tab="sheet">拼豆图纸</button>
+      <button data-tab="flat">成品效果</button>
+    </div>
+    <div id="imgbox"><img id="out" alt="预览"></div>
+    <div class="stats">
+      <div class="stat"><b id="s-size">—</b>网格</div>
+      <div class="stat"><b id="s-total">—</b>总豆数</div>
+      <div class="stat"><b id="s-colors">—</b>用色数</div>
+      <div class="stat"><b id="s-boards">—</b>小板数</div>
+    </div>
+    <div class="row" style="max-width:420px">
+      <div><button class="ghost" id="dl-sheet">⬇ 下载图纸 PNG</button></div>
+      <div><button class="ghost" id="dl-flat">⬇ 下载效果图 PNG</button></div>
+      <div><button class="ghost" id="dl-csv">⬇ 豆数清单 CSV</button></div>
+    </div>
+    <h2 style="margin-top:18px">豆数统计（按数量排序）</h2>
+    <div style="max-height:240px;overflow:auto">
+      <table><thead><tr><th></th><th>颜色</th><th>编号</th><th>厂号</th><th style="text-align:right">数量</th></tr></thead>
+      <tbody id="tbody"></tbody></table>
+    </div>
+  </section>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+let fileData = null, last = null;
+
+const drop = $('drop');
+drop.onclick = () => $('file').click();
+drop.ondragover = e => { e.preventDefault(); drop.classList.add('has'); };
+drop.ondragleave = () => drop.classList.remove('has');
+drop.ondrop = e => { e.preventDefault(); if (e.dataTransfer.files[0]) readFile(e.dataTransfer.files[0]); };
+$('file').onchange = e => { if (e.target.files[0]) readFile(e.target.files[0]); };
+
+function readFile(f){
+  if (!/^image\//.test(f.type)) return showErr('请选择图片文件');
+  const r = new FileReader();
+  r.onload = () => {
+    fileData = r.result;
+    drop.innerHTML = '<img src="' + fileData + '"><span>' + f.name + '（' +
+      (f.size/1024).toFixed(0) + ' KB）</span>';
+    drop.classList.add('has');
+    $('go').disabled = false;
+    hideErr();
+  };
+  r.readAsDataURL(f);
+}
+
+$('preset').onchange = e => {
+  if (!e.target.value) return;
+  const [w,h] = e.target.value.split('x');
+  $('w').value = w; $('h').value = h;
+};
+[['br','v-br'],['sa','v-sa'],['co','v-co']].forEach(([i,o])=>{
+  $(i).oninput = () => $(o).textContent = $(i).value + 'x';
+});
+['br','sa','co'].forEach(i=>$(i).oninput());
+
+function showErr(m){ const e=$('err'); e.textContent=m; e.style.display='block'; }
+function hideErr(){ $('err').style.display='none'; }
+
+$('go').onclick = async () => {
+  if (!fileData) return;
+  $('go').disabled = true; $('go').textContent = '生成中…';
+  try {
+    const res = await fetch('/api/convert', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        image: fileData,
+        width: +$('w').value, height: +$('h').value,
+        cell: +$('cell').value, dither: $('dither').checked,
+        labels: $('labels').checked, symbols: $('symbols').checked,
+        brightness: +$('br').value, saturation: +$('sa').value, contrast: +$('co').value,
+      })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    last = data;
+    $('result').style.display = 'block';
+    $('out').src = data.sheet_png;
+    $('s-size').textContent = data.width + '×' + data.height;
+    $('s-total').textContent = data.total.toLocaleString();
+    $('s-colors').textContent = data.colors;
+    $('s-boards').textContent = data.boards;
+    const tb = $('tbody'); tb.innerHTML = '';
+    for (const c of data.counts) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = '<td><span class="sw"></span></td><td>' + c.name + '</td><td>' + c.code +
+        '</td><td>' + c.brand_code + '</td><td style="text-align:right">' + c.count.toLocaleString() + '</td>';
+      tb.appendChild(tr);
+    }
+    // 用图纸第一格颜色给色块上色（从 flat 图取样不可靠，改由后端给 rgb）
+    fetch('/api/palette').then(r=>r.json()).then(p=>{
+      const map = {}; p.colors.forEach(c=>map[c.code]=c.hex);
+      tb.querySelectorAll('tr').forEach((tr,i)=>{
+        const code = data.counts[i].code;
+        tr.querySelector('.sw').style.background = map[code] || '#ccc';
+      });
+    });
+    $('result').scrollIntoView({behavior:'smooth'});
+    hideErr();
+  } catch (e) { showErr('生成失败：' + e.message); }
+  $('go').disabled = false; $('go').textContent = '✨ 生成拼豆图纸';
+};
+
+document.querySelectorAll('.tabs button').forEach(b=>{
+  b.onclick = () => {
+    document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    if (last) $('out').src = b.dataset.tab === 'sheet' ? last.sheet_png : last.flat_png;
+  };
+});
+
+function dl(url, name){
+  const a = document.createElement('a');
+  a.href = url; a.download = name; a.click();
+}
+$('dl-sheet').onclick = () => last && dl(last.sheet_png, 'perler-pattern.png');
+$('dl-flat').onclick = () => last && dl(last.flat_png, 'perler-preview.png');
+$('dl-csv').onclick = () => {
+  if (!last) return;
+  const blob = new Blob(['\ufeff' + last.csv], {type:'text/csv;charset=utf-8'});
+  dl(URL.createObjectURL(blob), 'perler-counts.csv');
+};
+</script>
+</body>
+</html>
