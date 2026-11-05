@@ -211,13 +211,40 @@ def chip(slide, x, y, w, h, s, fill=PANEL2, color=SLATE, size=10, bold=True, lin
 
 
 # ----------------------------------------------------------------- chrome
+# 每页右上角的“承接”标注:说明这一页从上一页的哪个结论接过来
+BRIDGE = {
+    2: "承接 P1 · 先给全景与路线",
+    3: "承接 P2 · 01 缘起:为什么需要并行",
+    4: "承接 P3 · 装不下 → 能不能按层拆?",
+    5: "承接 P4 · 已确定「按层切」,看它站哪一格",
+    6: "承接 P5 · 切层之后,计算变成串行",
+    7: "承接 P6 · 气泡从哪来 → 怎么填",
+    8: "承接 P7 · 机制清楚了,看 vLLM 怎么落地",
+    9: "承接 P8 · 二维卡位 → 三维怎么排",
+    10: "承接 P9 · 卡位定了,层具体怎么切",
+    11: "承接 P10 · 切开之后,段与段怎么接上",
+    12: "承接 P11 · 传的是 hidden,采样怎么回传",
+    13: "承接 P12 · 三条线索合成一次 forward",
+    14: "承接 P13 · 跑通了,算算显存这笔账",
+    15: "承接 P14 · 账算清了,怎么开起来",
+    16: "承接 P15 · 能开起来,再说哪里会踩坑",
+    17: "承接 P16 · 收束成三件事与源码索引",
+    18: "承接 P17 · 想深入,看这些文档与论文",
+}
+
+
 def new_slide(section_color, kicker, title, lead=None):
     s = prs.slides.add_slide(BLANK)
+    page = len(prs.slides)
     bar = shape(s, 0, 0, SW, 0.075, fill=section_color, kind=MSO_SHAPE.RECTANGLE)
     bar.line.fill.background()
     sq = shape(s, ML, 0.375, 0.115, 0.115, fill=section_color, kind=MSO_SHAPE.RECTANGLE)
     sq.line.fill.background()
     txt(s, ML + 0.22, 0.315, 8.6, 0.26, kicker, size=10.5, color=section_color, bold=True)
+    bridge = BRIDGE.get(page)
+    if bridge:
+        txt(s, SW - MR - 4.30, 0.315, 4.30, 0.24, "↳ " + bridge, size=8.6,
+            color=RGBColor(0x82, 0x90, 0xA4), align=PP_ALIGN.RIGHT)
     txt(s, ML, 0.60, CW, 0.62, title, size=26, color=INK, bold=True)
     if lead:
         txt(s, ML, 1.24, CW, 0.34, lead, size=13, color=MUTED)
