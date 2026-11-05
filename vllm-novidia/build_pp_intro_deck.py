@@ -217,19 +217,20 @@ BRIDGE = {
     3: "承接 P2 · 01 缘起:为什么需要并行",
     4: "承接 P3 · 装不下 → 能不能按层拆?",
     5: "承接 P4 · 已确定「按层切」,看它站哪一格",
-    6: "承接 P5 · 切层之后,计算变成串行",
-    7: "承接 P6 · 气泡从哪来 → 怎么填",
-    8: "承接 P7 · 机制清楚了,看 vLLM 怎么落地",
-    9: "承接 P8 · 二维卡位 → 三维怎么排",
-    10: "承接 P9 · 卡位定了,层具体怎么切",
-    11: "承接 P10 · 切开之后,段与段怎么接上",
-    12: "承接 P11 · 传的是 hidden,采样怎么回传",
-    13: "承接 P12 · 三条线索合成一次 forward",
-    14: "承接 P13 · 跑通了,算算显存这笔账",
-    15: "承接 P14 · 账算清了,怎么开起来",
-    16: "承接 P15 · 能开起来,再说哪里会踩坑",
-    17: "承接 P16 · 收束成三件事与源码索引",
-    18: "承接 P17 · 想深入,看这些文档与论文",
+    6: "承接 P5 · 并行方式定了,先看数据怎么组织",
+    7: "承接 P6 · batch 有了,切层后计算变成串行",
+    8: "承接 P7 · 气泡从哪来 → 怎么填",
+    9: "承接 P8 · 机制清楚了,看 vLLM 怎么落地",
+    10: "承接 P9 · 二维卡位 → 三维怎么排",
+    11: "承接 P10 · 卡位定了,层具体怎么切",
+    12: "承接 P11 · 切开之后,段与段怎么接上",
+    13: "承接 P12 · 传的是 hidden,采样怎么回传",
+    14: "承接 P13 · 三条线索合成一次 forward",
+    15: "承接 P14 · 跑通了,算算显存这笔账",
+    16: "承接 P15 · 账算清了,怎么开起来",
+    17: "承接 P16 · 能开起来,再说哪里会踩坑",
+    18: "承接 P17 · 收束成三件事与源码索引",
+    19: "承接 P18 · 想深入,看这些文档与论文",
 }
 
 
@@ -402,9 +403,9 @@ def s02():
     items = [
         ("01", "缘起", "2018 – 2019", "模型比显存长得快;DP 复制模型、TP 又把通信压在 NVLink 上 —— 跨机部署需要第三种解法。", BLUE, "P3 – P4"),
         ("02", "直觉", "切层与接力", "把 N 层切成 p 段,一段一张卡;段与段之间只传 hidden states。和 DP/TP/EP 的本质差别。", TEAL, "P5"),
-        ("03", "机制", "气泡与填充", "串行接力会让卡空转。气泡从哪来、(p−1)/(m+p−1) 怎么算、vLLM 用什么把流水线填满。", VIOLET, "P6 – P7"),
-        ("04", "实现", "vLLM GPU 路径", "命令如何变成进程;DP/TP/PP 怎么排卡;层怎么切、张量怎么传、采样怎么回传。", ORANGE, "P8 – P14"),
-        ("05", "部署", "选型与边界", "三条部署命令、官方选型建议、7 个硬限制,以及最常见的挂起原因和排查手法。", INK, "P15 – P16"),
+        ("03", "机制", "气泡与填充", "变长 batch 怎么拼、micro-batch 怎么切;串行接力让卡空转,气泡怎么算、vLLM 用什么填满。", VIOLET, "P6 – P8"),
+        ("04", "实现", "vLLM GPU 路径", "命令如何变成进程;DP/TP/PP 怎么排卡;层怎么切、张量怎么传、采样怎么回传。", ORANGE, "P9 – P15"),
+        ("05", "部署", "选型与边界", "三条部署命令、官方选型建议、7 个硬限制,以及最常见的挂起原因和排查手法。", INK, "P16 – P17"),
     ]
     x = ML
     cw, gap = 2.30, 0.115
@@ -430,7 +431,7 @@ def s02():
         x += 3.99
     footer(s, 2)
     notes(s, "先给结构:五个板块。前两个板块不需要看代码;第三个板块会打开 vLLM 的 8 个文件;"
-             "第四部分是命令和排错。如果时间紧,可直接看 P8–P14 的实现部分。")
+             "第四部分是命令和排错。如果时间紧,可直接看 P9–P15 的实现部分。")
 
 
 # ----------------------------------------------------------------- slide 3
@@ -615,6 +616,119 @@ def s05():
 
 # ----------------------------------------------------------------- slide 6
 def s06():
+    s = new_slide(TEAL, "03 · 机制  batch 与 micro-batch",
+                  "batch 是什么:从一条 prompt 到一次 forward",
+                  "一次 forward 处理的是一个批,不是一条请求;batch 由本步所有请求要算的 token 拼成,长度每个 step 都变。")
+    # ---- flow: prompt -> batch
+    steps = [("① prompt", "用户输入的一句话\n(纯文本)", SLATE),
+             ("② tokenize", "切成 token id\n[101, 872, …]", SLATE),
+             ("③ 请求入队", "带采样参数进\nwaiting 队列", SLATE),
+             ("④ 调度攒批", "每步挑一批请求,\n定每条算多少 token", BLUE),
+             ("⑤ batch", "本步所有 token\n拼成扁平数组", TEAL)]
+    x = ML
+    for i, (t, d, col) in enumerate(steps):
+        shape(s, x, 1.70, 2.12, 0.84, fill=WHITE, line=HAIR, lw=0.9, radius=0.06)
+        txt(s, x + 0.13, 1.78, 1.9, 0.24, t, size=9.4, color=col, bold=True)
+        txt(s, x + 0.13, 2.05, 1.92, 0.44, d, size=7.4, color=MUTED, line=1.12)
+        x += 2.12
+        if i < 4:
+            arrow(s, x + 0.02, 2.12, x + 0.20, 2.12, color=MUTED, lw=1.2)
+            x += 0.22
+
+    # ---- batch structure
+    txt(s, ML, 2.60, 8.2, 0.24, "batch 的结构:变长拼接(ragged),不是矩形矩阵",
+        size=10.5, color=INK, bold=True)
+    segs = [("请求 A · 5 tok", 5, 0), ("请求 B · 3 tok", 3, 1), ("请求 C · 4 tok", 4, 2)]
+    x0, ybar, cw = ML, 3.06, 0.605
+    idx = 0
+    for seg_label, n, ci in segs:
+        bx = x0 + idx * cw
+        txt(s, bx, 2.86, n * cw, 0.20, seg_label, size=7.4, color=STAGE[ci], bold=True,
+            align=PP_ALIGN.CENTER)
+        for k in range(n):
+            sp = shape(s, bx + k * cw + 0.008, ybar, cw - 0.016, 0.42, fill=STAGE[ci], radius=0.12)
+            label(sp, str(idx + k), size=6.4, color=WHITE, bold=True, margins=(0, 0, 0, 0))
+        idx += n
+    txt(s, ML, ybar + 0.46, 7.3, 0.20, "块信息:block_table / slot_mapping 决定每个 token 落到哪块 KV",
+        size=7.2, color=MUTED)
+
+    # ---- metadata
+    shape(s, ML, 3.56, 7.30, 0.94, fill=PANEL, radius=0.04).line.color.rgb = PANEL
+    metas = [("query_start_loc = [0, 5, 8, 12]", "每段起点(前缀和)"),
+             ("seq_lens        = [5, 3, 4]", "每条请求的上下文长度"),
+             ("input_ids / positions", "长度都等于 12")]
+    y = 3.62
+    for name, note in metas:
+        txt(s, ML + 0.14, y, 3.55, 0.22, name, size=7.6, color=INK, font=MONO)
+        txt(s, ML + 3.80, y, 3.3, 0.22, "← " + note, size=7.2, color=MUTED)
+        y += 0.28
+    txt(s, ML, 4.54, 7.3, 0.20,
+        "本步共 12 个 token,顺序是「请求 A 全部 → 请求 B → 请求 C」,没有 padding",
+        size=7.2, color=MUTED)
+
+    # ---- right: three points
+    shape(s, 8.15, 2.94, 4.55, 1.66, fill=SOFT["teal"], line=TEAL, lw=0.9, radius=0.05)
+    txt(s, 8.31, 3.02, 4.2, 0.24, "三个要点", size=9.2, color=TEAL, bold=True)
+    rich(s, 8.31, 3.26, 4.2, 1.28, [
+        {"runs": [("长度逐 step 变化:token 总数 = Σ 各请求本步的 token 数",
+                   {"size": 7.2, "color": SLATE})], "bullet": ("▪", TEAL), "after": 2, "line": 1.1},
+        {"runs": [("不补 padding:变长直接拼,算力和显存都不浪费",
+                   {"size": 7.2, "color": SLATE})], "bullet": ("▪", TEAL), "after": 2, "line": 1.1},
+        {"runs": [("prefill 与 decode 混批:decode 请求每次只贡献 1 个 token",
+                   {"size": 7.2, "color": SLATE})], "bullet": ("▪", TEAL), "after": 2, "line": 1.1},
+        {"runs": [("一个 batch 就是一次 forward 的全部输入,形状由调度决定",
+                   {"size": 7.2, "color": SLATE})], "bullet": ("▪", TEAL), "line": 1.1},
+    ])
+
+    # ---- micro-batch
+    txt(s, ML, 4.84, 10.2, 0.26, "micro-batch 的结构:两种语境,两种切法", size=10.5,
+        color=INK, bold=True)
+
+    c1x, c1y, c1w = ML, 5.12, 5.95
+    shape(s, c1x, c1y, c1w, 1.46, fill=WHITE, line=HAIR, lw=0.9, radius=0.05)
+    txt(s, c1x + 0.14, c1y + 0.08, 5.5, 0.22, "① 训练 / GPipe:按样本切", size=9.2,
+        color=BLUE, bold=True)
+    for k in range(8):
+        shape(s, c1x + 0.16 + k * 0.235, c1y + 0.38, 0.20, 0.20, fill=SOFT["blue"],
+              line=BLUE, lw=0.7, radius=0.2)
+    txt(s, c1x + 0.16, c1y + 0.60, 1.9, 0.18, "batch = 8 条样本", size=6.8, color=MUTED)
+    arrow(s, c1x + 2.12, c1y + 0.48, c1x + 2.40, c1y + 0.48, color=MUTED, lw=1.2)
+    for r in range(2):
+        for k in range(4):
+            shape(s, c1x + 2.52 + k * 0.235, c1y + 0.32 + r * 0.26, 0.20, 0.20,
+                  fill=SOFT["blue"], line=BLUE, lw=0.7, radius=0.2)
+        txt(s, c1x + 3.52, c1y + 0.36 + r * 0.26, 0.6, 0.18, f"m{r + 1}", size=6.8, color=BLUE)
+    txt(s, c1x + 0.14, c1y + 0.94, 5.65, 0.46,
+        "沿样本维切成 m 份,每份形状相同、样本更少;m 越大气泡越小,但单份变小、硬件效率下降。",
+        size=7.4, color=SLATE, line=1.16)
+
+    c2x, c2y, c2w = 6.76, 5.12, 5.95
+    shape(s, c2x, c2y, c2w, 1.46, fill=WHITE, line=HAIR, lw=0.9, radius=0.05)
+    txt(s, c2x + 0.14, c2y + 0.08, 5.6, 0.22, "② vLLM 推理(DBO):按 token 切", size=9.2,
+        color=VIOLET, bold=True)
+    for k in range(12):
+        ci = 0 if k < 5 else (1 if k < 8 else 2)
+        shape(s, c2x + 0.16 + k * 0.37, c2y + 0.40, 0.35, 0.20, fill=STAGE[ci], radius=0.15)
+    shape(s, c2x + 0.16 + 6 * 0.37 - 0.02, c2y + 0.34, 0.03, 0.32, fill=RED,
+          kind=MSO_SHAPE.RECTANGLE).line.fill.background()
+    txt(s, c2x + 0.16, c2y + 0.64, 2.0, 0.18, "ubatch 1 · t0–t5", size=6.8, color=VIOLET)
+    txt(s, c2x + 2.40, c2y + 0.64, 2.3, 0.18, "ubatch 2 · t6–t11", size=6.8, color=VIOLET)
+    txt(s, c2x + 0.14, c2y + 0.94, 5.65, 0.46,
+        "变长 batch 没有样本维,只能按 token 区间切;UBatchSlice = request_slice + token_slice,一条长请求可能被切开。",
+        size=7.4, color=SLATE, line=1.16)
+
+    txt(s, ML, 6.70, CW, 0.24,
+        "一句话:batch 是「一次 forward 的输入」;micro-batch 是「把它再切小」—— 训练切样本,推理切 token。",
+        size=8.8, color=INK, bold=True)
+    footer(s, 6, "vllm/v1/core/sched/output.py · v1/worker/gpu_input_batch.py · v1/worker/ubatch_utils.py")
+    notes(s, "这页解释数据是怎么组织的。prompt 先 tokenize 成 id,变成请求进入 waiting 队列;"
+             "scheduler 每步挑一批请求,并把「这一步每条请求要算多少 token」记在 num_scheduled_tokens 里;"
+             "这些 token 拼成一条扁平数组就是 batch,长度逐 step 变化,所以用 query_start_loc 记录每段起点。"
+             "micro-batch 有两种语境:训练里是沿样本维切,推理里(DBO)是按 token 区间切,可能切开同一条请求。")
+
+
+# ----------------------------------------------------------------- slide 7
+def s07():
     s = new_slide(TEAL, "03 · 机制  气泡是怎么来的",
                   "一张卡在算,三张卡在等:这就是「流水线气泡」",
                   "把一个批切成 m 个 micro-batch 依次灌入,能填满大部分空转,但首尾总会漏掉一段。")
@@ -659,13 +773,13 @@ def s06():
     txt(s, ML, 5.86, CW, 0.62,
         "下一页就是 vLLM 的答案:EngineCore 同时挂 pp_size 个批,每个阶段各算各的 —— 稳态下没有空转。",
         size=10.5, color=INK, bold=True, line=1.25)
-    footer(s, 6, "气泡率公式:GPipe(Huang et al., 2019);p 为流水线深度,m 为 micro-batch 数")
+    footer(s, 7, "气泡率公式:GPipe(Huang et al., 2019);p 为流水线深度,m 为 micro-batch 数")
     notes(s, "气泡要讲透:不是 PP 实现得不好,而是串行本性的必然。左边极限情况 1/4 利用率,"
              "右边 micro-batch 后改善但首尾仍有缺口。公式给出来,方便后面评估 pp 该开多大。")
 
 
-# ----------------------------------------------------------------- slide 7
-def s07():
+# ----------------------------------------------------------------- slide 8
+def s08():
     s = new_slide(TEAL, "03 · 机制  vLLM 的消泡办法",
                   "让多个「批」同时在飞:每个阶段每时每刻都有活干",
                   "推理不需要等反向传播,只要队列里始终有 pp_size 个批,就能把流水线填满。")
@@ -697,13 +811,13 @@ def s07():
     txt(s, 4.86, 6.28, 7.84, 0.52,
         "代价:流水线上同时有 pp_size 个批在飞,同时驻留的 KV Cache 随并发上升;单请求延迟也变高(要过 pp_size 跳)。",
         size=9, color=RED, line=1.15)
-    footer(s, 7, "vllm/v1/executor/multiproc_executor.py:474 · vllm/v1/engine/core.py:184, 466")
+    footer(s, 8, "vllm/v1/executor/multiproc_executor.py:474 · vllm/v1/engine/core.py:184, 466")
     notes(s, "这页是 vLLM 相对训练框架最大的不同:它复用 continuous batching,把『批』当成流水线的填充物。"
              "要强调队列深度恰好等于 pp_size 的原因:每个阶段各占一个批。")
 
 
-# ----------------------------------------------------------------- slide 8
-def s08():
+# ----------------------------------------------------------------- slide 9
+def s09():
     s = new_slide(VIOLET, "04 · 实现  一条命令如何变成 N 个进程",
                   "从 --pipeline-parallel-size 到每张卡上的一个 Worker",
                   "vLLM 里 PP 不是模型代码里的 if,而是一条贯穿「配置 → 执行器 → Worker → 模型」的链路。")
@@ -768,13 +882,13 @@ def s08():
         y += 0.80
     code_card(s, 7.10, 6.06, 5.60, 0.88, None,
               ["# config/parallel.py", "world_size = pp * tp * pcp   # 每个 DP 副本"], size=8.0)
-    footer(s, 8, "vllm/config/parallel.py:760 · vllm/distributed/parallel_state.py:initialize_model_parallel")
+    footer(s, 9, "vllm/config/parallel.py:760 · vllm/distributed/parallel_state.py:initialize_model_parallel")
     notes(s, "把链路串起来:命令行只是一个整数,真正的语义在 ParallelConfig 和 executor。"
              "rank 布局要讲清:PP 组不是相邻卡,而是跨 tp 的同一列。")
 
 
-# ----------------------------------------------------------------- slide 9
-def s09():
+# ----------------------------------------------------------------- slide 10
+def s10():
     s = new_slide(VIOLET, "04 · 实现  DP / TP / PP 同时启用时的卡位",
                   "三种并行同时上:每张卡同时属于 DP、PP、TP 三个组",
                   "例:DP=2、PP=4、TP=2,共 16 卡(2 台 8 卡机)。副本之间复制模型,副本内先切层、再切张量。")
@@ -841,14 +955,14 @@ def s09():
         {"runs": [("TP 不跨机;没有 NVLink 时优先用 PP 换带宽。", {"size": 7.6, "color": SLATE})],
          "bullet": ("▪", AMBER), "line": 1.05},
     ])
-    footer(s, 9, "vllm/distributed/parallel_state.py:initialize_model_parallel(排布 ExternalDP × DP × PP × PCP × TP)")
+    footer(s, 10, "vllm/distributed/parallel_state.py:initialize_model_parallel(排布 ExternalDP × DP × PP × PCP × TP)")
     notes(s, "这一页把三个维度落到具体卡位。要点:DP 在最外层,一个副本的卡在 rank 空间里连续,"
              "16 卡 / 2 台 8 卡机时一个副本正好一台机器;副本内先按 PP 分段,每段内再按 TP 切。"
              "读图时先看面板(DP),再看行(PP),最后看格内的两个卡(TP)。")
 
 
-# ----------------------------------------------------------------- slide 10
-def s10():
+# ----------------------------------------------------------------- slide 11
+def s11():
     s = new_slide(VIOLET, "04 · 实现  难题① 层怎么切",
                   "均分 + 余数往前补 + 末段少一层",
                   "32 层、PP=3 时 vLLM 切成 [11, 11, 10]:余数不给末段,因为末段还要放 norm 和 lm_head。")
@@ -911,13 +1025,13 @@ def s10():
         "注意:pp_size 必须 ≤ 层数;层数不能整除时不会报错,而是自动均摊(日志会打印 "
         "Hidden layers were unevenly partitioned)。想手工平衡首末段的显存,就直接设环境变量。",
         size=8.6, color=SLATE, line=1.2)
-    footer(s, 10, "vllm/distributed/utils.py:95 · vllm/model_executor/models/utils.py:607,620")
+    footer(s, 11, "vllm/distributed/utils.py:95 · vllm/model_executor/models/utils.py:607,620")
     notes(s, "切层是最容易被忽略却最影响显存平衡的地方。重点讲清余数分配方向,以及首末段额外的 embedding/lm_head。"
              "PPMissingLayer 是理解 vLLM 模型代码的关键技巧。")
 
 
-# ----------------------------------------------------------------- slide 11
-def s11():
+# ----------------------------------------------------------------- slide 12
+def s12():
     s = new_slide(VIOLET, "04 · 实现  难题② 段间怎么传数据",
                   "只传两个张量,而且发送之后不等",
                   "每个 stage 算完自己那段,把 hidden_states 和 residual 交给下一段;元数据走 CPU,张量走 NCCL。")
@@ -970,13 +1084,13 @@ def s11():
         "output = self.model_runner.execute_model(scheduler_output, intermediate_tensors)",
         "self._pp_send_work = get_pp_group().isend_tensor_dict(output.tensors, ...)  # 不等",
     ], size=8.4, hl={4: AMBER, 5: AMBER})
-    footer(s, 11, "vllm/distributed/parallel_state.py:821-1038 · vllm/v1/worker/gpu_worker.py:782")
+    footer(s, 12, "vllm/distributed/parallel_state.py:821-1038 · vllm/v1/worker/gpu_worker.py:782")
     notes(s, "两个层次:协议(元数据+张量)和时序(异步)。学生最容易忽略的是『发送不阻塞』,"
              "它让 PP 的通信几乎不占关键路径。")
 
 
-# ----------------------------------------------------------------- slide 12
-def s12():
+# ----------------------------------------------------------------- slide 13
+def s13():
     s = new_slide(VIOLET, "04 · 实现  难题③ 采样结果怎么回到第一段",
                   "只有末段能采样,但每一段都要知道新 token",
                   "首段要拼下一次的输入,每段都要更新自己那几层的 KV —— 于是必须把采样结果广播回去。")
@@ -1034,14 +1148,14 @@ def s12():
         "    # there's no direct communication between the first-stage worker",
         "    # and the last-stage worker.",
     ], size=8.0, hl={1: AMBER, 2: AMBER, 3: AMBER})
-    footer(s, 12, "vllm/v1/worker/gpu_model_runner.py:4481, 4498 · gpu/pp_utils.py 为 V2 runner 的等价实现")
+    footer(s, 13, "vllm/v1/worker/gpu_model_runner.py:4481, 4498 · gpu/pp_utils.py 为 V2 runner 的等价实现")
     notes(s, "这页回答『采样在末段,结果怎么回去』。默认 runner(gpu_model_runner.py)用 PP 组广播 prev_sampled_token_ids;"
              "未开 async scheduling 时调度器还会回填 new_token_ids。V2 runner(VLLM_USE_V2_MODEL_RUNNER=1)对应 "
              "gpu/pp_utils.py 的 pp_broadcast / pp_receive。")
 
 
-# ----------------------------------------------------------------- slide 13
-def s13():
+# ----------------------------------------------------------------- slide 14
+def s14():
     s = new_slide(VIOLET, "04 · 实现  一次 forward 的四步",
                   "所有 stage 跑同一份代码,靠 is_first / is_last 分叉",
                   "worker.execute_model 每步就四件事:等上一轮发送、收、算、发。首段少收,末段少发。")
@@ -1090,12 +1204,12 @@ def s13():
     txt(s, ML, 6.62, CW, 0.3,
         "注意:同一份代码在 4 种角色下执行 —— 这就是为什么读 vLLM 的 PP 只需要读一个 execute_model。",
         size=9.4, color=INK, bold=True)
-    footer(s, 13, "vllm/v1/worker/gpu_worker.py:782-871 · gpu_model_runner.py:4234, 4281")
+    footer(s, 14, "vllm/v1/worker/gpu_worker.py:782-871 · gpu_model_runner.py:4234, 4281")
     notes(s, "源码页,四步对应四个 if。强调首段/末段的分叉,以及『末段采样、其他段原样返回』。")
 
 
-# ----------------------------------------------------------------- slide 14
-def s14():
+# ----------------------------------------------------------------- slide 15
+def s15():
     s = new_slide(ORANGE, "04 · 实现  这笔账怎么算",
                   "PP 省的是显存,不是算力",
                   "权重和 KV Cache 都按层摊到各段;但总计算量不变,单请求还要多走 pp_size 跳。")
@@ -1131,12 +1245,12 @@ def s14():
     rich(s, 6.80, 5.54, 5.65, 0.72,
          [{"runs": [(c, {"size": 9, "color": SLATE})], "bullet": ("▪", RED), "after": 1, "line": 1.1}
           for c in costs])
-    footer(s, 14, "估算:KV 按 Llama-3-70B(80 层 / 8 KV heads / head_dim 128 / fp16);hidden 8192")
+    footer(s, 15, "估算:KV 按 Llama-3-70B(80 层 / 8 KV heads / head_dim 128 / fp16);hidden 8192")
     notes(s, "把收益和代价摆在一页,避免『PP 一定更快』的误解。数字都是可复算的估算,讲的时候给公式。")
 
 
-# ----------------------------------------------------------------- slide 15
-def s15():
+# ----------------------------------------------------------------- slide 16
+def s16():
     s = new_slide(ORANGE, "05 · 实战  怎么开、怎么选",
                   "三条命令覆盖 90% 的场景",
                   "单机用 mp(多进程),跨机用 ray 或 mp 多节点;选型只记一句话:节点内 TP,节点间 PP。")
@@ -1186,13 +1300,13 @@ def s15():
             ["VLLM_PP_LAYER_PARTITION", "手工指定每段层数"]]
     table(s, 8.48, 5.94, 4.22, data, [2.02, 2.20], row_h=0.24, header_h=0.24, size=6.9,
           header_size=7.1)
-    footer(s, 15, "docs/serving/parallelism_scaling.md · vllm/engine/arg_utils.py")
+    footer(s, 16, "docs/serving/parallelism_scaling.md · vllm/engine/arg_utils.py")
     notes(s, "三条命令按场景背下来。右边是官方文档的四条选型建议,最后一条(L40S 无 NVLink)很重要,"
              "很多人的直觉是反的 —— 没 NVLink 时 TP 反而慢。")
 
 
-# ----------------------------------------------------------------- slide 16
-def s16():
+# ----------------------------------------------------------------- slide 17
+def s17():
     s = new_slide(ORANGE, "05 · 实战  踩坑清单",
                   "7 个硬限制 + 3 步排错",
                   "PP 不是开个开关就完事:模型要支持、特性要兼容、每段的批必须完全一致,否则直接挂住。")
@@ -1238,19 +1352,19 @@ def s16():
         {"runs": [("跨机链路是否走了 IB?没有 IB 的 PP 也可能变成瓶颈。", {"size": 8.4, "color": SLATE})],
          "bullet": ("▪", AMBER), "line": 1.1},
     ])
-    footer(s, 16, "vllm/config/model.py:1153 · vllm/config/parallel.py:775 · model_runner.py:180 · vllm/config/vllm.py:1952")
+    footer(s, 17, "vllm/config/model.py:1153 · vllm/config/parallel.py:775 · model_runner.py:180 · vllm/config/vllm.py:1952")
     notes(s, "坑分三类:能力(不支持)、一致性(死锁)、性能(填不满)。排错三步按日志→批→通信的顺序。"
              "特别提醒 DP 组必须同步 generate 这条,生产上很容易踩。")
 
 
-# ----------------------------------------------------------------- slide 17
-def s17():
+# ----------------------------------------------------------------- slide 18
+def s18():
     s = new_slide(INK, "收尾 · 三件事与源码索引",
                   "切层、接力、填满:PP 就这三件事",
                   "如果只记三个数字:pp_size、max_concurrent_batches = pp_size、(p−1)/(m+p−1)。")
-    cards = [("切", "按层切段", "get_pp_indices 均分,余数往前补,末段少一层", BLUE, "P10"),
-             ("传", "边界传 hidden", "只传 {hidden_states, residual};元数据走 gloo、张量走 NCCL", TEAL, "P11"),
-             ("填", "多批填满", "batch_queue 挂 pp_size 个批,每段都有活干", VIOLET, "P7")]
+    cards = [("切", "按层切段", "get_pp_indices 均分,余数往前补,末段少一层", BLUE, "P11"),
+             ("传", "边界传 hidden", "只传 {hidden_states, residual};元数据走 gloo、张量走 NCCL", TEAL, "P12"),
+             ("填", "多批填满", "batch_queue 挂 pp_size 个批,每段都有活干", VIOLET, "P8")]
     x = ML
     for ch, title, desc, col, ref in cards:
         shape(s, x, 1.68, 3.93, 0.94, fill=WHITE, line=HAIR, lw=0.9, radius=0.05)
@@ -1263,44 +1377,44 @@ def s17():
     data = [["源码位置", "管什么(按一次 PP 前向的顺序读)", "对应页"],
             ["config/parallel.py",
              "定义 pipeline_parallel_size,并由它算出 world_size = pp × tp × pcp;同时校验哪些特性与 PP 互斥(如 Elastic EP、torch_shm)。",
-             "P8"],
+             "P9"],
             ["distributed/parallel_state.py",
              "按 ExternalDP × DP × PP × PCP × TP 建进程组;提供 get_pp_group() 与 send/recv_tensor_dict 点对点收发。",
-             "P8 – P9"],
+             "P9 – P10"],
             ["distributed/utils.py",
              "get_pp_indices():把总层数按 pp_size 均分,余数从倒数第二段往前补,定出每段的 [start, end)。",
-             "P10"],
+             "P11"],
             ["model_executor/models/utils.py",
              "make_layers() 只为本段真正建层,其余位置放 PPMissingLayer 占位;is_pp_missing_parameter() 判断参数是否属于本段。",
-             "P10"],
+             "P11"],
             ["v1/worker/gpu_worker.py",
              "execute_model() 四步:等上一轮发送 →(非首段)irecv 收 → 跑本段 →(非末段)isend 发,收发都不阻塞。",
-             "P11 – P13"],
+             "P12 – P14"],
             ["v1/worker/gpu_model_runner.py",
              "默认 runner:非首段把收到的 hidden/residual 拼进输入;末段采样后把 token 经 PP 组广播给其余段。",
-             "P12"],
+             "P13"],
             ["v1/engine/core.py",
              "EngineCore 用 batch_queue 挂住 pp_size 个批:先填队列、不阻塞,队列满了才回收最老的结果。",
-             "P7"],
+             "P8"],
             ["v1/executor/multiproc_executor.py",
              "max_concurrent_batches = pp_size(队列深度);并确定只从末段 TP0 回收 ModelRunnerOutput。",
-             "P7 – P8"]]
+             "P8 – P9"]]
     table(s, ML, 2.76, CW, data, [3.05, 7.00, 2.04], row_h=0.42, header_h=0.34, size=8.2,
           header_size=8.4)
 
     txt(s, ML, 6.54, CW, 0.24,
-        "读法:先看 P10 的切层,再看 P11–P13 的收发与采样,最后看 P7 的队列 —— 这几段代码连起来,就是一次完整的 PP 前向。",
+        "读法:先看 P11 的切层,再看 P12–P14 的收发与采样,最后看 P8 的队列 —— 这几段代码连起来,就是一次完整的 PP 前向。",
         size=8.6, color=MUTED)
-    footer(s, 17, "配图与脚本:assets/vllm-novidia/build_pp_intro_deck.py · 延伸阅读:vllm-main-PP流水线并行详解.pptx")
+    footer(s, 18, "配图与脚本:assets/vllm-novidia/build_pp_intro_deck.py · 延伸阅读:vllm-main-PP流水线并行详解.pptx")
     notes(s, "收尾:三件事 + 源码索引。每条都写清了这个文件到底做什么、对应前面哪一页,"
              "听众可以照着表逐行去仓库里读。如果只做一件事:去读 gpu_worker.execute_model。")
 
 
 # ----------------------------------------------------------------- slide 18 (references)
-def s18():
+def s19():
     s = new_slide(INK, "参考 · 文档与论文",
                   "参考文档与源码",
-                  "以下链接对应正文中的结论;具体源码位置见 P17 的索引表。")
+                  "以下链接对应正文中的结论;具体源码位置见 P18 的索引表。")
     doc = "https://docs.vllm.ai/en/latest/serving/"
     data = [["类别", "名称与用途", "链接"],
             ["官方文档", "Parallelism and Scaling —— 单机/多机选型:何时用 TP、何时 TP×PP,以及 Ray 与多进程部署",
@@ -1329,13 +1443,13 @@ def s18():
     txt(s, ML, 6.28, CW, 0.24,
         "链接指向 vLLM 官方 latest 文档与 arXiv 原文;若文档路径调整,可在 docs.vllm.ai 站内按页面标题检索。",
         size=8.2, color=MUTED)
-    footer(s, 18)
-    notes(s, "参考页。三篇论文对应 P4 的三个里程碑;vLLM 文档对应 P15 的选型建议与 P16 的排错;"
-             "源码仓库对应 P17 的索引表。")
+    footer(s, 19)
+    notes(s, "参考页。三篇论文对应 P4 的三个里程碑;vLLM 文档对应 P16 的选型建议与 P17 的排错;"
+             "源码仓库对应 P18 的索引表。")
 
 
 # ----------------------------------------------------------------- slide 19 (Thanks)
-def s19():
+def s20():
     s = prs.slides.add_slide(BLANK)
     shape(s, 0, 0, SW, SH, fill=INK, kind=MSO_SHAPE.RECTANGLE).line.fill.background()
 
@@ -1354,13 +1468,13 @@ def s19():
     txt(s, ML, 6.48, 9.0, 0.26,
         "源码基准:vllm main @ 70c0016 · 仅 NVIDIA GPU(CUDA / NCCL)路径",
         size=9, color=RGBColor(0x7A, 0x8A, 0xA3))
-    notes(s, "结束页。留出时间回答问题;如需深入某一块,可回到 P8–P14 的实现部分。")
+    notes(s, "结束页。留出时间回答问题;如需深入某一块,可回到 P9–P15 的实现部分。")
 
 
 # ----------------------------------------------------------------- build
 def main():
-    s01(); s02(); s03(); s04(); s05(); s06(); s07(); s08(); s09()
-    s10(); s11(); s12(); s13(); s14(); s15(); s16(); s17(); s18(); s19()
+    s01(); s02(); s03(); s04(); s05(); s06(); s07(); s08(); s09(); s10()
+    s11(); s12(); s13(); s14(); s15(); s16(); s17(); s18(); s19(); s20()
     out = "assets/vllm-novidia/vllm-PP流水线并行-原理与部署.pptx"
     prs.save(out)
     print("saved:", out, "slides:", len(prs.slides))

@@ -1,4 +1,4 @@
-<mxfile host="Electron" pages="8">
+<mxfile host="Electron" pages="7">
   <diagram id="jmAXHJAS_oF603FWaMZ1" name="基础概念-DP,PP,TP">
     <mxGraphModel dx="2054" dy="1201" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0">
       <root>
@@ -187,20 +187,6 @@
             <mxPoint x="220" y="210" as="sourcePoint" />
             <mxPoint x="540" y="600" as="targetPoint" />
           </mxGeometry>
-        </mxCell>
-      </root>
-    </mxGraphModel>
-  </diagram>
-  <diagram name="第 1 页" id="HwKq4ng7e3DAxUVWyVc-">
-    <mxGraphModel dx="2054" dy="1201" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0">
-      <root>
-        <mxCell id="0" />
-        <mxCell id="1" parent="0" />
-        <mxCell id="fbIiKxiQIRBKJW0sMh-Z-1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="边侧" vertex="1">
-          <mxGeometry height="460" width="730" x="630" y="600" as="geometry" />
-        </mxCell>
-        <mxCell id="fbIiKxiQIRBKJW0sMh-Z-2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;fillColor=#ffe6cc;strokeColor=#d79b00;" value="云侧" vertex="1">
-          <mxGeometry height="460" width="730" x="1430" y="600" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
@@ -2187,6 +2173,18 @@
         </mxCell>
         <mxCell id="2ssHXWKf9rXOy4efV-oj-57" edge="1" parent="1" source="2ssHXWKf9rXOy4efV-oj-54" style="edgeStyle=orthogonalEdgeStyle;shape=connector;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.292;entryDx=0;entryDy=0;entryPerimeter=0;strokeColor=default;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;startArrow=oval;startFill=0;endArrow=classic;" target="2ssHXWKf9rXOy4efV-oj-47">
           <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="2ssHXWKf9rXOy4efV-oj-58" edge="1" parent="1" style="endArrow=classic;startArrow=classic;html=1;rounded=0;strokeColor=default;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;edgeStyle=orthogonalEdgeStyle;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="1790" y="-760" as="sourcePoint" />
+            <mxPoint x="2050" y="-910" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="2ssHXWKf9rXOy4efV-oj-59" edge="1" parent="1" style="endArrow=classic;startArrow=classic;html=1;rounded=0;strokeColor=default;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;edgeStyle=orthogonalEdgeStyle;comic=0;enumerate=0;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="2030" y="-820" as="sourcePoint" />
+            <mxPoint x="2080" y="-870" as="targetPoint" />
+          </mxGeometry>
         </mxCell>
       </root>
     </mxGraphModel>
