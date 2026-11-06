@@ -214,14 +214,14 @@ def chip(slide, x, y, w, h, s, fill=PANEL2, color=SLATE, size=10, bold=True, lin
 # 每页右上角的“承接”标注:说明这一页从上一页的哪个结论接过来
 BRIDGE = {
     2: "承接 P1 · 先给全景与路线",
-    3: "承接 P2 · 01 缘起:为什么需要并行",
+    3: "承接 P2 · 01 背景:为什么需要并行",
     4: "承接 P3 · 装不下 → 能不能按层拆?",
-    5: "承接 P4 · 已确定「按层切」,看它站哪一格",
-    6: "承接 P5 · 并行方式定了,先看数据怎么组织",
-    7: "承接 P6 · batch 有了,切层后计算变成串行",
-    8: "承接 P7 · 气泡从哪来 → 怎么填",
-    9: "承接 P8 · 机制清楚了,看 vLLM 怎么落地",
-    10: "承接 P9 · 二维卡位 → 三维怎么排",
+    5: "承接 P4 · 层能切了,先看一次 forward 处理什么",
+    6: "承接 P5 · batch 有了,切层后计算变成串行",
+    7: "承接 P6 · 气泡从哪来 → 怎么填",
+    8: "承接 P7 · 机制清楚了,看 vLLM 怎么落地",
+    9: "承接 P8 · 进程建好了,再看四种并行怎么分工",
+    10: "承接 P9 · 四种并行定了,看三种同时上怎么排卡",
     11: "承接 P10 · 卡位定了,层具体怎么切",
     12: "承接 P11 · 切开之后,段与段怎么接上",
     13: "承接 P12 · 传的是 hidden,采样怎么回传",
@@ -398,17 +398,16 @@ def s01():
 
 # ----------------------------------------------------------------- slide 2
 def s02():
-    s = new_slide(BLUE, "内容结构", "从并行动因到部署边界",
-                  "五个板块:缘起 → 直觉 → 机制 → 实现 → 部署;每个结论都能在仓库里找到出处。")
+    s = new_slide(BLUE, "内容结构", "四个板块:从背景到部署",
+                  "背景 → 机制 → 实现 → 部署;每条结论都能在仓库里找到出处。")
     items = [
-        ("01", "缘起", "2018 – 2019", "模型比显存长得快;DP 复制模型、TP 又把通信压在 NVLink 上 —— 跨机部署需要第三种解法。", BLUE, "P3 – P4"),
-        ("02", "直觉", "切层与接力", "把 N 层切成 p 段,一段一张卡;段与段之间只传 hidden states。和 DP/TP/EP 的本质差别。", TEAL, "P5"),
-        ("03", "机制", "气泡与填充", "变长 batch 怎么拼、micro-batch 怎么切;串行接力让卡空转,气泡怎么算、vLLM 用什么填满。", VIOLET, "P6 – P8"),
-        ("04", "实现", "vLLM GPU 路径", "命令如何变成进程;DP/TP/PP 怎么排卡;层怎么切、张量怎么传、采样怎么回传。", ORANGE, "P9 – P15"),
-        ("05", "部署", "选型与边界", "三条部署命令、官方选型建议、7 个硬限制,以及最常见的挂起原因和排查手法。", INK, "P16 – P17"),
+        ("01", "背景", "2018 – 2019", "模型比显存长得快;DP 复制模型、TP 又把通信压在 NVLink 上 —— 跨机部署需要第三种解法。", BLUE, "P3 – P4"),
+        ("02", "机制", "气泡与填充", "变长 batch 怎么拼;串行接力让卡空转,气泡有多大、vLLM 用什么填满。", TEAL, "P5 – P7"),
+        ("03", "实现", "vLLM GPU 路径", "四种并行的分工;命令如何变成进程;DP/TP/PP 怎么排卡;层怎么切、张量怎么传、采样怎么回传。", VIOLET, "P8 – P15"),
+        ("04", "部署", "选型与边界", "三条部署命令、官方选型建议、7 个硬限制,以及最常见的挂起原因和排查手法。", ORANGE, "P16 – P17"),
     ]
     x = ML
-    cw, gap = 2.30, 0.115
+    cw, gap = 2.92, 0.135
     for num, name, sub, desc, col, page in items:
         shape(s, x, 1.72, cw, 2.92, fill=WHITE, line=HAIR, lw=1.0, radius=0.05)
         shape(s, x, 1.72, cw, 0.055, fill=col, kind=MSO_SHAPE.RECTANGLE).line.fill.background()
@@ -430,13 +429,13 @@ def s02():
         txt(s, x + 0.16, 5.66, 3.55, 0.62, a, size=9.5, color=SLATE, line=1.18)
         x += 3.99
     footer(s, 2)
-    notes(s, "先给结构:五个板块。前两个板块不需要看代码;第三个板块会打开 vLLM 的 8 个文件;"
-             "第四部分是命令和排错。如果时间紧,可直接看 P9–P15 的实现部分。")
+    notes(s, "先给结构:四个板块。背景和机制不看代码;实现部分会打开 vLLM 的 8 个文件;"
+             "最后是命令和排错。如果时间紧,可直接看 P8–P15 的实现部分。")
 
 
 # ----------------------------------------------------------------- slide 3
 def s03():
-    s = new_slide(BLUE, "01 · 缘起  为什么会有 PP",
+    s = new_slide(BLUE, "01 · 背景  为什么需要 PP",
                   "问题不是「算得慢」,而是「根本装不下」",
                   "2018 年至今,参数量的增长远超单卡显存:一张 80GB 的 H100,连一半权重都放不下。")
     stats = [("2018", "GPT-1", "117M", "单卡轻松放下"),
@@ -478,12 +477,12 @@ def s03():
         y += 0.65
 
     strip = shape(s, ML, 5.72, CW, 0.94, fill=SOFT["amber"], line=AMBER, lw=1.0, radius=0.05)
-    txt(s, ML + 0.22, 5.84, 1.6, 0.26, "关键区别", size=10, color=AMBER, bold=True)
+    txt(s, ML + 0.22, 5.84, 1.6, 0.26, "区别在哪", size=10, color=AMBER, bold=True)
     rich(s, ML + 1.30, 5.82, CW - 1.55, 0.74, [
         {"runs": [("DP(数据并行)复制整个模型", {"size": 11, "color": INK, "bold": True}),
                   (" —— 每张卡仍要装下一整份权重。它解决的是「吞吐」,不解决「单个模型装不下」。",
                    {"size": 11, "color": SLATE})], "after": 2, "line": 1.15},
-        {"runs": [("要把一个模型摊开到更多卡上,只能沿「层」或「层内张量」切 —— 这就是 TP 与 PP 的起点。",
+        {"runs": [("要把一个模型拆分到更多卡上,只能沿「层」或「层内张量」切 —— 这就是 TP 与 PP 的起点。",
                    {"size": 10.5, "color": SLATE})], "line": 1.15},
     ])
     footer(s, 3, "换算:fp16 每参数 2 字节;KV = 2(K,V)× 8 heads × 128 dim × 2B × 80 层 ≈ 320KB / token")
@@ -493,9 +492,9 @@ def s03():
 
 # ----------------------------------------------------------------- slide 4
 def s04():
-    s = new_slide(BLUE, "01 · 缘起  2018–2019 的三个里程碑",
-                  "关键洞察:模型是「一摞层」,层与层之间只有一个中间张量",
-                  "从 Embedding 到 LM Head 是一串串行的层;相邻两层之间流动的,只有 hidden states(+ residual)。")
+    s = new_slide(BLUE, "01 · 背景  2018–2019 的三个里程碑",
+                  "模型是层层堆叠,层与层之间只流动 hidden states 与 residual",
+                  "从 Embedding 到 LM Head 是一串首尾相接的层;正因为层间只传中间结果,才能按层把模型切开。")
     # layer chain
     y = 1.92
     blocks = [("Embedding", "词表 × hidden", SOFT["blue"], BLUE),
@@ -514,12 +513,12 @@ def s04():
             arrow(s, x + 0.04, y + 0.47, x + 0.30, y + 0.47, color=MUTED, lw=1.2)
             x += 0.34
     txt(s, ML, y + 1.04, 8.3, 0.26,
-        "层与层之间只流动 hidden_states([tokens, hidden])与 residual —— 不是整个模型,也不是权重",
+        "跨界传的是中间结果 —— 不是整个模型,也不是权重",
         size=9.2, color=MUTED)
 
     # right: milestones
     ms = [("GPipe", "2018 / 2019", "把 mini-batch 切成 micro-batch,让多批在阶段间流水起来;给出气泡率公式。", BLUE),
-          ("PipeDream", "2019", "异步流水 + 1F1B 调度,进一步压缩气泡(训练场景,需要权重暂存)。", TEAL),
+          ("PipeDream", "2019", "异步流水,进一步压缩气泡;代价是要暂存多份权重。", TEAL),
           ("Megatron-LM", "2019", "把 TP(层内)与 PP(层间)组合成标准配方,至今仍是主流拓扑。", VIOLET)]
     y2 = 1.86
     for name, year, desc, col in ms:
@@ -534,13 +533,13 @@ def s04():
     txt(s, ML + 0.22, 3.42, 2.0, 0.26, "于是可以这样切", size=10, color=AMBER, bold=True)
     rich(s, ML + 0.22, 3.68, 7.95, 1.08, [
         {"runs": [("GPU 0 放 L0 – L19,GPU 1 放 L20 – L39,……", {"size": 12.5, "color": WHITE, "bold": True}),
-                  ("  每张卡只装一段层,显存压力被摊开。", {"size": 11, "color": RGBColor(0xC7, 0xD2, 0xE0)})],
+                  ("  每张卡只装一段层,显存压力被分摊。", {"size": 11, "color": RGBColor(0xC7, 0xD2, 0xE0)})],
          "after": 5, "line": 1.2},
         {"runs": [("代价:计算变成串行 —— 同一时刻只有一段在算,其余在等。这个「等」就是下一节的气泡。",
                    {"size": 10.2, "color": RGBColor(0xC7, 0xD2, 0xE0)})], "line": 1.2},
     ])
     txt(s, ML, 5.06, CW, 0.3,
-        "PP 的本质不是「算得更快」,而是把模型摊到更多卡上,并尽量不浪费算力。",
+        "PP 的本质不是「算得更快」,而是把模型拆到更多卡上,并尽量不浪费算力。",
         size=12, color=INK, bold=True)
     txt(s, ML, 5.42, CW, 0.9,
         "对比一下:TP 是「把一个矩阵切给多张卡同时算」,PP 是「把不同的层放到不同卡上按顺序算」。"
@@ -553,7 +552,7 @@ def s04():
 
 # ----------------------------------------------------------------- slide 5
 def s05():
-    s = new_slide(TEAL, "02 · 直觉  四种并行,PP 站在哪一格",
+    s = new_slide(VIOLET, "03 · 实现  四种并行,PP 站在哪一格",
                   "PP 切的是「层与层之间」,不是「层里面」",
                   "同一条层链,可以横着切(PP)、竖着切(TP);切法不同,通信量和适用场景也完全不同。")
     data = [
@@ -596,34 +595,47 @@ def s05():
         {"runs": [("行与行之间只传一次 hidden states", {"size": 7.6, "color": MUTED})], "line": 1.1},
     ])
 
+    # NVLink 名词解释:紧贴表格下方
+    shape(s, ML, 4.30, 8.10, 0.54, fill=SOFT["blue"], line=BLUE, lw=0.7, radius=0.03)
+    rich(s, ML + 0.10, 4.35, 7.94, 0.44, [
+        {"runs": [("NVLink", {"size": 8, "color": BLUE, "bold": True}),
+                  ("  NVIDIA 的 GPU 间专用互联,单卡双向带宽约 900GB/s(H100),是 PCIe 5.0 的数倍;"
+                   "通常只在同一台机器内,跨机走 IB / 以太网。",
+                   {"size": 7.4, "color": SLATE})], "after": 1, "line": 1.05},
+        {"runs": [("作为对照  ", {"size": 7.4, "color": TEAL, "bold": True}),
+                  ("华为昇腾用 HCCS 做机内互联(910B 约 400GB/s,约为 H100 NVLink 的一半),"
+                   "跨机走 RoCE/RDMA,集合通信库是 HCCL。",
+                   {"size": 7.4, "color": SLATE})], "line": 1.05},
+    ])
+
     # bottom: communication volume
-    shape(s, ML, 4.56, CW, 1.00, fill=SOFT["amber"], line=AMBER, lw=1.0, radius=0.05)
-    txt(s, ML + 0.22, 4.64, 3.0, 0.24, "量级对比(8K token 批,70B 模型)", size=9.5, color=AMBER, bold=True)
-    rich(s, ML + 0.22, 4.88, CW - 0.5, 0.62, [
-        {"runs": [("TP=8:每层 2 次 all-reduce,80 层合计 ≈ 21GB;PP=2:整个批只过 1 个边界 ≈ 0.13GB。",
+    shape(s, ML, 4.94, CW, 1.00, fill=SOFT["amber"], line=AMBER, lw=1.0, radius=0.05)
+    txt(s, ML + 0.22, 5.02, 3.0, 0.24, "量级对比(8K token 批,70B 模型)", size=9.5, color=AMBER, bold=True)
+    rich(s, ML + 0.22, 5.26, CW - 0.5, 0.62, [
+        {"runs": [("TP=8:每层 2 次 all-reduce,80 层合计 ≈ 21GB;PP=2:整个批只过 1 个边界 ≈ 0.27GB。",
                    {"size": 9.8, "color": SLATE})], "after": 2},
         {"runs": [("→ PP 的通信量只与「边界数」有关,与层内计算量无关 —— 这就是它能跑在普通网络上的原因。",
                    {"size": 9.8, "color": INK, "bold": True})]},
     ])
-    txt(s, ML, 5.72, CW, 0.9,
-        "所以选型的第一条直觉:节点内有多卡且 NVLink 可用 → TP 更省延迟;要跨节点、或者机器之间只有普通网络 "
+    txt(s, ML, 6.06, CW, 0.9,
+        "所以选型的第一条经验:节点内有多卡且 NVLink 可用 → TP 更省延迟;要跨节点、或者机器之间只有普通网络 "
         "→ 必须靠 PP(通常 TP × PP 组合)。反过来,没有 NVLink 的单机也常常 PP 优于 TP。",
         size=10.5, color=SLATE, line=1.3)
-    footer(s, 5, "估算口径:按每次集合通信搬运一遍数据计;每 token hidden 8192 × 2B = 16KB")
-    notes(s, "表格是结论,右边的图是直觉。重点强调通信量的差别:TP 每层同步,PP 只在边界传一次。"
+    footer(s, 9, "估算口径:按每次集合通信搬运一遍数据计;每 token 两个张量 (8192 + 8192) × 2B = 32KB")
+    notes(s, "表格是结论,右边的图是直观对比。重点强调通信量的差别:TP 每层同步,PP 只在边界传一次。"
              "所以没有 NVLink 的机器反而更适合 PP,这是 vLLM 官方文档的明确建议。")
 
 
 # ----------------------------------------------------------------- slide 6
 def s06():
-    s = new_slide(TEAL, "03 · 机制  batch 与 micro-batch",
+    s = new_slide(TEAL, "02 · 机制  batch 与 micro-batch",
                   "batch 是什么:从一条 prompt 到一次 forward",
                   "一次 forward 处理的是一个批,不是一条请求;batch 由本步所有请求要算的 token 拼成,长度每个 step 都变。")
     # ---- flow: prompt -> batch
     steps = [("① prompt", "用户输入的一句话\n(纯文本)", SLATE),
              ("② tokenize", "切成 token id\n[101, 872, …]", SLATE),
              ("③ 请求入队", "带采样参数进\nwaiting 队列", SLATE),
-             ("④ 调度攒批", "每步挑一批请求,\n定每条算多少 token", BLUE),
+             ("④ 调度组批", "每步挑一批请求,\n定每条算多少 token", BLUE),
              ("⑤ batch", "本步所有 token\n拼成扁平数组", TEAL)]
     x = ML
     for i, (t, d, col) in enumerate(steps):
@@ -681,30 +693,30 @@ def s06():
     ])
 
     # ---- micro-batch
-    txt(s, ML, 4.84, 10.2, 0.26, "micro-batch 的结构:两种语境,两种切法", size=10.5,
+    txt(s, ML, 4.84, 10.2, 0.26, "为什么要再切成 micro-batch:让通信和计算错开", size=10.5,
         color=INK, bold=True)
 
     c1x, c1y, c1w = ML, 5.12, 5.95
     shape(s, c1x, c1y, c1w, 1.46, fill=WHITE, line=HAIR, lw=0.9, radius=0.05)
-    txt(s, c1x + 0.14, c1y + 0.08, 5.5, 0.22, "① 训练 / GPipe:按样本切", size=9.2,
+    txt(s, c1x + 0.14, c1y + 0.08, 5.5, 0.22, "① 为什么要切:一段在算,另一段在传", size=9.2,
         color=BLUE, bold=True)
     for k in range(8):
         shape(s, c1x + 0.16 + k * 0.235, c1y + 0.38, 0.20, 0.20, fill=SOFT["blue"],
               line=BLUE, lw=0.7, radius=0.2)
-    txt(s, c1x + 0.16, c1y + 0.60, 1.9, 0.18, "batch = 8 条样本", size=6.8, color=MUTED)
+    txt(s, c1x + 0.16, c1y + 0.60, 1.9, 0.18, "一个批", size=6.8, color=MUTED)
     arrow(s, c1x + 2.12, c1y + 0.48, c1x + 2.40, c1y + 0.48, color=MUTED, lw=1.2)
     for r in range(2):
         for k in range(4):
             shape(s, c1x + 2.52 + k * 0.235, c1y + 0.32 + r * 0.26, 0.20, 0.20,
                   fill=SOFT["blue"], line=BLUE, lw=0.7, radius=0.2)
-        txt(s, c1x + 3.52, c1y + 0.36 + r * 0.26, 0.6, 0.18, f"m{r + 1}", size=6.8, color=BLUE)
+        txt(s, c1x + 3.52, c1y + 0.36 + r * 0.26, 0.6, 0.18, f"段{r + 1}", size=6.8, color=BLUE)
     txt(s, c1x + 0.14, c1y + 0.94, 5.65, 0.46,
-        "沿样本维切成 m 份,每份形状相同、样本更少;m 越大气泡越小,但单份变小、硬件效率下降。",
+        "切成两段后,一段算的时候另一段在传,通信被计算盖住;序列越长、跨机越受益。",
         size=7.4, color=SLATE, line=1.16)
 
     c2x, c2y, c2w = 6.76, 5.12, 5.95
     shape(s, c2x, c2y, c2w, 1.46, fill=WHITE, line=HAIR, lw=0.9, radius=0.05)
-    txt(s, c2x + 0.14, c2y + 0.08, 5.6, 0.22, "② vLLM 推理(DBO):按 token 切", size=9.2,
+    txt(s, c2x + 0.14, c2y + 0.08, 5.6, 0.22, "② 在 vLLM 里怎么切:DBO 的 ubatch", size=9.2,
         color=VIOLET, bold=True)
     for k in range(12):
         ci = 0 if k < 5 else (1 if k < 8 else 2)
@@ -714,56 +726,63 @@ def s06():
     txt(s, c2x + 0.16, c2y + 0.64, 2.0, 0.18, "ubatch 1 · t0–t5", size=6.8, color=VIOLET)
     txt(s, c2x + 2.40, c2y + 0.64, 2.3, 0.18, "ubatch 2 · t6–t11", size=6.8, color=VIOLET)
     txt(s, c2x + 0.14, c2y + 0.94, 5.65, 0.46,
-        "变长 batch 没有样本维,只能按 token 区间切;UBatchSlice = request_slice + token_slice,一条长请求可能被切开。",
+        "batch 是变长的,只能按 token 区间切:UBatchSlice = request_slice + token_slice,一条长请求可能被切开。",
         size=7.4, color=SLATE, line=1.16)
 
     txt(s, ML, 6.70, CW, 0.24,
-        "一句话:batch 是「一次 forward 的输入」;micro-batch 是「把它再切小」—— 训练切样本,推理切 token。",
+        "一句话:micro-batch 是「把一个 batch 再切小」—— 推理里按 token 区间切,切成 2 段去重叠通信。",
         size=8.8, color=INK, bold=True)
-    footer(s, 6, "vllm/v1/core/sched/output.py · v1/worker/gpu_input_batch.py · v1/worker/ubatch_utils.py")
+    footer(s, 5, "vllm/v1/core/sched/output.py · v1/worker/gpu_input_batch.py · v1/worker/ubatch_utils.py")
     notes(s, "这页解释数据是怎么组织的。prompt 先 tokenize 成 id,变成请求进入 waiting 队列;"
              "scheduler 每步挑一批请求,并把「这一步每条请求要算多少 token」记在 num_scheduled_tokens 里;"
              "这些 token 拼成一条扁平数组就是 batch,长度逐 step 变化,所以用 query_start_loc 记录每段起点。"
-             "micro-batch 有两种语境:训练里是沿样本维切,推理里(DBO)是按 token 区间切,可能切开同一条请求。")
+             "micro-batch 是推理里为了重叠通信而做的切分:按 token 区间切,可能切开同一条请求。")
 
 
 # ----------------------------------------------------------------- slide 7
 def s07():
-    s = new_slide(TEAL, "03 · 机制  气泡是怎么来的",
+    s = new_slide(TEAL, "02 · 机制  气泡是怎么来的",
                   "一张卡在算,三张卡在等:这就是「流水线气泡」",
-                  "把一个批切成 m 个 micro-batch 依次灌入,能填满大部分空转,但首尾总会漏掉一段。")
-    txt(s, ML, 1.76, 5.7, 0.26, "① 不切 micro-batch:每批独占 4 个阶段", size=10, color=INK, bold=True)
+                  "一个批要顺序流过所有阶段;同时在飞的批少于阶段数,就一定有卡在等。")
+    txt(s, ML, 1.76, 5.7, 0.26, "① 同时只有 1 个批:4 个阶段只有 1 个在算", size=10, color=INK, bold=True)
     cells = {}
-    for b in range(2):
-        for r in range(4):
-            cells[(r, b * 4 + r)] = ("compute", f"B{b + 1}")
-    timeline(s, ML, 2.04, 5.75, 4, 8, cells, row_h=0.36, label_w=0.92)
-    txt(s, ML, 3.98, 5.7, 0.26, "利用率 ≈ 1/4;每批的延迟 = 4 个阶段之和", size=9, color=RED)
+    for r in range(4):
+        cells[(r, r)] = ("compute", "B1")
+    timeline(s, ML, 2.04, 5.75, 4, 4, cells, row_h=0.36, label_w=0.92)
+    txt(s, ML, 3.98, 5.7, 0.26, "一个批同一时刻只占 1 个阶段,其余 3 张卡空转:利用率 ≈ 1/4", size=9, color=RED)
 
-    txt(s, 6.62, 1.76, 5.9, 0.26, "② 切 4 个 micro-batch:阶梯灌入,阶梯流出", size=10, color=INK, bold=True)
-    gp = {}
-    for c in range(7):
-        for r in range(4):
-            b = c - r
-            if 0 <= b <= 3:
-                gp[(r, c)] = ("compute", f"B{b + 1}")
-    timeline(s, 6.62, 2.04, 6.07, 4, 7, gp, row_h=0.36, label_w=0.92, cell_w=0.70)
-    txt(s, 6.62, 3.98, 5.9, 0.26, "稳态 4 张卡都在算;只有首尾的填充与排空阶段是空的(气泡)", size=9, color=GREEN)
+    # 右:气泡率随 n 变化(量化,不再画"多批在飞"——那是下一页的事)
+    txt(s, 6.62, 1.76, 5.9, 0.26, "② 同时在飞的批越多,气泡越少(p = 4)", size=10, color=INK, bold=True)
+    base_y = 3.54
+    ln = shape(s, 6.86, base_y, 5.86, 0.012, fill=HAIR, kind=MSO_SHAPE.RECTANGLE)
+    ln.line.fill.background()
+    bars = [("1 个批", 0.75, RED), ("2 个批", 0.60, AMBER),
+            ("4 个批", 0.43, AMBER), ("8 个批", 0.27, GREEN)]
+    bx = 7.10
+    for name, ratio, col in bars:
+        h = max(0.10, ratio * 1.52)
+        shape(s, bx, base_y - h, 0.56, h, fill=col, radius=0.04)
+        txt(s, bx - 0.14, base_y - h - 0.22, 0.84, 0.2, f"{int(ratio * 100)}%", size=8.6,
+            color=col, bold=True, align=PP_ALIGN.CENTER)
+        txt(s, bx - 0.14, base_y + 0.06, 0.84, 0.2, name, size=7.6, color=MUTED,
+            align=PP_ALIGN.CENTER)
+        bx += 1.45
+    txt(s, 6.62, 3.88, 5.95, 0.22, "n 少于阶段数,就一定有卡在等;n ≥ p 之后稳态才基本填满",
+        size=8.8, color=SLATE)
 
     # formula
     shape(s, ML, 4.38, 6.05, 1.28, fill=INK, radius=0.05)
     txt(s, ML + 0.22, 4.48, 1.8, 0.24, "气泡率", size=9.5, color=AMBER, bold=True)
-    txt(s, ML + 1.02, 4.44, 4.2, 0.44, "(p − 1) / (m + p − 1)", size=20, color=WHITE, bold=True,
+    txt(s, ML + 1.02, 4.44, 4.2, 0.44, "(p − 1) / (n + p − 1)", size=20, color=WHITE, bold=True,
         font=MONO)
-    txt(s, ML + 0.22, 4.94, 5.6, 0.6,
-        "p = 阶段数(pp_size),m = micro-batch 数。p 越大、m 越小,空转越严重。\n"
-        "p=4: m=4 → 43%,m=8 → 27%,m=32 → 8.6%。",
+    txt(s, ML + 0.22, 4.94, 5.6, 0.62,
+        "p = 阶段数(pp_size),n = 同时在飞的批数。n 越小、p 越大,空转越严重。\n"
+        "p=4:n=1 → 75%,n=4 → 43%,n=8 → 27%。",
         size=9, color=RGBColor(0xC7, 0xD2, 0xE0), line=1.25)
 
     # right cards
-    cards = [("训练怎么消泡", "1F1B(一前一后):每个阶段做完一个 micro-batch 的前向,立刻做另一个的反向。"
-                              "靠「反向」把前半段空转填上。", TEAL),
-             ("推理没有反向", "只有前向,1F1B 用不上。要填满流水线,只能让多个「不同请求的批」同时在飞。", VIOLET)]
+    cards = [("不是实现问题", "串行结构决定:一个批必须顺序走完所有阶段,走到哪段,别的段只能等。", TEAL),
+             ("什么时候最明显", "请求少、队列见底时;长的 prefill 占住一个阶段时也会出现。", VIOLET)]
     x = 6.92
     for t, d, col in cards:
         shape(s, x, 4.38, 2.84, 1.28, fill=WHITE, line=HAIR, lw=0.9, radius=0.05)
@@ -771,18 +790,19 @@ def s07():
         txt(s, x + 0.14, 4.72, 2.56, 0.86, d, size=8.2, color=SLATE, line=1.18)
         x += 2.94
     txt(s, ML, 5.86, CW, 0.62,
-        "下一页就是 vLLM 的答案:EngineCore 同时挂 pp_size 个批,每个阶段各算各的 —— 稳态下没有空转。",
+        "所以思路很直接:让队列里始终有 pp_size 个批 —— 下一页就是 vLLM 的做法。",
         size=10.5, color=INK, bold=True, line=1.25)
-    footer(s, 7, "气泡率公式:GPipe(Huang et al., 2019);p 为流水线深度,m 为 micro-batch 数")
-    notes(s, "气泡要讲透:不是 PP 实现得不好,而是串行本性的必然。左边极限情况 1/4 利用率,"
-             "右边 micro-batch 后改善但首尾仍有缺口。公式给出来,方便后面评估 pp 该开多大。")
+    footer(s, 6, "气泡率:灌满 n 个批共 n + p − 1 步,其中 p − 1 步有空阶段")
+    notes(s, "只讲推理视角:一个批进来要顺序走过所有阶段,同一时刻只能占一个阶段;"
+             "同时在飞的批少于阶段数,就一定有卡在等。右上四根柱给出量级:1 个批空 75%,"
+             "4 个批降到 43%,8 个批 27%。结论直接指向下一页:让队列里始终有 pp_size 个批。")
 
 
 # ----------------------------------------------------------------- slide 8
 def s08():
-    s = new_slide(TEAL, "03 · 机制  vLLM 的消泡办法",
+    s = new_slide(TEAL, "02 · 机制  vLLM 的消泡办法",
                   "让多个「批」同时在飞:每个阶段每时每刻都有活干",
-                  "推理不需要等反向传播,只要队列里始终有 pp_size 个批,就能把流水线填满。")
+                  "vLLM 没有去切批,而是把「队列里始终挂着 pp_size 个批」做进了调度器。")
     cells = {}
     for c in range(12):
         for r in range(4):
@@ -801,24 +821,28 @@ def s08():
         txt(s, ML + 0.16, y + 0.34, 3.72, 0.36, v, size=8, color=SLATE, line=1.12)
         y += 0.80
 
-    # train vs infer
-    data = [["", "训练里的 PP", "vLLM 推理的 PP"],
-            ["切的是什么", "同一批的 micro-batch", "不同请求组成的批"],
-            ["怎么填满", "1F1B(前向 + 反向交错)", "batch queue 里挂 pp_size 个批"],
-            ["空转在哪", "首尾的填充/排空", "队列没满时(请求太少)"]]
-    table(s, 4.86, 4.42, 7.84, data, [1.42, 3.10, 3.32], row_h=0.42, header_h=0.34,
-          size=8.8, header_size=8.8)
+    # 为什么恰好是 pp_size
+    shape(s, 4.86, 4.86, 7.84, 1.30, fill=SOFT["teal"], line=TEAL, lw=0.9, radius=0.05)
+    txt(s, 5.02, 4.94, 7.5, 0.24, "为什么队列深度恰好是 pp_size", size=9.4, color=TEAL, bold=True)
+    rich(s, 5.02, 5.20, 7.52, 0.90, [
+        {"runs": [("每个阶段同一时刻只能算一个批,要 p 个批才能让 p 个阶段都有活",
+                   {"size": 8.2, "color": SLATE})], "bullet": ("▪", TEAL), "after": 2, "line": 1.15},
+        {"runs": [("再多的批不会更快:阶段数就那么多,只会多占 KV Cache",
+                   {"size": 8.2, "color": SLATE})], "bullet": ("▪", TEAL), "after": 2, "line": 1.15},
+        {"runs": [("队列见底时(请求太少)照样会空 —— 这才是气泡真正出现的地方",
+                   {"size": 8.2, "color": SLATE})], "bullet": ("▪", TEAL), "line": 1.15},
+    ])
     txt(s, 4.86, 6.28, 7.84, 0.52,
-        "代价:流水线上同时有 pp_size 个批在飞,同时驻留的 KV Cache 随并发上升;单请求延迟也变高(要过 pp_size 跳)。",
+        "代价:同时驻留的 KV Cache 随并发上升;单请求延迟也变高(要过 pp_size 跳)。",
         size=9, color=RED, line=1.15)
-    footer(s, 8, "vllm/v1/executor/multiproc_executor.py:474 · vllm/v1/engine/core.py:184, 466")
-    notes(s, "这页是 vLLM 相对训练框架最大的不同:它复用 continuous batching,把『批』当成流水线的填充物。"
+    footer(s, 7, "vllm/v1/executor/multiproc_executor.py:474 · vllm/v1/engine/core.py:184, 466")
+    notes(s, "这页是 vLLM 的消泡办法:复用 continuous batching,把『批』本身当成流水线的填充物。"
              "要强调队列深度恰好等于 pp_size 的原因:每个阶段各占一个批。")
 
 
 # ----------------------------------------------------------------- slide 9
 def s09():
-    s = new_slide(VIOLET, "04 · 实现  一条命令如何变成 N 个进程",
+    s = new_slide(VIOLET, "03 · 实现  一条命令如何变成 N 个进程",
                   "从 --pipeline-parallel-size 到每张卡上的一个 Worker",
                   "vLLM 里 PP 不是模型代码里的 if,而是一条贯穿「配置 → 执行器 → Worker → 模型」的链路。")
     steps = [("命令行", "--pipeline-parallel-size 2\n(简写 -pp 2)", "engine/arg_utils.py", BLUE, 2.10),
@@ -882,14 +906,14 @@ def s09():
         y += 0.80
     code_card(s, 7.10, 6.06, 5.60, 0.88, None,
               ["# config/parallel.py", "world_size = pp * tp * pcp   # 每个 DP 副本"], size=8.0)
-    footer(s, 9, "vllm/config/parallel.py:760 · vllm/distributed/parallel_state.py:initialize_model_parallel")
+    footer(s, 8, "vllm/config/parallel.py:760 · vllm/distributed/parallel_state.py:initialize_model_parallel")
     notes(s, "把链路串起来:命令行只是一个整数,真正的语义在 ParallelConfig 和 executor。"
              "rank 布局要讲清:PP 组不是相邻卡,而是跨 tp 的同一列。")
 
 
 # ----------------------------------------------------------------- slide 10
 def s10():
-    s = new_slide(VIOLET, "04 · 实现  DP / TP / PP 同时启用时的卡位",
+    s = new_slide(VIOLET, "03 · 实现  DP / TP / PP 同时启用时的卡位",
                   "三种并行同时上:每张卡同时属于 DP、PP、TP 三个组",
                   "例:DP=2、PP=4、TP=2,共 16 卡(2 台 8 卡机)。副本之间复制模型,副本内先切层、再切张量。")
     panels = [(0.80, 0, "副本 0 · 8 卡"), (4.60, 1, "副本 1 · 8 卡")]
@@ -963,7 +987,7 @@ def s10():
 
 # ----------------------------------------------------------------- slide 11
 def s11():
-    s = new_slide(VIOLET, "04 · 实现  难题① 层怎么切",
+    s = new_slide(VIOLET, "03 · 实现  难题① 层怎么切",
                   "均分 + 余数往前补 + 末段少一层",
                   "32 层、PP=3 时 vLLM 切成 [11, 11, 10]:余数不给末段,因为末段还要放 norm 和 lm_head。")
     # layer bar
@@ -1032,7 +1056,7 @@ def s11():
 
 # ----------------------------------------------------------------- slide 12
 def s12():
-    s = new_slide(VIOLET, "04 · 实现  难题② 段间怎么传数据",
+    s = new_slide(VIOLET, "03 · 实现  难题② 段间怎么传数据",
                   "只传两个张量,而且发送之后不等",
                   "每个 stage 算完自己那段,把 hidden_states 和 residual 交给下一段;元数据走 CPU,张量走 NCCL。")
     # protocol diagram
@@ -1066,7 +1090,7 @@ def s12():
     txt(s, 4.30, 4.70, 1.40, 0.22, "下一轮开头才 wait()", size=7.2, color=MUTED, align=PP_ALIGN.RIGHT)
 
     # right: three points
-    pts = [("传什么", "{hidden_states, residual} 两个张量;不同模型键可能更多,但都是「边界处的中间结果」", BLUE),
+    pts = [("传什么", "{hidden_states, residual} 两个张量:hidden_states 是本段最后一层算出的增量,residual 是残差主干,下一段要算 norm(hidden + residual),所以两个都得带", BLUE),
            ("怎么省", "TP>1 时每个 rank 只发 1/tp 切片,接收方在自己的 TP 组内 all-gather 还原", TEAL),
            ("怎么懒", "AsyncIntermediateTensors:模型第一层真正用到它时才同步,不阻塞 host", VIOLET)]
     y = 1.84
@@ -1091,7 +1115,7 @@ def s12():
 
 # ----------------------------------------------------------------- slide 13
 def s13():
-    s = new_slide(VIOLET, "04 · 实现  难题③ 采样结果怎么回到第一段",
+    s = new_slide(VIOLET, "03 · 实现  难题③ 采样结果怎么回到第一段",
                   "只有末段能采样,但每一段都要知道新 token",
                   "首段要拼下一次的输入,每段都要更新自己那几层的 KV —— 于是必须把采样结果广播回去。")
     # fan-out diagram (broadcast bus)
@@ -1156,7 +1180,7 @@ def s13():
 
 # ----------------------------------------------------------------- slide 14
 def s14():
-    s = new_slide(VIOLET, "04 · 实现  一次 forward 的四步",
+    s = new_slide(VIOLET, "03 · 实现  一次 forward 的四步",
                   "所有 stage 跑同一份代码,靠 is_first / is_last 分叉",
                   "worker.execute_model 每步就四件事:等上一轮发送、收、算、发。首段少收,末段少发。")
     steps = [("①", "等上一轮发送", "上一轮的发送还没落账,先把 handle(异步句柄)等完:保证 NCCL 顺序、不覆写待发缓冲。", BLUE),
@@ -1210,9 +1234,9 @@ def s14():
 
 # ----------------------------------------------------------------- slide 15
 def s15():
-    s = new_slide(ORANGE, "04 · 实现  这笔账怎么算",
+    s = new_slide(ORANGE, "03 · 实现  这笔账怎么算",
                   "PP 省的是显存,不是算力",
-                  "权重和 KV Cache 都按层摊到各段;但总计算量不变,单请求还要多走 pp_size 跳。")
+                  "权重和 KV Cache 都按层分摊到各段;但总计算量不变,单请求还要多走 pp_size 跳。")
     data = [["显存项", "单卡部署", "PP=4 每卡", "说明"],
             ["模型权重", "100%", "≈ 25%", "只加载自己那段层;其余是 PPMissingLayer"],
             ["KV Cache", "全部层", "≈ 25%", "只为自己的注意力层分配 block"],
@@ -1223,7 +1247,7 @@ def s15():
 
     nums = [("140 GB", "70B 模型 fp16 权重", "一张 80GB 卡装不下 → 必须切", RED),
             ("320 KB", "70B 每 token 的 KV(全模型)", "PP=4 后每卡 ≈ 80KB/token", BLUE),
-            ("128 MB", "8K token 批过一次边界的 hidden", "对比 TP 每层 all-reduce 的 GB 级", GREEN)]
+            ("270 MB", "8K token 批过一次边界:hidden + residual", "对比 TP 每层 all-reduce 的 GB 级", GREEN)]
     y = 1.80
     for big, cap, sub, col in nums:
         shape(s, 8.72, y, 3.98, 0.94, fill=PANEL, radius=0.05).line.color.rgb = PANEL
@@ -1251,7 +1275,7 @@ def s15():
 
 # ----------------------------------------------------------------- slide 16
 def s16():
-    s = new_slide(ORANGE, "05 · 实战  怎么开、怎么选",
+    s = new_slide(ORANGE, "04 · 实战  怎么开、怎么选",
                   "三条命令覆盖 90% 的场景",
                   "单机用 mp(多进程),跨机用 ray 或 mp 多节点;选型只记一句话:节点内 TP,节点间 PP。")
     code_card(s, ML, 1.76, 7.62, 1.10, "① 单机 8 卡:TP=4 × PP=2,都在机器内", [
@@ -1302,12 +1326,12 @@ def s16():
           header_size=7.1)
     footer(s, 16, "docs/serving/parallelism_scaling.md · vllm/engine/arg_utils.py")
     notes(s, "三条命令按场景背下来。右边是官方文档的四条选型建议,最后一条(L40S 无 NVLink)很重要,"
-             "很多人的直觉是反的 —— 没 NVLink 时 TP 反而慢。")
+             "很多人的印象是反的 —— 没 NVLink 时 TP 反而慢。")
 
 
 # ----------------------------------------------------------------- slide 17
 def s17():
-    s = new_slide(ORANGE, "05 · 实战  踩坑清单",
+    s = new_slide(ORANGE, "04 · 实战  踩坑清单",
                   "7 个硬限制 + 3 步排错",
                   "PP 不是开个开关就完事:模型要支持、特性要兼容、每段的批必须完全一致,否则直接挂住。")
     left = [("模型必须实现 SupportsPP", "启动即校验 registry.is_pp_supported_model();冷门模型直接 NotImplementedError"),
@@ -1364,7 +1388,7 @@ def s18():
                   "如果只记三个数字:pp_size、max_concurrent_batches = pp_size、(p−1)/(m+p−1)。")
     cards = [("切", "按层切段", "get_pp_indices 均分,余数往前补,末段少一层", BLUE, "P11"),
              ("传", "边界传 hidden", "只传 {hidden_states, residual};元数据走 gloo、张量走 NCCL", TEAL, "P12"),
-             ("填", "多批填满", "batch_queue 挂 pp_size 个批,每段都有活干", VIOLET, "P8")]
+             ("填", "多批填满", "batch_queue 挂 pp_size 个批,每段都有活干", VIOLET, "P7")]
     x = ML
     for ch, title, desc, col, ref in cards:
         shape(s, x, 1.68, 3.93, 0.94, fill=WHITE, line=HAIR, lw=0.9, radius=0.05)
@@ -1377,10 +1401,10 @@ def s18():
     data = [["源码位置", "管什么(按一次 PP 前向的顺序读)", "对应页"],
             ["config/parallel.py",
              "定义 pipeline_parallel_size,并由它算出 world_size = pp × tp × pcp;同时校验哪些特性与 PP 互斥(如 Elastic EP、torch_shm)。",
-             "P9"],
+             "P8"],
             ["distributed/parallel_state.py",
              "按 ExternalDP × DP × PP × PCP × TP 建进程组;提供 get_pp_group() 与 send/recv_tensor_dict 点对点收发。",
-             "P9 – P10"],
+             "P8, P10"],
             ["distributed/utils.py",
              "get_pp_indices():把总层数按 pp_size 均分,余数从倒数第二段往前补,定出每段的 [start, end)。",
              "P11"],
@@ -1395,15 +1419,15 @@ def s18():
              "P13"],
             ["v1/engine/core.py",
              "EngineCore 用 batch_queue 挂住 pp_size 个批:先填队列、不阻塞,队列满了才回收最老的结果。",
-             "P8"],
+             "P7"],
             ["v1/executor/multiproc_executor.py",
              "max_concurrent_batches = pp_size(队列深度);并确定只从末段 TP0 回收 ModelRunnerOutput。",
-             "P8 – P9"]]
+             "P7 – P8"]]
     table(s, ML, 2.76, CW, data, [3.05, 7.00, 2.04], row_h=0.42, header_h=0.34, size=8.2,
           header_size=8.4)
 
     txt(s, ML, 6.54, CW, 0.24,
-        "读法:先看 P11 的切层,再看 P12–P14 的收发与采样,最后看 P8 的队列 —— 这几段代码连起来,就是一次完整的 PP 前向。",
+        "读法:先看 P11 的切层,再看 P12–P14 的收发与采样,最后看 P7 的队列 —— 这几段代码连起来,就是一次完整的 PP 前向。",
         size=8.6, color=MUTED)
     footer(s, 18, "配图与脚本:assets/vllm-novidia/build_pp_intro_deck.py · 延伸阅读:vllm-main-PP流水线并行详解.pptx")
     notes(s, "收尾:三件事 + 源码索引。每条都写清了这个文件到底做什么、对应前面哪一页,"
@@ -1432,7 +1456,7 @@ def s19():
             ["论文", "GPipe(2019)—— micro-batch 流水线与气泡率公式的出处",
              [("https://arxiv.org/abs/1811.06965", {"link": "https://arxiv.org/abs/1811.06965",
                                                    "font": MONO, "size": 7.3, "color": VIOLET})]],
-            ["论文", "PipeDream(SOSP 2019)—— 1F1B 调度与异步流水",
+            ["论文", "PipeDream(SOSP 2019)—— 异步流水调度",
              [("https://arxiv.org/abs/1806.03377", {"link": "https://arxiv.org/abs/1806.03377",
                                                    "font": MONO, "size": 7.3, "color": VIOLET})]],
             ["论文", "Megatron-LM(2019)—— TP 与 PP 的组合配方",
@@ -1473,8 +1497,11 @@ def s20():
 
 # ----------------------------------------------------------------- build
 def main():
-    s01(); s02(); s03(); s04(); s05(); s06(); s07(); s08(); s09(); s10()
-    s11(); s12(); s13(); s14(); s15(); s16(); s17(); s18(); s19(); s20()
+    s01(); s02(); s03(); s04()
+    s06(); s07(); s08()          # 机制:batch → 气泡 → 多批在飞
+    s09(); s05()                 # 实现:命令→进程 → 四种并行
+    s10(); s11(); s12(); s13(); s14(); s15()
+    s16(); s17(); s18(); s19(); s20()
     out = "assets/vllm-novidia/vllm-PP流水线并行-原理与部署.pptx"
     prs.save(out)
     print("saved:", out, "slides:", len(prs.slides))
