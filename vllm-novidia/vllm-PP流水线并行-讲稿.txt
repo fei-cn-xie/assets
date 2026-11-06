@@ -281,7 +281,12 @@ P17 · 实战 | 7 个硬限制 + 3 步排错
 
 七个硬限制。
 
-模型必须实现 SupportsPP;EAGLE3 和 PP 不兼容;
+模型必须实现 SupportsPP;
+
+EAGLE3 和 PP 不兼容,这条多说两句:EAGLE3 的草稿模型要用目标模型中间层的 hidden states
+当输入,可 PP 把这些层分到了别的卡上,段间又只传 hidden 和 residual —— 中间结果根本过不来。
+所以这个组合直接不支持,V2 runner 会报错。
+
 Elastic EP 和 PP 不兼容;--enable-return-routed-experts 没验证;
 torch_shm 和 PP 互斥;pp_size 不能大于层数;
 同一 DP 组必须同时 generate,否则死锁。

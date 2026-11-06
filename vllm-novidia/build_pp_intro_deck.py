@@ -1335,7 +1335,8 @@ def s17():
                   "7 个硬限制 + 3 步排错",
                   "PP 不是开个开关就完事:模型要支持、特性要兼容、每段的批必须完全一致,否则直接挂住。")
     left = [("模型必须实现 SupportsPP", "启动即校验 registry.is_pp_supported_model();冷门模型直接 NotImplementedError"),
-            ("EAGLE3 投机采样 × PP", "EAGLE3 需要目标模型多个中间层的 aux hidden states,PP 把层切开了 → 启动报错"),
+            ("EAGLE3 投机采样 × PP", "EAGLE3 要吃目标模型中间层的结果当草稿输入;PP 把这些层分到了别的卡,\n"
+                                     "段间只传 hidden+residual,拿不到 → 不支持(V2 runner 直接报错)"),
             ("Elastic EP × PP", "ParallelConfig 初始化直接报错;普通 EP + PP 不受影响"),
             ("--enable-return-routed-experts", "源码明确标注「PP > 1 未验证」,会拒绝启动"),
             ("多模态 torch_shm IPC", "mm_tensor_ipc='torch_shm' 与 pp>1 互斥"),
@@ -1376,8 +1377,11 @@ def s17():
         {"runs": [("跨机链路是否走了 IB?没有 IB 的 PP 也可能变成瓶颈。", {"size": 8.4, "color": SLATE})],
          "bullet": ("▪", AMBER), "line": 1.1},
     ])
-    footer(s, 17, "vllm/config/model.py:1153 · vllm/config/parallel.py:775 · model_runner.py:180 · vllm/config/vllm.py:1952")
-    notes(s, "坑分三类:能力(不支持)、一致性(死锁)、性能(填不满)。排错三步按日志→批→通信的顺序。"
+    footer(s, 17, "vllm/config/model.py:1153 · vllm/config/parallel.py:775 · v1/worker/gpu/model_runner.py:181 · vllm/config/vllm.py:1952")
+    notes(s, "坑分三类:能力(不支持)、一致性(死锁)、性能(填不满)。EAGLE3 这条多讲一句:草稿模型只建在最后一个 PP rank"
+             "(gpu_model_runner.py 里 if speculative_config and get_pp_group().is_last_rank),它却要用前面几段算出的中间层结果当输入;"
+             "而段间只传 hidden+residual,这些中间结果根本过不来,所以这个组合不支持,V2 runner 会直接 raise。"
+             "排错三步按日志→批→通信的顺序。"
              "特别提醒 DP 组必须同步 generate 这条,生产上很容易踩。")
 
 
