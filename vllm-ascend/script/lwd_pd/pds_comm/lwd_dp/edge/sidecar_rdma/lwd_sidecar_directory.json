@@ -1,0 +1,54 @@
+{
+    "version": 1,
+    "backend": "rdma",
+    "edges": [
+      0
+    ],
+    "owners": [
+      {
+        "cloud_id": 0,
+        "instance_id": "cloud-p",
+        "dp_rank": 0,
+        "engine_index": 0,
+        "tp_size": 2
+      },
+      {
+        "cloud_id": 1,
+        "instance_id": "cloud-d",
+        "dp_rank": 0,
+        "engine_index": 0,
+        "tp_size": 2
+      }
+    ],
+    "instances": [
+      {
+        "instance_id": "cloud-p",
+        "stage_role": "prefill",
+        "local_endpoint": "ipc:///tmp/lwd-rdma-p-zy/ipc.sock",
+        "control_endpoint": "tcp://76.76.26.189:19180",
+        "data_endpoint": "tcp://76.76.26.189:19181",
+        "pool_directory": "/dev/shm",
+        "ucx_port_base": 19600
+      },
+      {
+        "instance_id": "cloud-d",
+        "stage_role": "decode",
+        "local_endpoint": "ipc:///tmp/lwd-rdma-d-zy/ipc.sock",
+        "control_endpoint": "tcp://76.76.26.189:19182",
+        "data_endpoint": "tcp://76.76.26.189:19183",
+        "pool_directory": "/dev/shm",
+        "ucx_port_base": 19700
+      }
+    ],
+    "limits": {
+      "slot_bytes": 33554432,
+      "rx_slots": 8,
+      "tx_slots": 8,
+      "private_slots": 2,
+      "pending_per_channel": 8,
+      "control_queue": 128,
+      "operation_timeout_s": 120,
+      "connect_timeout_s": 600
+    }
+  }
+  
