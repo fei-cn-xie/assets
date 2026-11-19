@@ -1,0 +1,11 @@
+- symbol: vllm_ascend.worker.model_runner_v1:NPUModelRunner.execute_model
+  name: NPUModelRunner.execute_model
+  handler: ms_service_profiler.patcher.vllm.handlers.v1.model_handlers:execute_model_runner
+  domain: NPUModelRunner
+
+
+- symbol: vllm.v1.sample.sampler:Sampler.forward
+  min_version: "0.9.1"
+  handler: ms_service_profiler.patcher.vllm.handlers.v1.model_handlers:sampler_forward
+  name: sample
+  domain: Sampler
