@@ -108,20 +108,23 @@ out=$(LOGDIR="$D" bash "$PKG/check.sh" prefill 2>&1); rc=$?
 [ "$rc" = "1" ] && ok "exit=1" || bad "exit=$rc"
 echo "$out" | grep -q "not divisible by kernel_size" && ok "识别新的失败签名" || bad "未识别：$out"
 
-echo "== 7) prefill.sh: 代码未含修复 -> 立刻报错退出，不启动 vllm =="
+echo "== 7) prefill.sh: 代码未含任何修复 -> 立刻报错退出，不启动 vllm =="
 FAKE="$WORK/fake-code"
 mkdir -p "$FAKE/vllm-ascend/vllm_ascend/distributed/kv_transfer/kv_p2p" "$FAKE/vllm"
 printf 'if has_mamba_group:\n    pass\n' > "$FAKE/vllm-ascend/vllm_ascend/distributed/kv_transfer/kv_p2p/mooncake_connector.py"
 out=$(CODEBASE_DIR="$FAKE" LOGDIR="$WORK/pre-out" bash "$PKG/prefill.sh" 2>&1); rc=$?
 [ "$rc" = "1" ] && ok "exit=1" || bad "exit=$rc"
-echo "$out" | grep -q "不含 hybrid KV 注册修复" && ok "预检文案正确" || bad "缺预检：$out"
+echo "$out" | grep -q "缺少: 修复1-KV注册基址 修复2-按组block-size" && ok "报告两项都缺" || bad "缺预检：$out"
+echo "$out" | grep -q "reset --hard origin/fix/pd-sep-hybrid-kv-register" && ok "给出强制对齐命令" || bad "缺修复指引：$out"
 echo "$out" | grep -q "vllm.entrypoints.cli.main serve" && bad "不应启动 vllm" || ok "未启动 vllm"
 
-echo "== 8) prefill.sh: 只有注册修复、缺 per-group 修复 -> 立刻报错退出 =="
+echo "== 8) prefill.sh: 只有修复1、缺修复2 -> 只报缺少修复2 =="
 printf 'if has_mamba_group or self.use_hybrid:\n    pass\n' > "$FAKE/vllm-ascend/vllm_ascend/distributed/kv_transfer/kv_p2p/mooncake_connector.py"
 out=$(CODEBASE_DIR="$FAKE" LOGDIR="$WORK/pre-out" bash "$PKG/prefill.sh" 2>&1); rc=$?
 [ "$rc" = "1" ] && ok "exit=1" || bad "exit=$rc"
-echo "$out" | grep -q "不含 DSV4 per-group block size 修复" && ok "第二项预检文案正确" || bad "缺第二项预检：$out"
+echo "$out" | grep -q "缺少: 修复2-按组block-size" && ok "精确指出缺少修复2" || bad "缺第二项预检：$out"
+echo "$out" | grep -q "修复1-KV注册基址" && bad "不应误报修复1缺失" || ok "未误报修复1"
+echo "$out" | grep -q "当前分支:" && ok "打印当前分支与提交" || bad "缺分支信息：$out"
 echo "$out" | grep -q "vllm.entrypoints.cli.main serve" && bad "不应启动 vllm" || ok "未启动 vllm"
 
 echo

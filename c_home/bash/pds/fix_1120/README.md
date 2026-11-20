@@ -18,21 +18,21 @@ fix_1120/
 ├── proxy.sh              # 187 Proxy，端口 8108
 ├── check.sh              # 启动日志与 /health 自检
 ├── smoke.sh              # 通过 proxy 发真实请求并校验响应
-├── selftest_offline.sh   # 脚本逻辑离线自测，不占 NPU
-├── 0001-kv-registration-aligned-base.patch   # 修复 1：注册基址
-├── 0002-kv-per-group-remote-block-sizes.patch # 修复 2：按组 block size
-└── 0003-kv-block-geometry-hardening.patch     # 修复 3：取值加固 + CP 路径提示
+└── selftest_offline.sh   # 脚本逻辑离线自测，不占 NPU
 ```
 
-启动脚本中的 vLLM 参数与原验证脚本保持一致。新增预检会在代码缺少任一修复时立即退出，避免浪费模型加载时间。
+启动脚本中的 vLLM 参数与原验证脚本保持一致。新增预检会在代码缺少任一修复时立即退出，并打印当前分支/提交和修复命令，避免浪费模型加载时间。
 
 ## 1. 更新代码（188、187 都执行）
+
+修复分支历史被重写过，**不要用 `git pull --ff-only`**，直接对齐远端：
 
 ```bash
 cd /vllm-workspace/vllm-ascend
 git fetch origin fix/pd-sep-hybrid-kv-register
 git checkout fix/pd-sep-hybrid-kv-register
-git pull --ff-only origin fix/pd-sep-hybrid-kv-register
+git reset --hard origin/fix/pd-sep-hybrid-kv-register
+git log -1 --oneline            # 期望 92127dd08c
 
 grep -n "has_mamba_group or self.use_hybrid" \
   vllm_ascend/distributed/kv_transfer/kv_p2p/mooncake_connector.py
@@ -40,7 +40,7 @@ grep -n "remote_block_sizes=\[group.kv_cache_spec.block_size" \
   vllm_ascend/distributed/kv_transfer/kv_p2p/mooncake_connector.py
 ```
 
-两条 grep 都必须有输出。若使用 patch，则在父代码上**按序号依次**应用本目录的 `0001-*.patch`、`0002-*.patch`、`0003-*.patch`（已用 `git am` 在干净父提交上验证：应用后工作树与分支 tip `92127dd08c` 完全一致）。
+两条 grep 都必须有输出。启动脚本会做同样的检查，缺哪项会直接告诉你。
 
 同时更新 assets 仓，并进入本目录：
 

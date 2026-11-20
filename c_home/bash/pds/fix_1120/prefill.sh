@@ -40,19 +40,33 @@ export VLLM_ENGINE_READY_TIMEOUT_S=1800
 export LD_LIBRARY_PATH=/usr/local/Ascend/ascend-toolkit/latest/python/site-packages/mooncake:${LD_LIBRARY_PATH:-}
 
 # ---- 代码版本预检 -----------------------------------------------------------
-CONNECTOR=$CODEBASE_DIR/vllm-ascend/vllm_ascend/distributed/kv_transfer/kv_p2p/mooncake_connector.py
+REPO=$CODEBASE_DIR/vllm-ascend
+CONNECTOR=$REPO/vllm_ascend/distributed/kv_transfer/kv_p2p/mooncake_connector.py
+FIX_BRANCH=fix/pd-sep-hybrid-kv-register
+
 if [ ! -f "$CONNECTOR" ]; then
-  echo "[fatal] 找不到 $CONNECTOR" >&2
+  echo "[fatal] 找不到 $CONNECTOR（检查 CODEBASE_DIR=$CODEBASE_DIR）" >&2
   exit 1
 fi
-if ! grep -q "has_mamba_group or self.use_hybrid" "$CONNECTOR"; then
-  echo "[fatal] 当前 vllm-ascend 不含 hybrid KV 注册修复。" >&2
-  echo "        请在两台机上 git checkout fix/pd-sep-hybrid-kv-register 后重试。" >&2
-  exit 1
-fi
-if ! grep -Fq "remote_block_sizes=[group.kv_cache_spec.block_size for group in self.kv_cache_groups]" "$CONNECTOR"; then
-  echo "[fatal] 当前 vllm-ascend 不含 DSV4 per-group block size 修复。" >&2
-  echo "        请在两台机上 git checkout fix/pd-sep-hybrid-kv-register 后重试。" >&2
+
+CUR_BRANCH=$(git -C "$REPO" rev-parse --abbrev-ref HEAD 2>/dev/null || echo '?')
+CUR_SHA=$(git -C "$REPO" rev-parse --short HEAD 2>/dev/null || echo '?')
+MISSING=""
+grep -q "has_mamba_group or self.use_hybrid" "$CONNECTOR" || MISSING="$MISSING 修复1-KV注册基址"
+grep -Fq "remote_block_sizes=[group.kv_cache_spec.block_size for group in self.kv_cache_groups]" "$CONNECTOR" \
+  || MISSING="$MISSING 修复2-按组block-size"
+
+if [ -n "$MISSING" ]; then
+  {
+    echo "[fatal] 当前 vllm-ascend 缺少:$MISSING"
+    echo "        当前分支: $CUR_BRANCH ($CUR_SHA)"
+    echo "        需要分支: $FIX_BRANCH (HEAD 92127dd08c)"
+    echo "        该分支历史被重写过，git pull --ff-only 会失败，请强制对齐远端后重试:"
+    echo "          cd $REPO"
+    echo "          git fetch origin $FIX_BRANCH"
+    echo "          git checkout $FIX_BRANCH"
+    echo "          git reset --hard origin/$FIX_BRANCH"
+  } >&2
   exit 1
 fi
 
