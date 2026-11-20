@@ -12,15 +12,16 @@
 ## 目录
 
 ```
-fix_kvreg_1120/
+fix_1120/
 ├── prefill.sh            # 188 Prefill，端口 9730
 ├── decode.sh             # 187 Decode，端口 9740
 ├── proxy.sh              # 187 Proxy，端口 8108
 ├── check.sh              # 启动日志与 /health 自检
 ├── smoke.sh              # 通过 proxy 发真实请求并校验响应
 ├── selftest_offline.sh   # 脚本逻辑离线自测，不占 NPU
-├── 0001-kv-registration-aligned-base.patch      # 修复 1
-└── 0002-kv-per-group-remote-block-sizes.patch   # 修复 2
+├── 0001-kv-registration-aligned-base.patch   # 修复 1：注册基址
+├── 0002-kv-per-group-remote-block-sizes.patch # 修复 2：按组 block size
+└── 0003-kv-block-geometry-hardening.patch     # 修复 3：取值加固 + CP 路径提示
 ```
 
 启动脚本中的 vLLM 参数与原验证脚本保持一致。新增预检会在代码缺少任一修复时立即退出，避免浪费模型加载时间。
@@ -39,7 +40,7 @@ grep -n "remote_block_sizes=\[group.kv_cache_spec.block_size" \
   vllm_ascend/distributed/kv_transfer/kv_p2p/mooncake_connector.py
 ```
 
-两条 grep 都必须有输出。若使用 patch，则在父代码上依次应用本目录的 `0001-*.patch`、`0002-*.patch`。
+两条 grep 都必须有输出。若使用 patch，则在父代码上**按序号依次**应用本目录的 `0001-*.patch`、`0002-*.patch`、`0003-*.patch`（已用 `git am` 在干净父提交上验证：应用后工作树与分支 tip `92127dd08c` 完全一致）。
 
 同时更新 assets 仓，并进入本目录：
 
