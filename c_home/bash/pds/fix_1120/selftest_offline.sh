@@ -115,7 +115,7 @@ printf 'if has_mamba_group:\n    pass\n' > "$FAKE/vllm-ascend/vllm_ascend/distri
 out=$(CODEBASE_DIR="$FAKE" LOGDIR="$WORK/pre-out" bash "$PKG/prefill.sh" 2>&1); rc=$?
 [ "$rc" = "1" ] && ok "exit=1" || bad "exit=$rc"
 echo "$out" | grep -q "缺少: 修复1-KV注册基址 修复2-按组block-size" && ok "报告两项都缺" || bad "缺预检：$out"
-echo "$out" | grep -q "reset --hard origin/fix/pd-sep-hybrid-kv-register" && ok "给出强制对齐命令" || bad "缺修复指引：$out"
+echo "$out" | grep -q "reset --hard pds/fix/pd-sep-hybrid-kv-register" && ok "给出按 pds 远端对齐的命令" || bad "缺修复指引：$out"
 echo "$out" | grep -q "vllm.entrypoints.cli.main serve" && bad "不应启动 vllm" || ok "未启动 vllm"
 
 echo "== 8) prefill.sh: 只有修复1、缺修复2 -> 只报缺少修复2 =="

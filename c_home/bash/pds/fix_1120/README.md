@@ -25,13 +25,13 @@ fix_1120/
 
 ## 1. 更新代码（188、187 都执行）
 
-修复分支历史被重写过，**不要用 `git pull --ff-only`**，直接对齐远端：
+代码远端是 **`pds`**（`git@gitcode.com:xiefei_cn/vllm-ascend_pds.git`）：
 
 ```bash
 cd /vllm-workspace/vllm-ascend
-git fetch origin fix/pd-sep-hybrid-kv-register
+git fetch pds fix/pd-sep-hybrid-kv-register
 git checkout fix/pd-sep-hybrid-kv-register
-git reset --hard origin/fix/pd-sep-hybrid-kv-register
+git reset --hard pds/fix/pd-sep-hybrid-kv-register
 git log -1 --oneline            # 期望 92127dd08c
 
 grep -n "has_mamba_group or self.use_hybrid" \
@@ -40,7 +40,9 @@ grep -n "remote_block_sizes=\[group.kv_cache_spec.block_size" \
   vllm_ascend/distributed/kv_transfer/kv_p2p/mooncake_connector.py
 ```
 
-两条 grep 都必须有输出。启动脚本会做同样的检查，缺哪项会直接告诉你。
+两条 grep 都必须有输出。启动脚本会做同样的检查，缺哪项会直接告诉你，并打印对齐命令。
+
+> 若你的机器上远端不叫 `pds`，启动脚本支持 `CODE_REMOTE=<远端名>` 覆盖。
 
 同时更新 assets 仓，并进入本目录：
 

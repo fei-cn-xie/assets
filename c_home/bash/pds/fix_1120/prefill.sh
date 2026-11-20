@@ -42,7 +42,8 @@ export LD_LIBRARY_PATH=/usr/local/Ascend/ascend-toolkit/latest/python/site-packa
 # ---- 代码版本预检 -----------------------------------------------------------
 REPO=$CODEBASE_DIR/vllm-ascend
 CONNECTOR=$REPO/vllm_ascend/distributed/kv_transfer/kv_p2p/mooncake_connector.py
-FIX_BRANCH=fix/pd-sep-hybrid-kv-register
+FIX_BRANCH=${FIX_BRANCH:-fix/pd-sep-hybrid-kv-register}
+CODE_REMOTE=${CODE_REMOTE:-pds}
 
 if [ ! -f "$CONNECTOR" ]; then
   echo "[fatal] 找不到 $CONNECTOR（检查 CODEBASE_DIR=$CODEBASE_DIR）" >&2
@@ -61,11 +62,11 @@ if [ -n "$MISSING" ]; then
     echo "[fatal] 当前 vllm-ascend 缺少:$MISSING"
     echo "        当前分支: $CUR_BRANCH ($CUR_SHA)"
     echo "        需要分支: $FIX_BRANCH (HEAD 92127dd08c)"
-    echo "        该分支历史被重写过，git pull --ff-only 会失败，请强制对齐远端后重试:"
+    echo "        请对齐远端（远端名默认 pds，可用 CODE_REMOTE=<名字> 覆盖）:"
     echo "          cd $REPO"
-    echo "          git fetch origin $FIX_BRANCH"
+    echo "          git fetch $CODE_REMOTE $FIX_BRANCH"
     echo "          git checkout $FIX_BRANCH"
-    echo "          git reset --hard origin/$FIX_BRANCH"
+    echo "          git reset --hard $CODE_REMOTE/$FIX_BRANCH"
   } >&2
   exit 1
 fi
