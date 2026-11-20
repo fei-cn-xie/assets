@@ -1,0 +1,279 @@
+From 294ca6d89f26329076c949b086c976ad0f5a61ba Mon Sep 17 00:00:00 2001
+From: Xie Fei <fei.cn.xie@gmail.com>
+Date: Fri, 20 Nov 2026 17:00:41 +0800
+Subject: [PATCH 2/3] fix(kv_transfer): publish per-group remote block sizes
+ for hybrid KV transfer
+
+EngineCore rewrites `cache_config.block_size` to the minimum of all KV cache
+group block sizes, so a DeepSeek-V4 deployment reports 8 even though its
+attention groups use 128/512/16384-token pages. The scheduler published that
+single scalar as `remote_block_size` for every group, and the decode worker
+derived `kernel_size` from its own (128-token) attention group, so the first
+KV pull aborted with:
+
+  AssertionError: remote_block_size(8) not divisible by kernel_size(128)
+
+Publish the per-group block sizes alongside the existing scalar and resolve
+both sides per KV cache group on the worker. The scalar keeps working for
+uniform models and remains the fallback when the new field is absent, so old
+peers fail loudly instead of silently pulling misaligned blocks.
+
+A sliding-window group's transfer list is already clipped to its window tail by
+the producer, so the decode side must not apply an absolute prompt offset to it
+again: select the missing suffix from the tail and let the existing tail/local
+trim finish the mapping. Non-sliding groups keep the previous absolute
+prefix-skip behavior.
+
+Add regression coverage for the reported six-group geometry, a transfer group
+whose index differs from its manager group, the sliding-window prefix tail, and
+the unchanged compressed-prefix path.
+
+Signed-off-by: Xie Fei <fei.cn.xie@gmail.com>
+---
+ .../kv_p2p/test_mooncake_connector.py         | 80 +++++++++++++++++++
+ .../kv_transfer/kv_p2p/mooncake_connector.py  | 65 +++++++++++++--
+ 2 files changed, 138 insertions(+), 7 deletions(-)
+
+diff --git a/tests/ut/distributed/kv_transfer/kv_p2p/test_mooncake_connector.py b/tests/ut/distributed/kv_transfer/kv_p2p/test_mooncake_connector.py
+index ec4d06366f..8c40dc1e5a 100644
+--- a/tests/ut/distributed/kv_transfer/kv_p2p/test_mooncake_connector.py
++++ b/tests/ut/distributed/kv_transfer/kv_p2p/test_mooncake_connector.py
+@@ -2327,6 +2327,7 @@ class TestMooncakeConnectorMetadata(unittest.TestCase):
+                         "num_computed_tokens": prefix,
+                         "num_prompt_blocks": 3,
+                         "remote_block_size": 16,
++                        "remote_block_sizes": [16, 32],
+                     },
+                     local_full_block_ids=([10, 11, 12], [21]),
+                 )
+@@ -2341,6 +2342,7 @@ class TestMooncakeConnectorMetadata(unittest.TestCase):
+                     (request.remote_pcp_size, request.remote_dcp_size, request.remote_ptp_size), (pcp, dcp, ptp)
+                 )
+                 self.assertEqual(request.remote_block_size, 16)
++                self.assertEqual(request.remote_block_sizes, (16, 32))
+ 
+     def test_add_new_req(self):
+         meta = MooncakeConnectorMetadata()
+@@ -2903,6 +2905,9 @@ class TestMooncakeConnectorScheduler(unittest.TestCase):
+         self.assertEqual(block_ids, ([10],))
+ 
+     def test_request_finished_trims_mtp_blocks_in_params(self):
++        self.scheduler.kv_cache_groups = [
++            types.SimpleNamespace(kv_cache_spec=types.SimpleNamespace(block_size=16))
++        ]
+         self.scheduler.group_transfer_info = [
+             types.SimpleNamespace(
+                 tokens_per_block=16,
+@@ -2918,6 +2923,7 @@ class TestMooncakeConnectorScheduler(unittest.TestCase):
+         self.assertIsNotNone(params)
+         assert params is not None
+         self.assertEqual(params["remote_block_ids"], ([10, 11, 12],))
++        self.assertEqual(params["remote_block_sizes"], [16])
+         self.assertEqual(params["num_prompt_blocks"], 3)
+         self.assertIn("req_mtp", self.scheduler._reqs_need_send)
+ 
+@@ -3881,6 +3887,80 @@ class TestMooncakeConnectorWorker(unittest.TestCase):
+         self.assertEqual(local_ids, [([2, 3, 4],)])
+         self.assertEqual(remote_ids, [([7, 8, 9],)])
+ 
++    def test_get_kernel_block_ids_uses_per_group_remote_block_sizes(self):
++        """DSV4 hybrid groups must not share the scheduler's minimum block size."""
++        worker = self._build_non_cp_worker()
++        block_sizes = [512, 16384, 128, 128, 8, 32]
++        worker.block_size = 128
++        worker.block_size_scale = [[1] for _ in block_sizes]
++        worker.kv_cache_config = types.SimpleNamespace(
++            kv_cache_groups=[
++                types.SimpleNamespace(kv_cache_spec=types.SimpleNamespace(block_size=block_size))
++                for block_size in block_sizes
++            ]
++        )
++        meta = types.SimpleNamespace(
++            # EngineCore sets the scalar to min(group block sizes). It cannot
++            # describe the 128-token attention groups alongside the 8/32-token
++            # compressor state groups.
++            remote_block_size=8,
++            remote_block_sizes=block_sizes,
++            local_block_ids=([1], [2], [3], [4], [5], [6, 7, 8]),
++            remote_block_ids=([1], [2], [3], [4], [15], [17, 18, 19]),
++            num_computed_tokens=0,
++        )
++
++        for group_idx, block_size in enumerate(block_sizes):
++            with self.subTest(group_idx=group_idx, block_size=block_size):
++                group_spec = {
++                    "kv_cache_spec_type": "AscendMLAAttentionSpec",
++                    "kv_cache_spec": {"block_size": block_size},
++                }
++                local_ids, remote_ids = worker._get_kernel_block_ids([group_idx], meta, group_idx, group_spec)
++                self.assertEqual(local_ids, meta.local_block_ids[group_idx])
++                self.assertEqual(remote_ids, meta.remote_block_ids[group_idx])
++
++        # A transfer-group index is not necessarily the manager-group index used
++        # by the P-published block-size list.
++        local_ids, remote_ids = worker._get_kernel_block_ids(
++            [5],
++            meta,
++            99,
++            {
++                "kv_cache_group_id": 5,
++                "kv_cache_spec_type": "AscendMLAAttentionSpec",
++                "kv_cache_spec": {"block_size": 32},
++            },
++        )
++        self.assertEqual(local_ids, [6, 7, 8])
++        self.assertEqual(remote_ids, [17, 18, 19])
++
++    def test_get_kernel_block_ids_sliding_uses_missing_window_suffix(self):
++        """A windowed P list is relative to its tail, not the whole prompt."""
++        worker = self._build_non_cp_worker()
++        worker.block_size = 8
++        worker.block_size_scale = [[1]]
++        worker.kv_cache_config = types.SimpleNamespace(
++            kv_cache_groups=[types.SimpleNamespace(kv_cache_spec=types.SimpleNamespace(block_size=8))]
++        )
++        meta = types.SimpleNamespace(
++            remote_block_size=8,
++            remote_block_sizes=[8],
++            local_block_ids=([5],),
++            remote_block_ids=([10, 11],),
++            num_computed_tokens=16,
++            num_external_tokens=8,
++        )
++        group_spec = {
++            "kv_cache_spec_type": "AscendSlidingWindowMLASpec",
++            "kv_cache_spec": {"block_size": 8, "sliding_window": 16},
++        }
++
++        local_ids, remote_ids = worker._get_kernel_block_ids([0], meta, 0, group_spec)
++
++        self.assertEqual(local_ids, [5])
++        self.assertEqual(remote_ids, [11])
++
+     def _build_worker_for_pd_case(self, case, tp_rank, pcp_rank=0, dcp_rank=0):
+         with (
+             patch.object(self.vllm_config.parallel_config, "tensor_parallel_size", case["decode_tp_size"]),
+diff --git a/vllm_ascend/distributed/kv_transfer/kv_p2p/mooncake_connector.py b/vllm_ascend/distributed/kv_transfer/kv_p2p/mooncake_connector.py
+index a8e9431982..feebd4bd85 100644
+--- a/vllm_ascend/distributed/kv_transfer/kv_p2p/mooncake_connector.py
++++ b/vllm_ascend/distributed/kv_transfer/kv_p2p/mooncake_connector.py
+@@ -134,6 +134,7 @@ class ReqMeta:
+     remote_multi_nodes_meta_mapping: dict[str, dict[str, Any]]
+     num_prompt_blocks: int
+     remote_block_size: int
++    remote_block_sizes: tuple[int, ...] = tuple()
+     local_full_block_ids: BlockIds = tuple()
+     do_virtual: bool = False
+ 
+@@ -1600,6 +1601,7 @@ class MooncakeConnectorMetadata(KVConnectorMetadata):
+             remote_multi_nodes_meta_mapping=kv_transfer_params.get("remote_multi_nodes_meta_mapping", {}),
+             num_prompt_blocks=kv_transfer_params.get("num_prompt_blocks", 0),
+             remote_block_size=kv_transfer_params.get("remote_block_size", 0),
++            remote_block_sizes=tuple(kv_transfer_params.get("remote_block_sizes", ())),
+             local_full_block_ids=local_full_block_ids or tuple(),
+             do_virtual=kv_transfer_params.get("do_virtual", False),
+         )
+@@ -2073,6 +2075,7 @@ class MooncakeConnectorScheduler:
+             remote_multi_nodes_meta_mapping=self.multi_nodes_meta_mapping,
+             num_prompt_blocks=num_prompt_blocks,
+             remote_block_size=self.block_size,
++            remote_block_sizes=[group.kv_cache_spec.block_size for group in self.kv_cache_groups],
+         )
+ 
+     def _port_offset_from_handshake_metadata(
+@@ -2850,6 +2853,22 @@ class MooncakeConnectorWorker:
+                     break
+         return compress_ratio
+ 
++    @staticmethod
++    def _is_sliding_group_spec(group_spec: dict[str, Any]) -> bool:
++        """Whether the producer has clipped transfer IDs to a sliding-window tail."""
++        if "SlidingWindow" in str(group_spec.get("kv_cache_spec_type", "")):
++            return True
++        pending = [group_spec.get("kv_cache_spec")]
++        while pending:
++            value = pending.pop()
++            if isinstance(value, Mapping):
++                if value.get("sliding_window"):
++                    return True
++                pending.extend(value.values())
++            elif isinstance(value, (list, tuple)):
++                pending.extend(value)
++        return False
++
+     @staticmethod
+     def _get_kv_cache_group_id(group_idx: int, group_spec: dict[str, Any]) -> int:
+         return group_spec.get("kv_cache_group_id", group_idx)
+@@ -2867,6 +2886,28 @@ class MooncakeConnectorWorker:
+             return self.block_size_scale[layer_indices[0]][0]
+         return 1
+ 
++    def _get_local_group_block_size(self, kv_cache_group_id: int) -> int:
++        groups = self.kv_cache_config.kv_cache_groups
++        if 0 <= kv_cache_group_id < len(groups):
++            block_size = getattr(groups[kv_cache_group_id].kv_cache_spec, "block_size", None)
++            if isinstance(block_size, int) and block_size > 0:
++                return block_size
++        return self.block_size
++
++    def _get_remote_group_block_size(self, meta: ReqMeta, kv_cache_group_id: int, local_block_size: int) -> int:
++        remote_block_sizes = getattr(meta, "remote_block_sizes", ())
++        if remote_block_sizes:
++            if kv_cache_group_id >= len(remote_block_sizes):
++                raise ValueError(
++                    f"Missing remote block size for KV cache group {kv_cache_group_id}: "
++                    f"received {len(remote_block_sizes)} group sizes."
++                )
++            remote_block_size = remote_block_sizes[kv_cache_group_id]
++            if not isinstance(remote_block_size, int) or remote_block_size <= 0:
++                raise ValueError(f"Invalid remote block size {remote_block_size} for KV cache group {kv_cache_group_id}.")
++            return remote_block_size
++        return meta.remote_block_size or local_block_size
++
+     def _get_kernel_block_ids(self, layer_indices, meta, group_idx, group_spec):
+         """No-CP per-group block ids at kernel granularity: (local, remote).
+ 
+@@ -2879,23 +2920,33 @@ class MooncakeConnectorWorker:
+         if group_spec["kv_cache_spec_type"] == "MambaSpec":
+             return list(meta.local_block_ids[kv_cache_group_id]), list(meta.remote_block_ids[kv_cache_group_id])
+ 
+-        remote_block_size = meta.remote_block_size or self.block_size
++        local_block_size = self._get_local_group_block_size(kv_cache_group_id)
++        remote_block_size = self._get_remote_group_block_size(meta, kv_cache_group_id, local_block_size)
+ 
+         # kernel_size is the shared (P==D) granularity; remote_scale is derived from it.
+         local_scale = self._get_kernel_block_scale(layer_indices)
+-        kernel_size = self.block_size // local_scale
++        assert local_block_size % local_scale == 0, (
++            f"local_block_size({local_block_size}) not divisible by local_scale({local_scale}) "
++            f"in KV cache group {kv_cache_group_id}"
++        )
++        kernel_size = local_block_size // local_scale
+         assert remote_block_size % kernel_size == 0, (
+-            f"remote_block_size({remote_block_size}) not divisible by kernel_size({kernel_size})"
++            f"remote_block_size({remote_block_size}) not divisible by kernel_size({kernel_size}) "
++            f"in KV cache group {kv_cache_group_id}"
+         )
+ 
+         remote_scale = remote_block_size // kernel_size
+         kernel_local = self._expand_block_ids(list(meta.local_block_ids[kv_cache_group_id]), local_scale)
+         kernel_remote = self._expand_block_ids(list(meta.remote_block_ids[kv_cache_group_id]), remote_scale)
+-        # Skip prefix-cached remote kernels (D-side already holds them). The token size of one
+-        # remote kernel is kernel_size * compress_ratio, so the number to skip is
+-        # num_computed_tokens // (kernel_size * compress_ratio).
++        # Skip prefix-cached remote kernels. Sliding groups were already clipped
++        # to a window tail by the producer, so select the missing suffix instead
++        # of applying an absolute prompt offset to that compacted list.
+         remote_kernel_token_size = kernel_size * self._group_compress_ratio(group_spec)
+-        remote_start_idx = meta.num_computed_tokens // remote_kernel_token_size
++        if self._is_sliding_group_spec(group_spec):
++            num_external_kernels = cdiv(meta.num_external_tokens, remote_kernel_token_size)
++            remote_start_idx = max(len(kernel_remote) - num_external_kernels, 0)
++        else:
++            remote_start_idx = meta.num_computed_tokens // remote_kernel_token_size
+         kernel_remote = kernel_remote[remote_start_idx:]
+         num_kernel_blocks = min(len(kernel_remote), len(kernel_local))
+         return kernel_local[:num_kernel_blocks], kernel_remote[:num_kernel_blocks]
+-- 
+2.55.0.windows.4
+

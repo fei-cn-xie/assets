@@ -1,0 +1,99 @@
+From 92127dd08ce54a25a1252bfe7f83fc7fc3c08a92 Mon Sep 17 00:00:00 2001
+From: Xie Fei <fei.cn.xie@gmail.com>
+Date: Fri, 20 Nov 2026 17:04:48 +0800
+Subject: [PATCH 3/3] refactor(kv_transfer): harden per-group block-size lookup
+ against partial workers
+
+The per-group block-size lookup read `self.kv_cache_config.kv_cache_groups`
+directly and required `num_external_tokens` on the request metadata. Unit
+tests and debug paths build `MooncakeConnectorWorker` instances through
+`__new__` and inject `MagicMock` cache specs, where those attributes are
+absent or hold non-integer values, so the new lookup could raise
+`AttributeError`/`TypeError` on paths that previously worked.
+
+Read both defensively and fall back to the previous scalar geometry. Expected
+shapes are unchanged: real workers still resolve each group's own block size.
+
+Also make the context-parallel path fail with an actionable message. That path
+still maps the scalar P/D block size, so hybrid models with unequal per-group
+block sizes (DeepSeek-V4) need `decode_context_parallel_size=1` until the
+per-group geometry is propagated through the CP mapping; the previous message
+was indistinguishable from the no-CP bug this branch fixes.
+
+Add a regression test for the partial-worker fallback.
+
+Signed-off-by: Xie Fei <fei.cn.xie@gmail.com>
+---
+ .../kv_p2p/test_mooncake_connector.py         | 20 +++++++++++++++++++
+ .../kv_transfer/kv_p2p/mooncake_connector.py  | 10 +++++++---
+ 2 files changed, 27 insertions(+), 3 deletions(-)
+
+diff --git a/tests/ut/distributed/kv_transfer/kv_p2p/test_mooncake_connector.py b/tests/ut/distributed/kv_transfer/kv_p2p/test_mooncake_connector.py
+index 8c40dc1e5a..fa99cad160 100644
+--- a/tests/ut/distributed/kv_transfer/kv_p2p/test_mooncake_connector.py
++++ b/tests/ut/distributed/kv_transfer/kv_p2p/test_mooncake_connector.py
+@@ -3961,6 +3961,26 @@ class TestMooncakeConnectorWorker(unittest.TestCase):
+         self.assertEqual(local_ids, [5])
+         self.assertEqual(remote_ids, [11])
+ 
++    def test_get_kernel_block_ids_falls_back_without_group_config(self):
++        """Workers built via __new__ and mocked specs keep the previous geometry."""
++        worker = MooncakeConnectorWorker.__new__(MooncakeConnectorWorker)
++        worker.block_size = 16
++        worker.block_size_scale = [[1]]
++        meta = types.SimpleNamespace(
++            remote_block_size=16,
++            local_block_ids=([1, 2],),
++            remote_block_ids=([3, 4, 5],),
++            num_computed_tokens=16,
++            num_external_tokens=32,
++        )
++
++        local_ids, remote_ids = worker._get_kernel_block_ids(
++            [0], meta, 0, {"kv_cache_spec_type": "FullAttentionSpec"}
++        )
++
++        self.assertEqual(local_ids, [1, 2])
++        self.assertEqual(remote_ids, [4, 5])
++
+     def _build_worker_for_pd_case(self, case, tp_rank, pcp_rank=0, dcp_rank=0):
+         with (
+             patch.object(self.vllm_config.parallel_config, "tensor_parallel_size", case["decode_tp_size"]),
+diff --git a/vllm_ascend/distributed/kv_transfer/kv_p2p/mooncake_connector.py b/vllm_ascend/distributed/kv_transfer/kv_p2p/mooncake_connector.py
+index feebd4bd85..484b2e7273 100644
+--- a/vllm_ascend/distributed/kv_transfer/kv_p2p/mooncake_connector.py
++++ b/vllm_ascend/distributed/kv_transfer/kv_p2p/mooncake_connector.py
+@@ -2887,7 +2887,7 @@ class MooncakeConnectorWorker:
+         return 1
+ 
+     def _get_local_group_block_size(self, kv_cache_group_id: int) -> int:
+-        groups = self.kv_cache_config.kv_cache_groups
++        groups = getattr(getattr(self, "kv_cache_config", None), "kv_cache_groups", None) or []
+         if 0 <= kv_cache_group_id < len(groups):
+             block_size = getattr(groups[kv_cache_group_id].kv_cache_spec, "block_size", None)
+             if isinstance(block_size, int) and block_size > 0:
+@@ -2943,7 +2943,7 @@ class MooncakeConnectorWorker:
+         # of applying an absolute prompt offset to that compacted list.
+         remote_kernel_token_size = kernel_size * self._group_compress_ratio(group_spec)
+         if self._is_sliding_group_spec(group_spec):
+-            num_external_kernels = cdiv(meta.num_external_tokens, remote_kernel_token_size)
++            num_external_kernels = cdiv(getattr(meta, "num_external_tokens", 0), remote_kernel_token_size)
+             remote_start_idx = max(len(kernel_remote) - num_external_kernels, 0)
+         else:
+             remote_start_idx = meta.num_computed_tokens // remote_kernel_token_size
+@@ -2962,7 +2962,11 @@ class MooncakeConnectorWorker:
+             local_scale = self._get_kernel_block_scale(layer_indices)
+             kernel_size = self.block_size // local_scale
+             assert remote_block_size % kernel_size == 0, (
+-                f"remote_block_size({remote_block_size}) not divisible by kernel_size({kernel_size})"
++                f"remote_block_size({remote_block_size}) not divisible by kernel_size({kernel_size}) "
++                f"in KV cache group {group_idx}. This path keeps the scalar P/D block size for "
++                "context-parallel decode; hybrid models with unequal per-group block sizes (for "
++                "example DeepSeek-V4) require decode_context_parallel_size=1 until the per-group "
++                "geometry is propagated through the CP mapping."
+             )
+             remote_scale = remote_block_size // kernel_size
+             group_kernel_params[group_idx] = (local_scale, remote_scale, kernel_size)
+-- 
+2.55.0.windows.4
+
