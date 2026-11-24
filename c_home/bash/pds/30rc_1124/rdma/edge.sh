@@ -20,7 +20,10 @@ export VLLM_WORKER_MULTIPROC_METHOD=spawn
 # profiling configuration
 #export SERVICE_PROF_CONFIG_PATH=/bash_dir/profiling/ms_service_profiler_config.json
 #export PROFILING_SYMBOLS_PATH=/bash_dir/profiling/prof_dir/service_profiling_symbols.0.23.0.yaml
-export VLLM_LOGGING_LEVEL="${VLLM_LOGGING_LEVEL:-ERROR}"
+# INFO by default: the edge is the only side that BLOCKS waiting for links
+# (bounded by 605s per IO, up to 4 IOs on a 1-edge/2-cloud topology). At ERROR the
+# connect-retry warnings are invisible and startup looks like a hang.
+export VLLM_LOGGING_LEVEL="${VLLM_LOGGING_LEVEL:-INFO}"
 
 # HARD CONSTRAINTS of data_plane_comm=host on v0.30.0:
 #   --tensor-parallel-size 1  (only edge TP rank 0 holds the host links; TP>1

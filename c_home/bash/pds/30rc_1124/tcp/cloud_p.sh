@@ -30,8 +30,10 @@ export LD_LIBRARY_PATH="/usr/local/Ascend/ascend-toolkit/latest/python/site-pack
 # profiling configuration
 #export SERVICE_PROF_CONFIG_PATH=/bash_dir/profiling/ms_service_profiler_config.json
 #export PROFILING_SYMBOLS_PATH=/bash_dir/profiling/prof_dir/service_profiling_symbols.0.23.0.yaml
-# ERROR hides the [LWD] handshake/digest lines; use INFO for first bring-up.
-export VLLM_LOGGING_LEVEL="${VLLM_LOGGING_LEVEL:-ERROR}"
+# INFO by default: the [LWD] digest / listener / link lines and the [ucx-chan]
+# connect-retry warnings all live at INFO/WARNING. A perf run can override with
+# VLLM_LOGGING_LEVEL=ERROR; VLLM_LWD_LOG_LEVEL=INFO adds the separate [lwd] stream.
+export VLLM_LOGGING_LEVEL="${VLLM_LOGGING_LEVEL:-INFO}"
 
 # --port 8560 is the ordinary OpenAI API of this cloud engine.
 # coord_port 8660 lives in the topology and is the PD registration endpoint the

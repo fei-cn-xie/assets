@@ -113,7 +113,7 @@ source of truth — there is no env override"）。文件：`lwd_topology.yaml`�
 | `LD_LIBRARY_PATH` | mooncake site-packages 前置，UCX lib 保留 | 同 | 两者都要 |
 | `LD_PRELOAD` | `libjemalloc.so.2` | 同 | 仅云侧脚本设置 |
 | `HCCL_OP_EXPANSION_MODE`/`HCCL_BUFFSIZE`/`OMP_*`/`TASK_QUEUE_ENABLE`/`PYTORCH_NPU_ALLOC_CONF`/`VLLM_WORKER_MULTIPROC_METHOD` | 同参考 | 同 | 云侧脚本设置 |
-| `VLLM_LOGGING_LEVEL` | `ERROR`（可覆盖） | 同 | 首轮建议 `INFO` |
+| `VLLM_LOGGING_LEVEL` | `INFO`（默认） | 同 | 压测时用 `ERROR` 覆盖；见 §5 的启动排查 |
 | `VLLM_LWD_LOG_LEVEL` | 未设（默认 `DISABLE`） | 同 | `[lwd]` 独立日志流，排查时置 `INFO` |
 | `VLLM_ASCEND_ENABLE_FLASHCOMM1` | 注释掉 | 同 | 参考脚本即注释状态 |
 
@@ -212,6 +212,37 @@ python3 check_configs.py
 bash cloud_p.sh --dry-run
 bash edge.sh --dry-run
 ```
+
+### 边端启动像"卡住"时，先看它停在哪个阶段
+
+v0.30.0 里**只有边端会阻塞等链路**（云端只报 listener bound、异步接纳边端）：
+
+- 单条链路的 `wait_ready` 超时是 `_HS_TIMEOUT_S + 5 = 605s`（`ucx_io.py:63`、
+  `lwd_host_channels.py:391-401`），而且是**逐条 IO 串行**：1 边 × 2 云 = 4 条 IO，
+  最坏约 40 分钟才抛 `[LWD][handshake] host link not ready`；
+- 等待期间的唯一进展日志是 `[ucx-chan] ... connect ... deferred (...) [peer listener not ready]`，
+  级别是 **WARNING**。所以脚本默认改成 `VLLM_LOGGING_LEVEL=INFO`——首轮别用 `ERROR` 起，
+  否则整个等待期一行日志都没有，表现得和死锁一模一样。
+
+按日志停在哪判断：
+
+| 日志最后停在 | 结论 |
+| --- | --- |
+| 没有 `[LWD][config]` | 卡在更早阶段：模型加载 / NPU 初始化（先试去掉边端 `--async-scheduling`） |
+| 有 `[LWD] host memory plan ...`、没有 `links created` | 卡在 UCX 初始化或监听绑定 |
+| 有 `links created`、等不到 `[LWD][handshake] OK` | 在等云端链路，查网络与监听（见下） |
+
+现场排查（不用重启进程）：
+
+```bash
+py-spy dump --pid <Worker pid>                                   # 栈是否停在 _supervise / Event.wait
+ss -tnp state syn-sent '( dport = :19600 or dport = :19700 )'    # SYN-SENT 不动 = 云侧没监听或被 DROP
+ss -ntp | grep 76.76.26.189
+ss -lntp | grep -E '19600|19700'                                 # 在云端 B 上应看到两个 listener
+```
+
+注意防火墙 DROP 与 REJECT 表现不同：DROP 会静默等满 600s，REJECT 才会立刻打
+`[peer listener not ready]` 的 warning。
 
 上线前建议按顺序确认：
 

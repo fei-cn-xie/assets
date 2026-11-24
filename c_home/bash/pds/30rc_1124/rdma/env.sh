@@ -20,8 +20,9 @@ LWD_TOPOLOGY_JSON="$("$LWD_PYTHON" -c 'import json, os; print(json.dumps(os.envi
 export LWD_TOPOLOGY_JSON
 
 # LWD also has its own log stream, off by default (VLLM_LWD_LOG_LEVEL=DISABLE).
-# First bring-up: VLLM_LWD_LOG_LEVEL=INFO VLLM_LOGGING_LEVEL=INFO bash edge.sh
-# The [LWD][config] line carries the topology digest; both hosts must agree.
+# VLLM_LOGGING_LEVEL defaults to INFO in these scripts; add the [lwd] stream with
+# VLLM_LWD_LOG_LEVEL=INFO. The [LWD][config] line carries the topology digest,
+# which must match on both hosts.
 
 LWD_DRY_RUN=0
 if [[ $# == 1 && $1 == --dry-run ]]; then

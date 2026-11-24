@@ -7,6 +7,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=env.sh
 source "$SCRIPT_DIR/env.sh"
+# INFO by default: the proxy logs the P/D it picked, which is how you tell whether
+# a request actually fanned out to both stages.
+export VLLM_LOGGING_LEVEL="${VLLM_LOGGING_LEVEL:-INFO}"
 
 lwd_run "$LWD_PYTHON" -m vllm.v1.lwd_control.pd.proxy \
   --config "$LWD_SCRIPT_DIR/pd_proxy.json" \

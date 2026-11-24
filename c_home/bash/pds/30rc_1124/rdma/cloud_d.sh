@@ -27,7 +27,8 @@ export LD_LIBRARY_PATH="/usr/local/Ascend/ascend-toolkit/latest/python/site-pack
 # profiling configuration
 #export SERVICE_PROF_CONFIG_PATH=/bash_dir/profiling/ms_service_profiler_config.json
 #export PROFILING_SYMBOLS_PATH=/bash_dir/profiling/prof_dir/service_profiling_symbols.0.23.0.yaml
-export VLLM_LOGGING_LEVEL="${VLLM_LOGGING_LEVEL:-ERROR}"
+# INFO by default so the listener/link lines and connect-retry warnings show.
+export VLLM_LOGGING_LEVEL="${VLLM_LOGGING_LEVEL:-INFO}"
 
 # Decode keeps graph mode (no --enforce-eager); itertools-free capture list.
 # kv_port 24680 pairs with P's 24679 (see cloud_p.sh for the ephemeral-range caveat).

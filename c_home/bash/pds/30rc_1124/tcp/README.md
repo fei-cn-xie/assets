@@ -52,6 +52,13 @@ bash edge.sh --dry-run
 `UCX_TLS=tcp,self`、`UCX_NET_DEVICES=enp189s0f0`、`--additional-config` 是内联 JSON 且
 `path` 指向本目录的 `lwd_topology.yaml`。
 
+## 边端启动会静默等云侧（最长 605s/条链路）
+
+边端是唯一阻塞等待的一方，单条链路超时 605s，且逐条 IO 串行（1 边 × 2 云 = 4 条，
+最坏约 40 分钟才报错）。等待期的进展日志是 WARNING 级，所以脚本默认
+`VLLM_LOGGING_LEVEL=INFO`；压测时再覆盖成 `ERROR`。判断与排查见上级
+[README.md](../README.md) 的 §5。
+
 ## 可覆盖项
 
 ```bash
@@ -60,7 +67,7 @@ LWD_PYTHON=/usr/bin/python3 \
 LWD_TOPOLOGY=/abs/path/lwd_topology.yaml \
 UCX_TLS=tcp,self UCX_NET_DEVICES=enp189s0f0 \
 UCX_PREFIX=/vllm-workspace/ucx \
-VLLM_LOGGING_LEVEL=INFO VLLM_LWD_LOG_LEVEL=INFO \
+VLLM_LOGGING_LEVEL=ERROR VLLM_LWD_LOG_LEVEL=INFO \
 bash cloud_p.sh
 ```
 
