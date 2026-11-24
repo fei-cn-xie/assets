@@ -1764,7 +1764,7 @@
     </mxGraphModel>
   </diagram>
   <diagram id="7XbSJFgWYqQNmfC0MkSu" name="pd分离-队列">
-    <mxGraphModel dx="8335" dy="7503" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0">
+    <mxGraphModel dx="8908" dy="7802" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0" adaptiveColors="simple">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
