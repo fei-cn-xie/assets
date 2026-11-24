@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+# Shared by the four launch scripts of the v0.30.0 edge/cloud PD deployment.
+# Transport variant: RDMA (the host data plane is UCX over RoCE / rc_verbs).
+#
+# Sourced, never executed. Deployment overrides may be exported beforehand:
+#   CODEBASE_DIR, LWD_PYTHON, LWD_TOPOLOGY, UCX_PREFIX, UCX_TLS, UCX_NET_DEVICES,
+#   LWD_CLOUD_UCX_NET_DEVICES, LWD_EDGE_UCX_NET_DEVICES, VLLM_LOGGING_LEVEL,
+#   VLLM_LWD_LOG_LEVEL
+export CODEBASE_DIR="${CODEBASE_DIR:-/vllm-workspace}"
+export LWD_PYTHON="${LWD_PYTHON:-python}"
+export PYTHONPATH="$CODEBASE_DIR/vllm-ascend:$CODEBASE_DIR/vllm${PYTHONPATH:+:$PYTHONPATH}"
+
+LWD_SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+export LWD_SCRIPT_DIR
+# The topology YAML is v0.30.0's single source of truth and must be identical on
+# both hosts. It is resolved from this directory so the tree is relocatable.
+export LWD_TOPOLOGY="${LWD_TOPOLOGY:-$LWD_SCRIPT_DIR/lwd_topology.yaml}"
+# Encode the path as a JSON string before embedding it in --additional-config.
+LWD_TOPOLOGY_JSON="$("$LWD_PYTHON" -c 'import json, os; print(json.dumps(os.environ["LWD_TOPOLOGY"]))')"
+export LWD_TOPOLOGY_JSON
+
+# LWD also has its own log stream, off by default (VLLM_LWD_LOG_LEVEL=DISABLE).
+# First bring-up: VLLM_LWD_LOG_LEVEL=INFO VLLM_LOGGING_LEVEL=INFO bash edge.sh
+# The [LWD][config] line carries the topology digest; both hosts must agree.
+
+LWD_DRY_RUN=0
+if [[ $# == 1 && $1 == --dry-run ]]; then
+  LWD_DRY_RUN=1
+elif [[ $# != 0 ]]; then
+  printf 'Usage: bash %s [--dry-run]\n' "$0" >&2
+  exit 2
+fi
+
+# v0.30.0 always uses UCX for data_plane_comm=host (ctypes over libucp); only
+# UCX_TLS / UCX_NET_DEVICES decide whether frames leave on RoCE or TCP. The
+# handshake sockets stay TCP in both variants, hence tcp stays in the list.
+lwd_transport_env() {
+  local devices
+  case "$1" in
+    cloud) devices="${LWD_CLOUD_UCX_NET_DEVICES:-${UCX_NET_DEVICES:-rocep67s0f0:1,enp189s0f0}}" ;;
+    edge) devices="${LWD_EDGE_UCX_NET_DEVICES:-${UCX_NET_DEVICES:-rocep67s0f0:1,enp189s0f0}}" ;;
+    *) return 2 ;;
+  esac
+  export UCX_TLS="${UCX_TLS:-rc_verbs,tcp,self}"
+  export UCX_NET_DEVICES="$devices"
+  # An explicitly empty prefix keeps the existing library search path.
+  export UCX_PREFIX="${UCX_PREFIX-/vllm-workspace/ucx}"
+  if [[ -n $UCX_PREFIX ]]; then
+    export PATH="$UCX_PREFIX/bin:$PATH"
+    export LD_LIBRARY_PATH="$UCX_PREFIX/lib:$UCX_PREFIX/lib64${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+  fi
+}
+
+lwd_run() {
+  if [[ $LWD_DRY_RUN == 1 ]]; then
+    "$LWD_PYTHON" - "$@" <<'PY'
+import json
+import os
+import sys
+
+names = (
+    "CODEBASE_DIR", "PYTHONPATH", "LWD_TOPOLOGY", "LWD_TOPOLOGY_JSON",
+    "VLLM_HOST_IP", "VLLM_LOGGING_LEVEL", "VLLM_LWD_LOG_LEVEL",
+    "ASCEND_RT_VISIBLE_DEVICES", "GLOO_SOCKET_IFNAME", "TP_SOCKET_IFNAME",
+    "HCCL_SOCKET_IFNAME", "UCX_PREFIX", "UCX_NET_DEVICES", "UCX_TLS",
+    "LD_LIBRARY_PATH", "LD_PRELOAD", "VLLM_ASCEND_ENABLE_FLASHCOMM1",
+)
+print(json.dumps({
+    "command": sys.argv[1:],
+    "environment": {name: os.environ.get(name) for name in names},
+}, ensure_ascii=False, indent=2))
+PY
+  else
+    exec "$@"
+  fi
+}
