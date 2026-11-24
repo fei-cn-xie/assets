@@ -37,6 +37,26 @@ fi
 # libucp is required even in the TCP variant. Only UCX_TLS / UCX_NET_DEVICES
 # decide whether frames leave on TCP or on RoCE: no sidecar, no directory file,
 # no ucx_port_base, no ipc socket.
+#
+# This is NEW relative to dev/pd-sep-comm: the old TCP deployment used its own
+# sockets, so a host without UCX worked. Here every engine host needs the UCX
+# runtime - the edge included. lwd_require_ucx_runtime() enforces it up front
+# instead of letting the link builder retry for 605s.
+lwd_resolve_ucx_prefix() {
+  # An explicitly set UCX_PREFIX wins, empty included ("keep the system path").
+  if [[ -v UCX_PREFIX ]]; then
+    return 0
+  fi
+  # Otherwise use the workspace tree only when it actually exists, so we never
+  # prepend a bogus lib dir; empty means "keep the system search path".
+  if [[ -d /vllm-workspace/ucx/lib || -d /vllm-workspace/ucx/lib64 ]]; then
+    UCX_PREFIX=/vllm-workspace/ucx
+  else
+    UCX_PREFIX=
+  fi
+  export UCX_PREFIX
+}
+
 lwd_transport_env() {
   local devices
   case "$1" in
@@ -47,12 +67,37 @@ lwd_transport_env() {
   # tcp,self: no rc_verbs -> everything goes over the business NIC's TCP stack.
   export UCX_TLS="${UCX_TLS:-tcp,self}"
   export UCX_NET_DEVICES="$devices"
-  # An explicitly empty prefix keeps the existing library search path.
-  export UCX_PREFIX="${UCX_PREFIX-/vllm-workspace/ucx}"
+  lwd_resolve_ucx_prefix
   if [[ -n $UCX_PREFIX ]]; then
     export PATH="$UCX_PREFIX/bin:$PATH"
     export LD_LIBRARY_PATH="$UCX_PREFIX/lib:$UCX_PREFIX/lib64${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
   fi
+}
+
+# Fail fast when the UCX runtime is absent. Mirrors ucx_ucp.py, which tries
+# libucp.so.0 then libucp.so; without either, the link builder raises inside a
+# background thread and the engine only dies at the 605s handshake timeout with
+# a misleading "[LWD][handshake] host link not ready" message.
+lwd_require_ucx_runtime() {
+  if "$LWD_PYTHON" -c 'import ctypes, sys
+for name in ("libucp.so.0", "libucp.so"):
+    try:
+        ctypes.CDLL(name)
+    except OSError:
+        continue
+    sys.exit(0)
+sys.exit(1)' >/dev/null 2>&1; then
+    return 0
+  fi
+  local hint='install the UCX runtime on this host (libucp), or point UCX_PREFIX at an existing tree: UCX_PREFIX=/path/to/ucx; verify with: ldconfig -p | grep libucp'
+  if [[ $LWD_DRY_RUN == 1 ]]; then
+    printf '[LWD][preflight] WARNING: libucp.so.0 is not loadable here; a real launch would exit now.\n[LWD][preflight] hint: %s\n' "$hint" >&2
+    return 0
+  fi
+  printf '[LWD][preflight] ERROR: libucp.so.0 not found on this host (UCX_PREFIX=%s).\n' "${UCX_PREFIX:-<system path>}" >&2
+  printf '[LWD][preflight] hint: %s\n' "$hint" >&2
+  printf '[LWD][preflight] note: v0.30.0 uses UCX for BOTH transport variants; the edge needs it too.\n' >&2
+  exit 3
 }
 
 lwd_run() {

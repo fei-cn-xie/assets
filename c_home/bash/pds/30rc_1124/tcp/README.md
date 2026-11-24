@@ -5,6 +5,17 @@ v0.30.0 的 host 数据面**固定是 UCX**，所以这里的 "tcp" 不是"不�
 和 `rdma/` 的唯一区别就在 `env.sh` 的这两行；四个入口脚本与 `lwd_topology.yaml`
 与 rdma 目录逐字节相同（拓扑解析内容完全一样）。
 
+> **最容易踩的坑**：tcp 变体**仍然需要 UCX 运行库**（libucp），而且**边端也要**。
+> 旧分支 `dev/pd-sep-comm` 的 tcp 走自研 socket，没有 UCX 也能跑，所以边端常常没装；
+> 缺库时的表现是"启动后静默 605 秒，然后报 handshake not ready"。现在脚本会启动前预检：
+>
+> ```bash
+> ldconfig -p | grep libucp          # 有就直接跑
+> UCX_PREFIX=/path/to/ucx bash edge.sh   # 有但不在默认路径
+> ```
+>
+> 缺库时脚本直接 `exit 3` 并打印修复提示，不会再闷等。
+
 完整参数分析、端口规划、风险清单见上级 [README.md](../README.md)。
 
 ## 文件

@@ -7,6 +7,7 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=env.sh
 source "$SCRIPT_DIR/env.sh"
 lwd_transport_env edge
+lwd_require_ucx_runtime
 
 # ---- instance-local placement -------------------------------------------------
 export VLLM_HOST_IP=76.76.26.194

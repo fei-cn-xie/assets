@@ -54,6 +54,8 @@ UCX 可能为某条链路回落到 TCP。逐条核对：
 ## 常见失败
 
 - `libucp` 找不到：`UCX_PREFIX` 指到 UCX 安装前缀，或显式设置 `LD_LIBRARY_PATH`。
+  脚本已内置启动前预检（`lwd_require_ucx_runtime`），缺库时直接 `exit 3` 并打印
+  `ldconfig -p | grep libucp` 之类的排查提示，不会闷等 605s。
 - 握手超时：检查 `data_port` 在云端是否监听、边端到云端的 TCP 连通性、
   `rocep67s0f0:1` 的 GID 索引是否与对端网卡规划一致。
 - 两侧 digest 不一致：两份 `lwd_topology.yaml` 不同步，直接比对 `sha256sum`。

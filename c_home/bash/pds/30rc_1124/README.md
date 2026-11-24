@@ -119,8 +119,27 @@ source of truth — there is no env override"）。文件：`lwd_topology.yaml`�
 
 ### 2.4 外部依赖
 
-- **UCX 运行库**（两种变体都要）：host 数据面是 ctypes 直接调 `libucp`，缺库时报
-  "set LD_LIBRARY_PATH to the UCX install lib directory"。`/vllm-workspace/ucx` 由 `UCX_PREFIX` 引入。
+- **UCX 运行库 —— 三种角色都要，边端也逃不掉（最容易踩）**：v0.30.0 的 host 数据面是
+  ctypes 直接调 `libucp`（`ucx_ucp.py:34-41` 先找 `libucp.so.0`、再找 `libucp.so`），
+  **tcp 变体也一样**——它只是把 UCX 拨到 TCP 传输，不是"不用 UCX"。
+  这是相对 `dev/pd-sep-comm` 的**新增前置条件**：旧 tcp 部署走自研 socket，没有 UCX 也能跑，
+  所以边端历史上从没装过 UCX；换到 v0.30.0 后边端会带着这句报错闷等 605s：
+
+  ```
+  [ucx-chan] cli:<cloud>:19600 connect failed (RuntimeError('libucp.so.0 not found:
+             ucx data plane requires UCX runtime (set LD_LIBRARY_PATH ...)'))
+  ```
+
+  脚本现在会**启动前预检**（`lwd_require_ucx_runtime`，缺库直接 exit 3）。检查与修复：
+
+  ```bash
+  ldconfig -p | grep -E 'libucp|libuct|libucm'      # 本机有没有
+  ls -d /vllm-workspace/ucx/lib* 2>/dev/null        # 工作区树有没有
+  # 有：显式指定；没有：把能跑的那台机器的 UCX 树同步过来，或装 libucx
+  UCX_PREFIX=/path/to/ucx bash edge.sh
+  ```
+
+  `UCX_PREFIX` 显式置空表示沿用系统库路径；不设置时只在 `/vllm-workspace/ucx` 真实存在时才采用它。
 - **Mooncake**：P/D 的 KV 传输仍用原生气泡 `MooncakeConnectorV1`，需要 `mooncake` 包与
   `LD_LIBRARY_PATH` 指向其 site-packages。
 - **边端租户密钥**：`/vllm-workspace/lwd_tenant.key`（PD 下 `tenant_key_file` 不可省略）。
@@ -231,6 +250,9 @@ v0.30.0 里**只有边端会阻塞等链路**（云端只报 listener bound、�
 | 没有 `[LWD][config]` | 卡在更早阶段：模型加载 / NPU 初始化（先试去掉边端 `--async-scheduling`） |
 | 有 `[LWD] host memory plan ...`、没有 `links created` | 卡在 UCX 初始化或监听绑定 |
 | 有 `links created`、等不到 `[LWD][handshake] OK` | 在等云端链路，查网络与监听（见下） |
+| 边端反复 `connect failed (RuntimeError('libucp.so.0 not found ...'))` | **本机缺 UCX 运行库**，不是网络问题；见 §2.4，`UCX_PREFIX` 指过去即可 |
+
+注意后两种在 ERROR 日志级别下都只有超时那一条，所以先按 §2.3 用 `INFO` 起。
 
 现场排查（不用重启进程）：
 
@@ -259,6 +281,10 @@ ss -lntp | grep -E '19600|19700'                                 # 在云端 B �
 ## 6. 已知风险与首轮排查顺序
 
 按"最可能先炸"排序：
+
+> **已实测踩到的一条**：边端缺 UCX 运行库（`libucp.so.0 not found`）。表现是前 605 秒
+> 没有任何可见日志、最后只报 `[LWD][handshake] host link not ready`，极易误判成网络问题。
+> 脚本现已启动前预检、缺库直接 `exit 3`；细节与修复见 §2.4。
 
 1. **`--async-scheduling` 在边端未验证**。v0.30.0 的 LWD 代码对 `async_scheduling` 零处理，
    而边端 `execute_model` 是劫持实现。若边端起不来或首个请求挂住，**先去掉边端的
