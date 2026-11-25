@@ -3,8 +3,8 @@
 在 **76.76.26.195** 上用三个进程实现标准的 prefill/decode 分离：
 
 ```
-客户端 ──9060──▶ proxy ──┬─▶ prefill 9160 (NPU 0-3, TP=4, kv_producer)
-                         └─▶ decode  9161 (NPU 4-7, TP=4, kv_consumer)
+客户端 ──9060──▶ proxy ──┬─▶ prefill 9160 (NPU 0,1, TP=2, kv_producer)
+                         └─▶ decode  9161 (NPU 3,4, TP=2, kv_consumer)
                                    ▲
                           MooncakeConnectorV1 搬运 KV
 ```
@@ -23,8 +23,8 @@ prefill、decode、proxy 三种角色，没有 edge/cloud 概念。
 | 角色 | 端口 | NPU | 说明 |
 | --- | --- | --- | --- |
 | proxy | **9060** | 无 | 客户端入口；`/v1/chat/completions`、`/v1/completions`、`/v1/models`、`/healthcheck` |
-| prefill | 9160 | 0,1,2,3 | `kv_role=kv_producer`，`kv_port=14589`，`--enforce-eager` |
-| decode | 9161 | 4,5,6,7 | `kv_role=kv_consumer`，`kv_port=14590`，图模式 + MTP |
+| prefill | 9160 | 0,1 | TP=2，`kv_role=kv_producer`，`kv_port=14589`，`--enforce-eager` |
+| decode | 9161 | 3,4 | TP=2，`kv_role=kv_consumer`，`kv_port=14590`，图模式 + MTP |
 | master | 29535 / 29536 | — | 两个引擎各自的 torch 分布式端口 |
 
 端口由 `env.sh` 统一定义（`PD_PROXY_PORT` / `PD_PREFILL_PORT` / …），改一处即可。
@@ -106,10 +106,12 @@ curl -s http://76.76.26.195:9060/v1/chat/completions \
 ## 调参与排查
 
 - **KV 没搬起来**：先看 P 日志里是否出现 `do_remote_decode` 相关记录、D 是否报找不到 `remote_block_ids`；
-  再确认 `kv_connector_extra_config` 里两侧的 `tp_size` 与实际 TP 一致（本目录都是 4），
+  再确认 `kv_connector_extra_config` 里两侧的 `tp_size` 与实际 TP 一致（本目录都是 2），
   以及两个 `kv_port`（14589/14590）在 195 上确实空着。
-- **显存不够**：两个引擎各 `--gpu-memory-utilization 0.90`、TP=4，27B bf16 权重每卡约 14 GB；
-  若 KV 不足，降 `--max-model-len`（如 32768）或降低 `--max-num-seqs`。
+- **显存**：两个引擎各 TP=2、`--gpu-memory-utilization 0.90`。27B 权重约 51.7 GiB（bf16），
+  按 TP=2 切分后每卡约 26 GiB。TP=2 + `--max-model-len 65536` 这套组合已由
+  [../sidecar](../sidecar/README.md) 的 cloud_p/cloud_d（同为 TP=2）在本机跑通过，可以先用默认值；
+  若仍在启动时报 KV block 不足，再降 `--max-model-len`（如 32768）或提高 `--gpu-memory-utilization`。
 - **只想起一个引擎调试**：直接 `bash prefill.sh`，然后手工按两跳顺序 curl P 与 D，
   观察 P 的响应里是否带 `kv_transfer_params`。
 - **改并发**：proxy 的并发上限由 `--max-retries` 等参数控制，见上游脚本的 argparse。
@@ -126,6 +128,6 @@ curl -s http://76.76.26.195:9060/v1/chat/completions \
 | 无 LWD 残留 / 无本地 Python | 只查可执行行 + 目录清单 | `lwd_config`/`LWD_TOPOLOGY`/`UCX_`/`libucp` 均无；目录内没有 `*.py` |
 
 ⚠️ 仍未在真机上验证的部分：**纯 Mooncake PD（无 LWD）这条链路本身**在本集群没有跑通过，
-`MooncakeConnectorV1` 的 `kv_port`/handshake 在"两个引擎同机、各自 TP=4"下是否正常建立，
+`MooncakeConnectorV1` 的 `kv_port`/handshake 在"两个引擎同机、各自 TP=2"下是否正常建立，
 需要实机首次启动时确认。若 D 报找不到远端 block / 握手超时，优先怀疑 `kv_rank`、`kv_port`
 与 `kv_connector_extra_config` 的组合，把两侧日志发我。
