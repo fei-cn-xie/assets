@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Shared environment for the centralized Mooncake PD deployment (P + D + proxy,
-# all on 76.76.26.195, no edge, no LWD).
+# all on 76.76.26.195, no LWD control plane).
 #
 # The NPU/vLLM runtime knobs are the ones the curl-verified v30_rc reference
 # proved on this hardware. The LWD-only pieces of
@@ -77,7 +77,7 @@ pd_preflight() {
   done
   if ((${#busy[@]})); then
     printf '[pd][preflight] ERROR: port(s) %s already in use on this host.\n' "${busy[*]}" >&2
-    printf '[pd][preflight]        stop the previous deployment first (cloud_p.sh/cloud_d.sh, start_proxy.sh).\n' >&2
+    printf '[pd][preflight]        stop the previous deployment first (prefill.sh/decode.sh, start_proxy.sh).\n' >&2
     [[ $PD_DRY_RUN == 1 ]] || exit 4
   fi
 }
