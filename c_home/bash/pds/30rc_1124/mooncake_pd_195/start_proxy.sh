@@ -1,23 +1,34 @@
 #!/usr/bin/env bash
 # Client-facing PD proxy on 76.76.26.195:9060 (no edge, no LWD).
 #
-# It performs the two-hop hand-off that a standard PD deployment needs:
-#   client -> proxy:9060 -> P:9160 (max_tokens=1, do_remote_decode)
-#                       -> D:9161 (with P's kv_transfer_params) -> client
+# Uses the proxy shipped with vllm-ascend, which performs the two-hop hand-off a
+# standard PD deployment needs:
+#   examples/disaggregated_prefill_v1/load_balance_proxy_server_example.py
+#     - sets kv_transfer_params={"do_remote_decode": true, ...} on the prefill hop
+#     - forwards the prefill response's kv_transfer_params to the decode hop
+#   (documented in examples/disaggregated_prefill_v1/
+#    mooncake_connector_deployment_guide.md, section 3 "Start proxy_server")
 #
-# Uses the small stdlib proxy in this directory instead of
-# examples/disaggregated/disaggregated_serving/disagg_proxy_demo.py, because that
-# example never sets kv_transfer_params on the prefill hop and never forwards
-# them to decode, so MooncakeConnectorV1 would transfer nothing.
+# No Python glue lives in this repository: the script is only a launcher.
 set -euo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=env.sh
 source "$SCRIPT_DIR/env.sh"
 
+PROXY="$PD_ASCEND_DIR/load_balance_proxy_server_example.py"
+if [[ ! -f $PROXY ]]; then
+  printf '[pd][preflight] ERROR: %s not found.\n' "$PROXY" >&2
+  printf '[pd][preflight]        expected inside the vllm-ascend checkout at %s\n' "$CODEBASE_DIR/vllm-ascend" >&2
+  printf '[pd][preflight]        check the branch: examples/disaggregated_prefill_v1/ must exist.\n' >&2
+  [[ $PD_DRY_RUN == 1 ]] || exit 5
+fi
+
 pd_preflight "$PD_PROXY_PORT"
 
-pd_run "$PD_PYTHON" "$SCRIPT_DIR/pd_proxy.py" \
+pd_run "$PD_PYTHON" "$PROXY" \
   --host 0.0.0.0 \
   --port "$PD_PROXY_PORT" \
-  --prefill "http://$PD_HOST:$PD_PREFILL_PORT" \
-  --decode "http://$PD_HOST:$PD_DECODE_PORT"
+  --prefiller-hosts "$PD_HOST" \
+  --prefiller-ports "$PD_PREFILL_PORT" \
+  --decoder-hosts "$PD_HOST" \
+  --decoder-ports "$PD_DECODE_PORT"

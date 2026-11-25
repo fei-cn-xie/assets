@@ -38,6 +38,9 @@ export PD_PREFILL_MASTER_PORT=29535
 export PD_DECODE_MASTER_PORT=29536
 export PD_HOST=76.76.26.195
 export PD_MODEL=/home/weight/Qwen3.6-27B/
+# The PD proxy is the one shipped with vllm-ascend (no local Python glue):
+# examples/disaggregated_prefill_v1/load_balance_proxy_server_example.py
+export PD_ASCEND_DIR="${PD_ASCEND_DIR:-$CODEBASE_DIR/vllm-ascend/examples/disaggregated_prefill_v1}"
 
 pd_runtime_env() {
   # Single node: the torch/HCCL bootstrap socket groups stay on loopback.
@@ -46,6 +49,10 @@ pd_runtime_env() {
   export HCCL_SOCKET_IFNAME=lo
   export PYTORCH_NPU_ALLOC_CONF="expandable_segments:True"
   export HCCL_OP_EXPANSION_MODE="AIV"
+  # Values from the vllm-ascend Mooncake deployment guide: the prefill side can
+  # sit on a long prefill before the decode side hears from it.
+  export HCCL_EXEC_TIMEOUT="${HCCL_EXEC_TIMEOUT:-204}"
+  export HCCL_CONNECT_TIMEOUT="${HCCL_CONNECT_TIMEOUT:-120}"
   export VLLM_WORKER_MULTIPROC_METHOD=spawn
   export HCCL_BUFFSIZE=1024
   export OMP_PROC_BIND=false
@@ -87,6 +94,7 @@ names = (
     "ASCEND_RT_VISIBLE_DEVICES",
     "GLOO_SOCKET_IFNAME", "TP_SOCKET_IFNAME", "HCCL_SOCKET_IFNAME",
     "PYTORCH_NPU_ALLOC_CONF", "HCCL_OP_EXPANSION_MODE", "HCCL_BUFFSIZE",
+    "HCCL_EXEC_TIMEOUT", "HCCL_CONNECT_TIMEOUT",
     "VLLM_WORKER_MULTIPROC_METHOD", "OMP_PROC_BIND", "OMP_NUM_THREADS",
     "TASK_QUEUE_ENABLE", "VLLM_LOGGING_LEVEL", "VLLM_ENGINE_READY_TIMEOUT_S",
     "LD_PRELOAD", "LD_LIBRARY_PATH",

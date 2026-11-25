@@ -9,14 +9,17 @@
                           MooncakeConnectorV1 搬运 KV
 ```
 
-**没有 edge，也没有 LWD 控制面/拓扑/UCX**：proxy 直接对客户端提供 OpenAI 接口，自己完成
-"先 P 后 D"的两跳编排。这与 [../sidecar](../sidecar/README.md)（edge + P + D 的边云式 LWD）是两条不同的路。
+**没有 edge，也没有 LWD 控制面/拓扑/UCX**：proxy 直接对客户端提供 OpenAI 接口（9060），
+自己完成"先 P 后 D"的两跳编排。这与 [../sidecar](../sidecar/README.md)（edge + P + D 的边云式 LWD）
+是两条不同的路。
+
+本目录**只有 shell 拉起脚本，没有任何 Python 代码**：proxy 直接用 vllm-ascend 仓自带的示例。
 
 ## 端口与卡
 
 | 角色 | 端口 | NPU | 说明 |
 | --- | --- | --- | --- |
-| proxy | **9060** | 无 | 客户端入口；`/v1/chat/completions`、`/v1/completions`、`/v1/models`、`/health` |
+| proxy | **9060** | 无 | 客户端入口；`/v1/chat/completions`、`/v1/completions`、`/v1/models`、`/healthcheck` |
 | prefill | 9160 | 0,1,2,3 | `kv_role=kv_producer`，`kv_port=14589`，`--enforce-eager` |
 | decode | 9161 | 4,5,6,7 | `kv_role=kv_consumer`，`kv_port=14590`，图模式 + MTP |
 | master | 29535 / 29536 | — | 两个引擎各自的 torch 分布式端口 |
@@ -27,16 +30,23 @@
 
 | 文件 | 作用 |
 | --- | --- |
-| `env.sh` | 运行时环境（NPU/HCCL/OMP/jemalloc）、端口常量、预检、`--dry-run` |
+| `env.sh` | 运行时环境（NPU/HCCL/OMP/jemalloc）、端口与路径常量、预检、`--dry-run` |
 | `cloud_p.sh` | prefill 引擎 |
 | `cloud_d.sh` | decode 引擎 |
-| `start_proxy.sh` | 启动 `pd_proxy.py`（9060） |
-| `pd_proxy.py` | 最小标准 PD proxy：P 探测取 `kv_transfer_params` → 带参打 D → 回放答案 |
+| `start_proxy.sh` | 启动 vllm-ascend 自带的 proxy（9060） |
+
+proxy 代码不在本仓，路径为：
+
+```
+$CODEBASE_DIR/vllm-ascend/examples/disaggregated_prefill_v1/load_balance_proxy_server_example.py
+```
+
+`start_proxy.sh` 启动前会检查该文件是否存在，缺失时给出明确报错（`exit 5`）。
 
 ## 启动
 
 ```bash
-# 顺序：P → D → proxy（proxy 先起也能跑，只是前两个就绪前请求会 502）
+# 顺序：P → D → proxy
 bash cloud_p.sh
 bash cloud_d.sh
 bash start_proxy.sh
@@ -50,33 +60,33 @@ bash start_proxy.sh
 ## 验证
 
 ```bash
-curl -s http://76.76.26.195:9060/health
+curl -s http://76.76.26.195:9060/healthcheck
 curl -s http://76.76.26.195:9060/v1/models
 curl -s http://76.76.26.195:9060/v1/chat/completions \
   -H 'Content-Type: application/json' \
   -d '{"model":"qwen3.6","messages":[{"role":"user","content":"你好"}],"max_tokens":64}'
 ```
 
-- `/health` 返回 `{"status":"ok","stats":{"ok":N,"failed":M}}`。
-- 若返回 `502 ... prefill response carries no kv_transfer_params`，说明 P 侧没按 producer 起，
-  或 KV 传输没建立（见下节排查）。
+- 健康检查端点是 **`/healthcheck`**（上游示例的命名）。
+- 若 proxy 报 P 侧没有 `kv_transfer_params`，说明 P 的 `kv_role` 或 KV 通道没建起来，见下节。
 
-## 为什么自己写 pd_proxy.py
+## 为什么用 vllm-ascend 的这个 proxy
 
-仓里的示例 `examples/disaggregated/disaggregated_serving/disagg_proxy_demo.py` **不能用于这套连接器**：
-它把请求发给 P 时只改 `max_tokens=1`，**既不设 `kv_transfer_params.do_remote_decode`，也不把 P 返回的
-`kv_transfer_params` 转发给 D**（该文件 `:250-278`、`:286-317`）。而 Ascend 的
-`MooncakeConnectorV1` 只有看到这些参数才会搬运 KV
-（`vllm_ascend/distributed/kv_transfer/kv_p2p/mooncake_connector.py:1911-2049`）。
+它的 `handle_completions_impl` 正是标准两跳：
 
-`pd_proxy.py` 的结构照搬**已经在本集群验证过的** `vllm/v1/lwd_control/pd/proxy.py`，
-只去掉 LWD 的 envelope 要求：
+| 步骤 | 代码位置（`load_balance_proxy_server_example.py`） |
+| --- | --- |
+| 给 P 设 `kv_transfer_params={"do_remote_decode": true, "do_remote_prefill": false}` | `:821-823` |
+| 从 P 的响应取 `kv_transfer_params` 并转发给 D | `:973-975` |
+| 路由：`/v1/completions`、`/v1/chat/completions`、`/v1/models`、`/healthcheck` | `:1292-1364` |
 
-1. 给 P：`max_tokens=1`、`stream=false`、`kv_transfer_params={"do_remote_decode":true,"do_remote_prefill":false}`；
-2. 从 P 的响应里取 `kv_transfer_params`；
-3. 原样带上它打 D（`stream` 跟随客户端），SSE 直接回放。
+参数形态与 `examples/disaggregated_prefill_v1/mooncake_connector_deployment_guide.md` 一致，
+`--kv-transfer-config` 里的 `kv_buffer_device="npu"`、`kv_parallel_size=1`、字符串形式的
+`kv_port`、`kv_rank` 0/1 也都取自该指南。
 
-只用标准库，不依赖 fastapi/httpx。
+**不要用** `vllm/examples/disaggregated/disaggregated_serving/disagg_proxy_demo.py`：它给 P 只改
+`max_tokens=1`，既不设 `kv_transfer_params`，也不把 P 的返回值转给 D（该文件 `:250-278`、`:286-317`），
+配 `MooncakeConnectorV1` 会"跑起来但根本不搬 KV"。
 
 ## 与 ../sidecar（LWD 边云）的差异
 
@@ -85,32 +95,34 @@ curl -s http://76.76.26.195:9060/v1/chat/completions \
 | edge | 有（194，承担模板渲染/unembed/采样） | **无** |
 | LWD 控制面 | `--additional-config lwd_config` + 拓扑文件 | **无** |
 | host 数据面 | `data_plane_comm: host` + UCX + sidecar daemon | **无** |
-| KV 传输 | MooncakeConnectorV1 | MooncakeConnectorV1（同） |
+| KV 传输 | MooncakeConnectorV1 | MooncakeConnectorV1（同连接器，参数按官方指南补全） |
 | 客户端入口 | edge 的 8510 | proxy 的 9060 |
 | P 的 MTP | 有（`cloud_p.sh` 里带 `--speculative-config`） | **去掉**：P 只回答 `max_tokens=1` 的探测，draft 纯属开销 |
 | 其余 vLLM 参数 | — | 与 sidecar 逐字一致（`max-model-len/max-num-seqs/max-num-batched-tokens/gpu-memory-utilization/async-scheduling/served-model-name/trust-remote-code/pp`） |
 
 ## 调参与排查
 
-- **KV 没搬起来**：先看 P 的日志是否有 `do_remote_decode` 相关记录、D 是否报找不到 `remote_block_ids`；
-  再确认 `kv_connector_extra_config` 里两侧的 `tp_size` 与实际 TP 一致（本目录都是 4）。
+- **KV 没搬起来**：先看 P 日志里是否出现 `do_remote_decode` 相关记录、D 是否报找不到 `remote_block_ids`；
+  再确认 `kv_connector_extra_config` 里两侧的 `tp_size` 与实际 TP 一致（本目录都是 4），
+  以及两个 `kv_port`（14589/14590）在 195 上确实空着。
 - **显存不够**：两个引擎各 `--gpu-memory-utilization 0.90`、TP=4，27B bf16 权重每卡约 14 GB；
   若 KV 不足，降 `--max-model-len`（如 32768）或降低 `--max-num-seqs`。
-- **只想起一个引擎调试**：可直接 `bash cloud_p.sh`，然后手工按两跳顺序 curl P 和 D，
-  观察 `kv_transfer_params` 是否出现在 P 的响应里。
-- **proxy 需要更高并发**：`ThreadingHTTPServer` 每请求一线程；压测到极高 QPS 时再考虑换 uvicorn 实现。
+- **只想起一个引擎调试**：直接 `bash cloud_p.sh`，然后手工按两跳顺序 curl P 与 D，
+  观察 P 的响应里是否带 `kv_transfer_params`。
+- **改并发**：proxy 的并发上限由 `--max-retries` 等参数控制，见上游脚本的 argparse。
 
 ## 本目录做过的校验（均实跑）
 
 | 检查 | 方法 | 结果 |
 | --- | --- | --- |
 | 脚本语法 | `bash -n` × 4 | 通过 |
-| proxy 逻辑 | 桩 P/D 服务 + 真实启动 `pd_proxy.py` | 17 项断言全过：P 收到 `max_tokens=1`/`do_remote_decode`；D 收到原始 `max_tokens` 与 P 的 `kv_transfer_params`；SSE 与 `[DONE]` 正常回放；P 缺 KV 参数时返回 502 并点名 `kv_transfer_params`；`/health`、`/v1/models`、`/v1/completions` 正常 |
-| 拉起参数 | 三个入口 `--dry-run` 逐项断言 | 端口/TP/卡号/kv_role/kv_port/图模式/MTP 全部符合预期 |
+| 拉起参数 | 三个入口 `--dry-run` 逐项断言 | 端口/TP/卡号/kv_role/kv_rank/kv_port/kv_buffer_device/kv_parallel_size/图模式/MTP 全部符合预期 |
+| proxy 指向 | `start_proxy.sh --dry-run` | 指向 vllm-ascend 示例脚本，参数 `--port 9060`、`--prefiller-hosts 76.76.26.195`、`--prefiller-ports 9160`、`--decoder-hosts/ports` 对应 9161 |
+| 上游文件存在 | 本地 vllm-ascend 检出的该路径 | 存在，且 kv 握手代码行号与上表一致 |
 | 与 LWD 参考一致 | 与 `sidecar/cloud_p.sh` 的 argv 比对 | 8 个共享参数逐字相同 |
-| 无 LWD 残留 | 只查可执行行 | `lwd_config`/`LWD_TOPOLOGY`/`UCX_`/`libucp` 均无 |
+| 无 LWD 残留 / 无本地 Python | 只查可执行行 + 目录清单 | `lwd_config`/`LWD_TOPOLOGY`/`UCX_`/`libucp` 均无；目录内没有 `*.py` |
 
 ⚠️ 仍未在真机上验证的部分：**纯 Mooncake PD（无 LWD）这条链路本身**在本集群没有跑通过，
-`MooncakeConnectorV1` 的 `kv_port`/handshake 是否在"两个引擎同机、各自 TP=4"下正常建立，
+`MooncakeConnectorV1` 的 `kv_port`/handshake 在"两个引擎同机、各自 TP=4"下是否正常建立，
 需要实机首次启动时确认。若 D 报找不到远端 block / 握手超时，优先怀疑 `kv_rank`、`kv_port`
 与 `kv_connector_extra_config` 的组合，把两侧日志发我。
