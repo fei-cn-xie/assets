@@ -1,3 +1,5 @@
 **/*.bkp
 **/build
 **/*.patch
+__pycache__/
+*.pyc
