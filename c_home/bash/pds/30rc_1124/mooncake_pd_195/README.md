@@ -4,7 +4,7 @@
 
 ```
 客户端 ──9060──▶ proxy ──┬─▶ prefill 9160 (NPU 0,1, TP=2, kv_producer)
-                         └─▶ decode  9161 (NPU 3,4, TP=2, kv_consumer)
+                         └─▶ decode  9161 (NPU 2,3, TP=2, kv_consumer)
                                    ▲
                           MooncakeConnectorV1 搬运 KV
 ```
@@ -24,7 +24,7 @@ prefill、decode、proxy 三种角色，没有 edge/cloud 概念。
 | --- | --- | --- | --- |
 | proxy | **9060** | 无 | 客户端入口；`/v1/chat/completions`、`/v1/completions`、`/v1/models`、`/healthcheck` |
 | prefill | 9160 | 0,1 | TP=2，`kv_role=kv_producer`，`kv_port=14589`，`--enforce-eager` |
-| decode | 9161 | 3,4 | TP=2，`kv_role=kv_consumer`，`kv_port=14590`，图模式 + MTP |
+| decode | 9161 | 2,3 | TP=2，`kv_role=kv_consumer`，`kv_port=14590`，图模式 + MTP |
 | master | 29535 / 29536 | — | 两个引擎各自的 torch 分布式端口 |
 
 端口由 `env.sh` 统一定义（`PD_PROXY_PORT` / `PD_PREFILL_PORT` / …），改一处即可。
