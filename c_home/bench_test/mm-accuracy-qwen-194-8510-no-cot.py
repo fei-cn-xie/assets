@@ -17,13 +17,23 @@
     确认无误后可以 --skip-probe 跳过。
 
 用法：
-    python mm-accuracy-qwen-194-8510-no-cot.py            # 先探针，再跑 ais_bench
-    python mm-accuracy-qwen-194-8510-no-cot.py --skip-probe
+    python mm-accuracy-qwen-194-8510-no-cot.py                 # 先探针，再跑 ais_bench
+    python mm-accuracy-qwen-194-8510-no-cot.py --probe-wait 600  # 边端还在加载时多等一会
+    python mm-accuracy-qwen-194-8510-no-cot.py --skip-probe    # 跳过探针
+
+探针的三类失败是分开报的，避免把"端口没起"误判成"CoT 没关"：
+    net    端口/网络不通（服务没起、没就绪、或本机到目标不通）
+    http   服务可达但 HTTP 报错（模型名不匹配、鉴权、引擎错）
+    param  有回复但仍在思考（模板不认 enable_thinking 等）
+探针还会**显式绕过 http_proxy/HTTPS_PROXY**：urllib 默认会把请求转给代理，
+在带代理的机器上表现为 Connection refused（连的是代理而不是边端）。
 """
 
 import json
 import os
+import socket
 import subprocess
+import sys
 import time
 import urllib.error
 import urllib.request
@@ -121,13 +131,60 @@ def get_editable_location():
     return None
 
 
-def probe_no_cot(model_name, host_ip, host_port, timeout=120):
+def wait_for_port(host_ip, host_port, wait_s=60, interval=5):
+    """TCP 轮询，等边端把端口绑上。返回 (ok, last_error)。
+
+    边端 vLLM 是先等引擎就绪（含 PD 链路预热，最长 605s/条）再 uvicorn.run，
+    所以在"正在加载"期间端口本来就是 refused。这里把它和真正的故障区分开。
+    """
+    deadline = time.monotonic() + max(0, wait_s)
+    attempt = 0
+    last_error = ""
+    while True:
+        attempt += 1
+        try:
+            with socket.create_connection((host_ip, host_port), timeout=3):
+                return True, ""
+        except OSError as exc:
+            last_error = repr(exc)
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                return False, last_error
+            print(
+                f"[probe] {host_ip}:{host_port} 暂不可连"
+                f"（第 {attempt} 次：{exc}）—— 假设边端仍在加载，"
+                f"最多再等 {remaining:.0f}s"
+            )
+            time.sleep(min(interval, remaining))
+
+
+def probe_no_cot(model_name, host_ip, host_port, timeout=120, wait_s=60):
     """直连服务端，确认 enable_thinking=false 真的生效。
 
-    判据（任一命中即视为"仍在思考"）：
-      * 返回体 message.reasoning_content 非空；
-      * content 里出现思考起止标记（由调用方用 markers 传入）。
+    返回 (ok, kind)，kind 用于区分责任方：
+      ok     生效
+      net    端口/网络不通（服务没起、没就绪、或本机到目标不通）——与 CoT 无关
+      http   HTTP 层报错（404 模型名不对、401 鉴权、500 引擎错）
+      param  有回复但仍在思考 —— 请求开关没生效
     """
+    proxies = {
+        key: value
+        for key, value in os.environ.items()
+        if key.lower() in {"http_proxy", "https_proxy", "all_proxy", "no_proxy"}
+    }
+    if proxies:
+        print(f"[probe] 检测到代理环境变量 {proxies}；探针已显式绕过代理直连")
+
+    # 关键：不用 urllib 的默认 opener —— 它会读取 http_proxy/HTTPS_PROXY，
+    # 把请求转到代理上。在带代理的机器上，这会表现为 Connection refused
+    # （连的是代理地址，而不是边端），极易误判成服务没起。
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+
+    reachable, last_error = wait_for_port(host_ip, host_port, wait_s=wait_s)
+    if not reachable:
+        print(f"[probe] FAIL(net): {host_ip}:{host_port} 始终连不上 —— {last_error}")
+        return False, "net"
+
     url = f"http://{host_ip}:{host_port}/v1/chat/completions"
     payload = {
         "model": model_name,
@@ -144,15 +201,15 @@ def probe_no_cot(model_name, host_ip, host_port, timeout=120):
 
     print(f"[probe] POST {url}  payload.chat_template_kwargs={payload['chat_template_kwargs']}")
     try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
+        with opener.open(request, timeout=timeout) as response:
             body = json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode("utf-8", "replace")[:400]
-        print(f"[probe] FAIL: HTTP {exc.code} — {detail}")
-        return False
+        print(f"[probe] FAIL(http): HTTP {exc.code} — {detail}")
+        return False, "http"
     except Exception as exc:  # noqa: BLE001 - 探针要给出可读结论，不抛栈
-        print(f"[probe] FAIL: 请求失败 {exc!r}")
-        return False
+        print(f"[probe] FAIL(net): 请求失败 {exc!r}")
+        return False, "net"
 
     choice = (body.get("choices") or [{}])[0]
     message = choice.get("message") or {}
@@ -164,25 +221,41 @@ def probe_no_cot(model_name, host_ip, host_port, timeout=120):
 
     print(f"[probe] content({len(content)} 字符): {content.strip()[:120]!r}")
     if reasoning:
-        print(f"[probe] FAIL: message.reasoning_content 非空（{len(reasoning)} 字符）"
+        print(f"[probe] FAIL(param): message.reasoning_content 非空（{len(reasoning)} 字符）"
               " → 服务端仍在思考，enable_thinking=false 没生效")
-        return False
+        return False, "param"
     if leaked:
-        print(f"[probe] FAIL: content 里出现思考标记 {leaked} → 模板没吃掉 enable_thinking")
-        return False
+        print(f"[probe] FAIL(param): content 里出现思考标记 {leaked} → 模板没吃掉 enable_thinking")
+        return False, "param"
 
     print("[probe] OK: 无 reasoning_content、无思考标记，服务端已按不思考处理")
-    return True
+    return True, "ok"
 
 
-def do_task(skip_probe=False):
+def do_task(skip_probe=False, probe_wait=60):
     global model_path, model_name, host_ip, host_port, dataset_path, test_parameter
 
     if not skip_probe:
-        if not probe_no_cot(model_name, host_ip, host_port):
-            print("\n[probe] 已中止：请先解决上面的问题，或用 --skip-probe 强制跳过探针。")
-            print("        常见原因：模型模板不认 enable_thinking；服务端版本吞掉了该字段；")
-            print("        服务端配了 reasoning parser 但请求没带 chat_template_kwargs。")
+        ok, kind = probe_no_cot(model_name, host_ip, host_port, wait_s=probe_wait)
+        if not ok:
+            if kind == "net":
+                print("\n[probe] 已中止：边端端口不可达 —— 与 CoT 参数无关，先修连通性。")
+                print("        在【执行本脚本的机器】上依次确认：")
+                print(f"        1) 服务是否监听   ss -lntp | grep {host_port}")
+                print(f"        2) 直连是否通     curl -sS -m 3 -o /dev/null -w '%{{http_code}}\\n' "
+                      f"http://{host_ip}:{host_port}/v1/models")
+                print("        3) 是否有代理     env | grep -i proxy   （探针已自动绕过代理，手工 curl 不会）")
+                print("        4) 边端是否就绪   加载/预热最长可达 605s×IO 数，就绪前端口本来就是 refused")
+                print(f"        就绪前想让它自己等：--probe-wait {max(probe_wait * 10, 600)}")
+            elif kind == "http":
+                print("\n[probe] 已中止：服务可达，但 HTTP 层返回错误。")
+                print(f"        先核对 --served-model-name 是否等于 model_name={model_name!r}，再看鉴权/引擎状态。")
+            else:
+                print("\n[probe] 已中止：请求开关没生效 —— 服务端仍在思考。")
+                print("        常见原因：模型模板不认 enable_thinking；服务端版本吞掉了该字段；")
+                print("        或边端配了 reasoning parser，而请求没把 chat_template_kwargs 带过去。")
+                print("        备选方案：边端加 --default-chat-template-kwargs '{\"enable_thinking\": false}'。")
+            print("        （连通性/引擎确认无误后，可加 --skip-probe 跳过探针）")
             return 1
     else:
         print("[probe] 已按 --skip-probe 跳过")
@@ -236,4 +309,11 @@ if __name__ == '__main__':
     test_parameter = [
         {'batch_size': 100, 'num_prompts': 100, 'request_rate': 1},
                      ]
-    raise SystemExit(do_task(skip_probe="--skip-probe" in os.sys.argv))
+    raise SystemExit(
+        do_task(
+            skip_probe="--skip-probe" in sys.argv,
+            probe_wait=int(sys.argv[sys.argv.index("--probe-wait") + 1])
+            if "--probe-wait" in sys.argv
+            else 60,
+        )
+    )
