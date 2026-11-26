@@ -57,9 +57,38 @@ LINE_ROLE = {
 }
 
 
+def role_families(label: str) -> set[str]:
+    """**标题行**里提到了哪些角色（用于"文案说边端、颜色却不是"的一致性检查）。
+
+    只看标题行：后面的补充说明/锚点经常"顺带提到对端"（例如云 P 的框里写
+    "视觉塔留在边侧"），那不是归属声明，按它判会大量误报。
+    `prefill` / `decode` 要整词匹配：`do_remote_prefill=True` 这类字段名不是归属。
+    """
+    import re
+    title = re.sub(r"<[^>]+>", "", label.split("<br>")[0])
+    fam = set()
+    if re.search(r"边端|边侧", title):
+        fam.add("edge")
+    if re.search(r"云 ?P(?![a-zA-Z])|(?<![_A-Za-z])prefill(?![_A-Za-z])|Producer",
+                 title):
+        fam.add("cloudp")
+    if re.search(r"云 ?D(?![a-zA-Z])|(?<![_A-Za-z])decode(?![_A-Za-z])|Consumer",
+                 title):
+        fam.add("cloudd")
+    if re.search(r"PD Proxy|proxy", title):
+        fam.add("proxy")
+    return fam
+
+
+FAMILY_FILL = {"edge": "#dae8fc", "cloudp": "#ffe6cc", "cloudd": "#d5e8d4",
+               "proxy": "#b0e3e6"}
+
+
 def audit(path: str, verbose: bool = False) -> int:
     pages = load(path)
     problems: list[str] = []
+    hints: list[str] = []
+    scanned = 0
     print(f"{os.path.basename(path)}: {len(pages)} pages\n")
     print(f"{'页':<26} {'方块':>4} {'边':>4}  填色分布")
     print("-" * 96)
@@ -92,6 +121,21 @@ def audit(path: str, verbose: bool = False) -> int:
             if fill in LEGACY_FILL and LEGACY_FILL[fill]:
                 bad_fill.append((v.id, fill, "LEGACY", v.label[:40]))
             fills[name] += 1
+            # 文案↔填色一致性（启发式，只扫"内容方框"：圆角 + 带 .py: 锚点）
+            # 内容方框 = 圆角 + 带 .py 锚点；排除表格 cell（font-size:11px 包裹）
+            is_content = (v.style.get("rounded") == "1"
+                          and ".py" in v.label
+                          and "font-size:11px" not in v.label)
+            fam = role_families(v.label)
+            if is_content:
+                scanned += 1
+            if is_content and len(fam) == 1:
+                want = FAMILY_FILL[next(iter(fam))]
+                if fill != want and fill != "#f8cecc":
+                    hints.append(
+                        f"[{pi:02d} {page['name']}] 文案只提「{next(iter(fam))}」，"
+                        f"填色却是 {FILL_ROLE.get(fill, fill)} :: "
+                        f"{v.label.split('<br>')[0][:46]}")
             for _lid, lx, ly_, lw, lfill in lanes:
                 if lx - 2 <= v.x <= lx + lw and ly_ - 2 <= v.y <= ly_ + 4000 \
                         and lfill == fill:
@@ -136,6 +180,15 @@ def audit(path: str, verbose: bool = False) -> int:
                 print(f"      图例色块 {len(chips)} 个:", sorted(got))
 
     print()
+    if hints:
+        print(f"{len(hints)} 条「文案只提一个角色、填色却不是它」的候选"
+              f"（启发式，逐条判断：有些步骤本就该中立）：")
+        for h in hints:
+            print("  ?", h)
+        print()
+    else:
+        print(f"角色一致性：扫描了 {scanned} 个内容方框，"
+              f"没有「文案说某角色、颜色却不是它」的情况")
     if problems:
         print(f"{len(problems)} 个待处理项：")
         for p in problems:

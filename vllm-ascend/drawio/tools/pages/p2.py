@@ -94,15 +94,16 @@ def build(doc: Doc) -> None:
            "ATTACH 时用 SCM_RIGHTS 回传 3 个 fd（memfd 段 + 两对 pipe）；空闲 30s 自杀", role="proxy")
 
     s.phase("⑤ 控制面握手（ZMQ ROUTER/DEALER）")
-    s.step("ec", "_lwd_start_control_plane：ROUTER bind ctrl_port",
+    s.step("ec", "_lwd_start_control_plane（边端）：DEALER connect 云的两条 ctrl 链路",
            "lwd_edge_engine.py:126 · vllm/v1/lwd_control/lwd_comm/lwd_control_plane.py",
-           "边端 bind（连 6100/6101 的两条链路），云端按拓扑 bind 自己的 ctrl_port", role="ctrl")
+           "边端只 connect（6100 / 6101 各一条）；云端在 LwdCloudEngineCore 里各自 "
+           "ROUTER bind 自己的 ctrl_port", role="hi_edge")
     s.msg("ec", "ot", "HELLO + CloudParams（并发上限 / hash block / stage_role / pd_version）",
           mode="sync", role="ctrl")
     s.msg("ot", "ec", "参数回执 → wait_until_ready(handshake_timeout)", mode="return",
           role="ctrl")
     s.step("ec", "PD 校验：必须同时存在 prefill + decode 且 hash block 一致",
-           "vllm/v1/lwd_control/pd/edge_runtime.py:74-88", role="cloudd")
+           "vllm/v1/lwd_control/pd/edge_runtime.py:74-88", role="hi_edge")
 
     s.phase("⑥ 数据面建链（只有边端阻塞等）")
     s.step("wk", "lwd_init_host_channels：身份驱动建链 + UP 块定尺 + 内存预算闸",

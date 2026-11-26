@@ -35,8 +35,9 @@ def main() -> int:
         importlib.reload(mod)
         mod.build(doc)
     out = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_OUT
-    with open(out, "w", encoding="utf-8", newline="\n") as f:
-        f.write(fmt.normalized(doc.xml()))
+
+    # doc.xml() 会把懒构建（Seq 等）全部落地；先完整生成，再校验，最后落盘。
+    text = fmt.normalized(doc.xml())
 
     problems = 0
     for p in doc.pages:
@@ -45,6 +46,9 @@ def main() -> int:
         for i in issues[:20]:
             print("   -", i)
         problems += len(issues)
+
+    with open(out, "w", encoding="utf-8", newline="\n") as f:
+        f.write(text)
     print(f"wrote {out} ({len(doc.pages)} pages, {problems} layout issues)")
     return 1 if problems else 0
 

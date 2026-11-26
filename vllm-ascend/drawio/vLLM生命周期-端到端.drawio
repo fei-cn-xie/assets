@@ -562,7 +562,7 @@
             <mxPoint x="1866" y="1709" as="targetPoint"/>
           </mxGeometry>
         </mxCell>
-        <mxCell id="n65" value="&lt;b&gt;_lwd_start_control_plane：ROUTER bind ctrl_port&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot; color=&quot;#8a6d3b&quot;&gt;边端 bind（连 6100/6101 的两条链路），云端按拓扑 bind 自己的 ctrl_port&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot; color=&quot;#666666&quot;&gt;lwd_edge_engine.py:126 · vllm/v1/lwd_control/lwd_comm/lwd_control_plane.py&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#ffffff;strokeColor=#b3b3b3;" vertex="1" parent="1">
+        <mxCell id="n65" value="&lt;b&gt;_lwd_start_control_plane（边端）：DEALER connect 云的两条 ctrl 链路&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot; color=&quot;#8a6d3b&quot;&gt;边端只 connect（6100 / 6101 各一条）；云端在 LwdCloudEngineCore 里各自 ROUTER bind 自己的 ctrl_port&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot; color=&quot;#666666&quot;&gt;lwd_edge_engine.py:126 · vllm/v1/lwd_control/lwd_comm/lwd_control_plane.py&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
           <mxGeometry x="660" y="1737" width="274" height="89" as="geometry"/>
         </mxCell>
         <mxCell id="e66" value="HELLO + CloudParams（并发上限 / hash block / stage_role / pd_version）" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeColor=#9673a6;fillColor=#9673a6;fontColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1">
@@ -577,7 +577,7 @@
             <mxPoint x="797" y="1899" as="targetPoint"/>
           </mxGeometry>
         </mxCell>
-        <mxCell id="n68" value="&lt;b&gt;PD 校验：必须同时存在 prefill + decode 且 hash block 一致&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot; color=&quot;#666666&quot;&gt;vllm/v1/lwd_control/pd/edge_runtime.py:74-88&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#ffffff;strokeColor=#b3b3b3;" vertex="1" parent="1">
+        <mxCell id="n68" value="&lt;b&gt;PD 校验：必须同时存在 prefill + decode 且 hash block 一致&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot; color=&quot;#666666&quot;&gt;vllm/v1/lwd_control/pd/edge_runtime.py:74-88&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
           <mxGeometry x="660" y="1928" width="274" height="53" as="geometry"/>
         </mxCell>
         <mxCell id="n69" value="&lt;font color=&quot;#999999&quot;&gt;⑥ 数据面建链（只有边端阻塞等）&lt;/font&gt;" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=0;fontSize=11;fontStyle=1;dashed=1;" vertex="1" parent="1">
