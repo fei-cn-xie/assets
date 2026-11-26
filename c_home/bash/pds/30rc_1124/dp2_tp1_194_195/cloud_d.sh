@@ -6,9 +6,9 @@
 # derived from data_parallel_index (the consumer only connects, so 14580/14581
 # never have to be free).
 #
-# Memory: same TP=1 pressure as the prefill side (full 64-layer model per card),
-# so the KV budget is ≈6.7 GiB at 0.95 and max_num_seqs stays below the Mamba
-# block count (≈123 at that pool size).
+# Memory: same TP=1 pressure as the prefill side (full 64-layer model per card).
+# With MTP the KV pool only covers ~32-63 GDN(Mamba) blocks, one per decode
+# sequence, so max_num_seqs is 32 (64 was rejected at startup).
 set -euo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=env.sh
@@ -32,7 +32,7 @@ lwd_run "$LWD_PYTHON" -m vllm.entrypoints.cli.main serve /home/weight/Qwen3.6-27
   --additional-config '{"enable_cpu_binding":true,"lwd_config":{"path":'"${LWD_TOPOLOGY_JSON}"',"role":"cloud","instance_id":1}}' \
   --kv-transfer-config '{"kv_connector":"MooncakeConnectorV1","kv_role":"kv_consumer","kv_rank":1,"kv_port":14580,"kv_connector_extra_config":{"prefill":{"dp_size":2,"tp_size":1},"decode":{"dp_size":2,"tp_size":1}}}' \
   --trust-remote-code --served-model-name qwen3.6 \
-  --max-model-len "${LWD_MAX_MODEL_LEN:-32768}" --max-num-seqs "${LWD_MAX_NUM_SEQS:-64}" --max-num-batched-tokens 8192 \
+  --max-model-len "${LWD_MAX_MODEL_LEN:-32768}" --max-num-seqs "${LWD_MAX_NUM_SEQS:-32}" --max-num-batched-tokens "${LWD_MAX_NUM_BATCHED_TOKENS:-8192}" \
   --gpu-memory-utilization "${LWD_GPU_MEM_UTIL:-0.95}" \
   --async-scheduling \
   --compilation-config '{"cudagraph_mode":"FULL_DECODE_ONLY"}' \

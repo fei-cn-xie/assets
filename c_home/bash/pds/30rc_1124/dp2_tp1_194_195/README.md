@@ -50,15 +50,31 @@ DP 协调端口：prefill `29600`、decode `29601`；master 端口 29525 / 29526
 | --- | --- | --- |
 | `--max-model-len` | 32768（**边端与两个云必须一致**） | TP=1 时 KV 只有 ≈6.7 GiB，32768 需 ≈2.2 GiB；该值进 `model_config_hash`，而它是 PD ABI 指纹的一部分，不一致就会 400 |
 | `--gpu-memory-utilization` | 0.95 | 0.90 时 KV 只有 3.3 GiB，65536 上下文直接失败 |
-| `--max-num-seqs` | 64 | 模型含 GDN(Mamba) 层，每 decode 序列占一个 mamba block；6.7 GiB 只有 ≈123 个 |
+| `--max-num-seqs` | 32 | 模型含 GDN(Mamba) 层，每个 decode 序列占一个 mamba block。开 MTP 后 KV 池只够 ~32~63 个 block，实测 **64 直接起不来**，32 可用 |
 | `--speculative-config` | MTP，3 tokens | 修好 DP 校验后 DP>1 也能用 MTP；若显存吃紧可去掉，能换来约 1 GiB KV |
+
+三个脚本里的 `--max-model-len` / `--max-num-seqs` / `--max-num-batched-tokens` 都走同一组环境变量
+（`LWD_MAX_MODEL_LEN` / `LWD_MAX_NUM_SEQS` / `LWD_MAX_NUM_BATCHED_TOKENS`），默认值相同，
+`check_configs.py` 的 launch parity 会在拉起前校验三者一致。
+
+## 边云一致性
+
+| 参数 | 边端 | 两个云 | 必须一致？ | 原因 |
+| --- | --- | --- | --- | --- |
+| `--max-model-len` | 32768 | 32768 | **必须** | 进 `model_config_hash`，而它是 PD ABI 指纹的一部分（`lwd_mm_identity.py:107-135`）；不一致云端直接 400 `PD input processor ABI does not match this cloud` |
+| `--max-num-seqs` | 32 | 32 | **必须** | 决定整条流水线能接纳多少并发。边端更大只会把请求堆给云，最终还是被 mamba block 上限挡住 |
+| `--max-num-batched-tokens` | 8192 | 8192 | **必须** | 分块窗口，两侧要能对上；LWD 的 host buffer 也按它推导 |
+| `--gpu-memory-utilization` | 0.90 | 0.95 | 不必 | 各卡自己的显存预算；云侧 TP=1 权重更占地方，需要更高利用率留出 KV |
+| `--speculative-config`（MTP） | 无 | 有 | 不必 | 只有云侧做生成；边端差异字面量 `spec_target_max_model_len` 官方已被排除在哈希外 |
+| `--data-parallel-size` / `--tensor-parallel-size` | 1 / 1 | 2 / 1 | 不必 | 只有云侧跑多副本 |
+| `--port` / `--master-port` | 8510 / 29527 | 8600·8601 / 29525·29526 | 不必 | 各进程独立监听 |
 | `--data-parallel-size 2` | 两侧都是 2 | 每个 DP rank 独占一张卡（TP=1，权重不切分） |
 
 三个值都能用环境变量覆盖，不必改脚本：
 
 ```bash
 LWD_MAX_MODEL_LEN=65536 bash cloud_d.sh   # 需 Available KV > 4.4 GiB
-LWD_MAX_NUM_SEQS=96     bash cloud_d.sh   # 上限由启动日志的 mamba block 数决定
+LWD_MAX_NUM_SEQS=48     bash cloud_d.sh   # 上限由启动日志的 mamba block 数决定，默认 32
 LWD_GPU_MEM_UTIL=0.96   bash cloud_d.sh
 ```
 

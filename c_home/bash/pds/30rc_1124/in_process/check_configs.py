@@ -530,40 +530,50 @@ def validate_proxy(path: Path, label: str) -> int:
 
 
 LAUNCHERS = ("edge.sh", "cloud_p.sh", "cloud_d.sh")
-MODEL_LEN_RE = re.compile(r'--max-model-len\s+(?:"\$\{LWD_MAX_MODEL_LEN:-(\d+)\}"|(\d+))')
+# Knobs the edge and both clouds must agree on: the first one is hashed into the
+# PD ABI fingerprint, the other two bound what the pipeline as a whole can admit.
+PARITY_FLAGS = ("--max-model-len", "--max-num-seqs", "--max-num-batched-tokens")
+LAUNCH_VALUE_RE = r'(?:"\$\{LWD_[A-Z_]+:-(\d+)\}"|(\d+))'
 
 
-def _launcher_model_len(path: Path) -> int | None:
-    match = MODEL_LEN_RE.search(path.read_text(encoding="utf-8"))
+def _launcher_flag(path: Path, flag: str) -> int | None:
+    pattern = rf"{re.escape(flag)}\s+{LAUNCH_VALUE_RE}"
+    match = re.search(pattern, path.read_text(encoding="utf-8"))
     if match is None:
         return None
     return int(match.group(1) or match.group(2))
 
 
 def validate_launch_parity(where: Path) -> int:
-    """All three launchers must agree on the ModelConfig-visible flags.
+    """All three launchers must agree on the pipeline-wide knobs.
 
     model_config_hash feeds the PD input-processor ABI fingerprint
     (lwd_mm_identity.compute_processor_fingerprint) and max_model_len is not in
-    ModelConfig.compute_hash's ignored_factors, so any drift makes every request
-    fail with "PD input processor ABI does not match this cloud".
+    ModelConfig.compute_hash's ignored_factors, so drift there rejects every
+    request with "PD input processor ABI does not match this cloud".
     """
     report = Report(f"launch parity ({where})")
-    lens: dict[str, int | None] = {}
-    for name in LAUNCHERS:
-        path = where / name
-        if not path.is_file():
-            report.check(False, f"{name} is missing")
-            continue
-        lens[name] = _launcher_model_len(path)
-        report.check(lens[name] is not None, f"{name}: has a readable --max-model-len")
-    values = {v for v in lens.values() if v is not None}
-    report.check(
-        len(values) <= 1,
-        "edge and both clouds must pass the same --max-model-len "
-        f"(got {lens}); the value is hashed into the PD ABI fingerprint",
-    )
+    missing = [name for name in LAUNCHERS if not (where / name).is_file()]
+    report.check(not missing, f"missing launcher(s): {missing}")
+    if missing:
+        return report.done()
+    for flag in PARITY_FLAGS:
+        values = {name: _launcher_flag(where / name, flag) for name in LAUNCHERS}
+        report.check(
+            None not in values.values(),
+            f"{flag}: readable in all three launchers (got {values})",
+        )
+        reason = (
+            "hashed into the PD ABI fingerprint"
+            if flag == "--max-model-len"
+            else "bounds what the whole pipeline can admit"
+        )
+        report.check(
+            len({v for v in values.values() if v is not None}) <= 1,
+            f"edge and both clouds must pass the same {flag} (got {values}); {reason}",
+        )
     return report.done()
+
 
 def main(argv: list[str]) -> int:
     # This directory holds exactly one deployment: one topology + one proxy file.

@@ -29,6 +29,6 @@ lwd_run "$LWD_PYTHON" -m vllm.entrypoints.cli.main serve /weight/Qwen3.6-27B/ \
   --additional-config '{"enable_cpu_binding":true,"lwd_config":{"path":'"${LWD_TOPOLOGY_JSON}"',"role":"edge","instance_id":0}}' \
   --enforce-eager \
   --trust-remote-code --served-model-name qwen3.6 \
-  --max-model-len "${LWD_MAX_MODEL_LEN:-32768}" --max-num-seqs 128 --max-num-batched-tokens 8192 \
+  --max-model-len "${LWD_MAX_MODEL_LEN:-32768}" --max-num-seqs "${LWD_MAX_NUM_SEQS:-32}" --max-num-batched-tokens "${LWD_MAX_NUM_BATCHED_TOKENS:-8192}" \
   --gpu-memory-utilization 0.90 \
   --async-scheduling
