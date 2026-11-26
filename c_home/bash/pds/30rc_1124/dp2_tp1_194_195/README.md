@@ -57,6 +57,54 @@ vllm_ascend/spec_decode/llm_base_proposer.py:178  _create_draft_vllm_config()
 > `[LWD] cloud control HTTP ready on 0.0.0.0 ports=[8100, 8101] cloud_id=0 dp_size=2`
 > 和 `host data-plane links created ... dp_rank=0/1`，4 个 DP rank 的链路都建好了。
 
+## 已知限制：TP=1 每卡显存极紧（第二次拉起失败的原因）
+
+去掉 MTP 后，两个 cloud 都通过了配置校验、加载完权重，但死在 KV cache 分配：
+
+```
+[Lwd][cloud-model] loaded layers=? first=...layers.0 last=...layers.63 (pp=1 tp=1)
+Loading model weights took 50.2267 GB
+Available KV cache memory: 3.34 GiB          # prefill
+ValueError: To serve at least one request with the model's max seq len (65536),
+  (4.38 GiB KV cache is needed, which is larger than the available KV cache
+   memory (3.34 GiB). ... estimated maximum model length is 49280
+```
+
+**关键事实：LWD 的 cloud 侧加载的是完整 64 层模型**（日志里 `layers.0 … layers.63`，
+50.2 GB ≈ 46.8 GiB）。sidecar 用 TP=2 时权重被两卡分摊，所以 65536 从容；本包用 TP=1，
+46.8 GiB 权重全压在一张 64 GB 卡上，KV 就只剩 3 GiB 出头。
+
+算账（64 GB 卡）：
+
+| gpu-memory-utilization | 预算 | 权重 | 激活/图捕获 | 剩给 KV |
+| --- | --- | --- | --- | --- |
+| 0.90 | 53.6 GiB | 46.8 GiB | ≈3.5 GiB | **≈3.3 GiB**（不够 4.38） |
+| **0.95** | **56.6 GiB** | 46.8 GiB | ≈3.5 GiB | **≈6.3 GiB**（够） |
+
+因此本包的两个引擎改成：
+
+```bash
+--max-model-len "${LWD_MAX_MODEL_LEN:-32768}"       # 32768 只需要 ≈2.2 GiB KV
+--gpu-memory-utilization "${LWD_GPU_MEM_UTIL:-0.95}"  # 把 KV 池从 3.3 提到 ≈6.3 GiB
+```
+
+两个值都可以用环境变量覆盖，不必改脚本：
+
+```bash
+LWD_MAX_MODEL_LEN=65536 bash cloud_p.sh     # 0.95 下也够（≈6.3 GiB > 4.38 GiB）
+LWD_GPU_MEM_UTIL=0.90  bash cloud_p.sh      # 但此时必须把 max-model-len 降到 ≤49152
+```
+
+### 根本上的取舍
+
+`dp2 × tp1` 意味着**每个 rank 独占一整份权重**。27B 在单卡 64 GB 上只剩 3~6 GiB 给 KV，
+并发大上下文的能力很有限。如果更看重长上下文/高并发而不是 DP 副本数：
+
+| 目标 | 选择 |
+| --- | --- |
+| 2 个 DP 副本、短请求为主（本包） | `dp2_tp1_194_195` + `max-model-len 32768` |
+| 长上下文 + 充足 KV | [../sidecar](../sidecar/README.md)（TP=2，权重分摊，65536 已验证） |
+
 ## 卡与端口（当前值）
 
 | 角色 | 主机 / 卡 | 并行 | API | kv_port（基址） | LWD ctrl / data / coord |
