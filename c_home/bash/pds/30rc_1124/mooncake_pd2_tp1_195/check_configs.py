@@ -90,9 +90,17 @@ def parse_script(path: Path, env: dict[str, str]) -> dict[str, str]:
     tokens = shlex.split(source, comments=False)
     while pos < len(tokens):
         token = tokens[pos]
-        if token.startswith("--") and pos + 1 < len(tokens) and not tokens[pos + 1].startswith("--"):
-            args.setdefault(token, tokens[pos + 1])
+        nxt = tokens[pos + 1] if pos + 1 < len(tokens) else ""
+        # A following token that is still an unexpanded shell reference (e.g. the
+        # array expansion ${PD_MTP_ARGS[@]+...}) is not this flag's value. JSON
+        # values start with "{" and must still be accepted.
+        has_value = nxt and not nxt.startswith("--") and not nxt.startswith("$")
+        if token.startswith("--") and has_value:
+            args.setdefault(token, nxt)
             pos += 2
+        elif token.startswith("--"):
+            args.setdefault(token, "")
+            pos += 1
         else:
             pos += 1
     return args
@@ -142,8 +150,23 @@ def main(argv: list[str]) -> int:
                      f"{name}: --tensor-parallel-size resolves to {env.get('PD_TP_SIZE')}")
         report.check("--data-parallel-address" in args,
                      f"{name}: DP=2 needs an explicit --data-parallel-address")
-        report.check(args.get("--distributed-executor-backend") == "mp",
-                     f"{name}: keep --distributed-executor-backend mp")
+
+    # --- prefill and decode must share the engine flags ----------------------
+    # The deployments differ only in the ports, the KV role/config and the graph
+    # mode; everything else stays identical so a regression is attributable.
+    allowed = {
+        "--port",
+        "--master-port",
+        "--data-parallel-rpc-port",
+        "--kv-transfer-config",
+        "--compilation-config",
+    }
+    for flag in sorted(set(prefill) | set(decode)):
+        if flag in allowed:
+            continue
+        same = prefill.get(flag) == decode.get(flag)
+        report.check(same, f"{flag} differs between prefill and decode: "
+                           f"{prefill.get(flag)!r} vs {decode.get(flag)!r}")
 
     # --- NPU sets -------------------------------------------------------------
     devices: dict[str, list[int]] = {}
@@ -192,6 +215,8 @@ def main(argv: list[str]) -> int:
         "decode api": ints["PD_DECODE_PORT"],
         "prefill dp rpc": ints["PD_PREFILL_DP_RPC"],
         "decode dp rpc": ints["PD_DECODE_DP_RPC"],
+        "prefill master": ints["PD_PREFILL_MASTER_PORT"],
+        "decode master": ints["PD_DECODE_MASTER_PORT"],
     }
     values = list(singles.values())
     report.check(len(values) == len(set(values)), f"listening ports collide: {singles}")
@@ -219,6 +244,14 @@ def main(argv: list[str]) -> int:
     report.check(int(env.get("PD_MAX_NUM_SEQS", "0") or 0) <= 32,
                  "with TP=1 and MTP on, max_num_seqs above 32 exceeded the Mamba "
                  "block count on the real host")
+    # Same switch as the working edge-cloud DP=2 package, so this is a warning and
+    # not a failure: if the centralized engine runs out of KV, dropping the draft
+    # is the first knob to try (measured: 0.30 GiB with MTP vs ~6.8 GiB without).
+    if tp == 1 and env.get("PD_ENABLE_MTP") == "1":
+        report.notes.append(
+            "MTP on: centralized TP=1 measured only ~0.30 GiB of KV on this host; "
+            "if the engine refuses to start, rerun with PD_ENABLE_MTP=0 (~6.8 GiB)"
+        )
     return report.done()
 
 

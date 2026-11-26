@@ -46,6 +46,10 @@ export PD_DECODE_KV_PORT="${PD_DECODE_KV_PORT:-30100}"
 # (ParallelConfig default is 29550 for both).
 export PD_PREFILL_DP_RPC="${PD_PREFILL_DP_RPC:-29600}"
 export PD_DECODE_DP_RPC="${PD_DECODE_DP_RPC:-29601}"
+# torch-distributed rendezvous ports. Prefill and decode share this host and the
+# edge-cloud deployment already owns 29525/29526, so keep a separate pair.
+export PD_PREFILL_MASTER_PORT="${PD_PREFILL_MASTER_PORT:-29535}"
+export PD_DECODE_MASTER_PORT="${PD_DECODE_MASTER_PORT:-29536}"
 
 # --------------------------------------------------------------------- memory
 # TP=1 means every replica holds the full 64-layer model (50.2 GB ≈ 46.8 GiB) on
@@ -58,9 +62,14 @@ export PD_MAX_MODEL_LEN="${PD_MAX_MODEL_LEN:-32768}"
 export PD_MAX_NUM_SEQS="${PD_MAX_NUM_SEQS:-32}"
 export PD_MAX_NUM_BATCHED_TOKENS="${PD_MAX_NUM_BATCHED_TOKENS:-8192}"
 export PD_GPU_MEM_UTIL="${PD_GPU_MEM_UTIL:-0.95}"
-# MTP drafts. They need the multi-DP fix (the draft rebuilds a VllmConfig at
-# DP=1), so set PD_ENABLE_MTP=0 when you want a DP-only failure signature on an
-# unfixed branch.
+# MTP drafts, same switch and same method string as the working edge-cloud DP=2
+# package. Verified before this package existed: with MTP on, a centralized TP=1
+# engine on this host reported only 0.30 GiB of KV for a 32768 context that needs
+# 3.02 GiB and refused to start, while the edge-cloud engine starts with MTP on.
+# The two remaining differences are inherent to LWD: its cloud workers skip the
+# visual tower ("role=cloud skips loading tensors of visual") and use their own
+# LwdMTPProposer. If this deployment is short on KV, drop the draft with
+# PD_ENABLE_MTP=0 and expect ~6.8 GiB instead.
 export PD_ENABLE_MTP="${PD_ENABLE_MTP:-1}"
 
 PD_DRY_RUN=0
@@ -97,7 +106,7 @@ pd_runtime_env() {
 pd_mtp_args() {
   PD_MTP_ARGS=()
   if [[ $PD_ENABLE_MTP == 1 ]]; then
-    PD_MTP_ARGS+=(--speculative-config '{"method":"qwen3_5_mtp","num_speculative_tokens":3,"enforce_eager":true}')
+    PD_MTP_ARGS+=(--speculative-config '{"method":"mtp","num_speculative_tokens":3,"enforce_eager":true}')
   fi
 }
 
