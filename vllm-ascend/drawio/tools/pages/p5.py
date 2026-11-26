@@ -5,10 +5,10 @@ from seq import Seq
 
 def build(doc: Doc) -> None:
     p = doc.page("05 KV Cache 生命周期", pw=2200, ph=2700)
-    # 本页全部发生在"一个云实例"内部：进程泳道一律中立色，
-    # 只有承载 KV 搬运的那条泳道用数据面色；边端对照注释用边端蓝。
-    p.fill_map = {"ctrl": "neutral", "proxy": "neutral", "cloudp": "neutral",
-                  "cloudd": "data", "grey": "neutral"}
+    # 本页全部发生在"一个云实例"内部：进程泳道用灰阶梯度，
+    # 承载 KV 搬运的那条泳道用数据面色；边端对照注释用边端蓝。
+    p.fill_map = {"ctrl": "proc1", "proxy": "proc2", "cloudp": "proc3",
+                  "cloudd": "data", "grey": "proc1"}
     s = Seq(
         p,
         lanes=[("ec", "EngineCore<br><font style='font-size:9px'>core.py 驱动</font>", "ctrl"),

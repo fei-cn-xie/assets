@@ -25,6 +25,13 @@ C = {
     "proxy": ("#b0e3e6", "#0e8088"),      # PD Proxy
     "neutral": ("#ffffff", "#b3b3b3"),    # 中立：通用 vLLM 代码/进程骨架/分组带/表格
     "fail": ("#f8cecc", "#b85450"),       # 失败 / 取消 / 超时 / 终止
+    # 进程泳道灰度梯度：只用于"按进程切泳道"的页面（P02/P05/P09）。
+    # 灰阶不是颜色，所以不与角色色冲突；图例里单列一项说明。
+    "proc1": ("#ffffff", "#9e9e9e"),
+    "proc2": ("#f1f1f1", "#9e9e9e"),
+    "proc3": ("#e4e4e4", "#8a8a8a"),
+    "proc4": ("#d7d7d7", "#8a8a8a"),
+    "proc5": ("#c9c9c9", "#757575"),
     # 平面（只用于线，不用于填充）
     "ctrl": ("#ffffff", "#9673a6"),       # 控制面 ZMQ
     "data": ("#fff2cc", "#d6b656"),       # 数据面 UCX / Mooncake
@@ -538,26 +545,32 @@ def legend_bar(page: Page, y: int, extra_fill=None, extra_line=None,
                x0: int = 36):
     """The one legend used by every page: same shapes, order and wording.
 
-    Row 1 = 填色（角色），Row 2 = 线条（平面），可选第三项为本页特有说明。
+    Row 1 = 填色（角色），Row 2 = 线条（平面），可选额外项说明本页专有语义。
+    图例**永远显示规范色**：临时清掉本页的 fill_map，否则像 P02/P05/P09 这种
+    "把进程方框统一改用灰阶"的页面会把图例本身也改白，造成各页图例不一致。
     """
-    page.text(x0, y, 104, 20, "<b>图例</b>", "text_b")
-    cx = x0 + 112
-    for text, role in LEGEND_ITEMS:
-        page.box(cx, y - 3, 120, 26, text, "box_center", role)
-        cx += 128
-    if extra_fill:
-        page.box(cx, y - 3, 160, 26, extra_fill[0], "box_center", extra_fill[1])
-    y2 = y + 34
-    cx = x0 + 112
-    for text, role in LEGEND_LINES:
-        _, stroke = C[role]
-        page.edge(src_pt=(cx, y2 + 12), dst_pt=(cx + 56, y2 + 12), st="arrow_thick",
-                  role=role)
-        page.text(cx + 62, y2, 190, 24, text, "subtitle")
-        cx += 250
-    if extra_line:
-        _, stroke = C[extra_line[1]]
-        page.edge(src_pt=(cx, y2 + 12), dst_pt=(cx + 56, y2 + 12),
-                  st="arrow_dash_open", role=extra_line[1])
-        page.text(cx + 62, y2, 200, 24, extra_line[0], "subtitle")
+    saved = dict(page.fill_map)
+    page.fill_map = {}
+    try:
+        page.text(x0, y, 104, 20, "<b>图例</b>", "text_b")
+        cx = x0 + 112
+        for text, role in LEGEND_ITEMS:
+            page.box(cx, y - 3, 120, 26, text, "box_center", role)
+            cx += 128
+        if extra_fill:
+            page.box(cx, y - 3, 240, 26, extra_fill[0], "box_center",
+                     extra_fill[1])
+        y2 = y + 34
+        cx = x0 + 112
+        for text, role in LEGEND_LINES:
+            page.edge(src_pt=(cx, y2 + 12), dst_pt=(cx + 56, y2 + 12),
+                      st="arrow_thick", role=role)
+            page.text(cx + 62, y2, 190, 24, text, "subtitle")
+            cx += 250
+        if extra_line:
+            page.edge(src_pt=(cx, y2 + 12), dst_pt=(cx + 56, y2 + 12),
+                      st="arrow_dash_open", role=extra_line[1])
+            page.text(cx + 62, y2, 200, 24, extra_line[0], "subtitle")
+    finally:
+        page.fill_map = saved
     return y2 + 30

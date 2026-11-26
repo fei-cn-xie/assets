@@ -5,13 +5,13 @@ from seq import Seq
 
 def build(doc: Doc) -> None:
     p = doc.page("02 启动时序", pw=2100, ph=2450)
-    # 本页讲的是"进程骨架"，与角色无关：lane/方框统一用中立项色，
+    # 本页讲"进程骨架"，与角色无关：泳道用**灰阶梯度**（灰阶不是角色色，不冲突），
     # 只有真正角色专属的步骤用 hi_* 取角色色。箭头仍按平面着色。
     p.fill_map = {
-        "sh": "neutral", "fe": "neutral", "ec": "neutral", "wk": "neutral",
-        "sd": "neutral", "ot": "neutral",
-        "edge": "neutral", "ctrl": "neutral", "cloudp": "neutral",
-        "proxy": "neutral", "cloudd": "neutral", "grey": "neutral", "ok": "neutral",
+        "sh": "proc1", "fe": "proc2", "ec": "proc3", "wk": "proc4",
+        "sd": "proc5", "ot": "neutral",
+        "grey": "proc1", "edge": "proc2", "ctrl": "proc3", "cloudp": "proc4",
+        "proxy": "proc5", "cloudd": "neutral", "ok": "neutral",
         "hi_edge": "edge", "hi_p": "cloudp", "hi_d": "cloudd",
         "hi_proxy": "proxy", "hi_fail": "fail",
     }
@@ -126,4 +126,5 @@ def build(doc: Doc) -> None:
            "箭头颜色表示平面：紫=控制面 ZMQ，黄=数据面 UCX，灰=HTTP/进程创建。")
 
     # ---- 统一图例（全文件同义）----
-    legend_bar(p, s._layout_rows(dry=True) + 44)
+    legend_bar(p, s._layout_rows(dry=True) + 44,
+               extra_fill=("灰阶 = 进程泳道（非角色）", "proc3"))
