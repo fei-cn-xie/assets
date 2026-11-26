@@ -1,0 +1,92 @@
+# LWD edge/cloud PD topology — asymmetric multi-DP on the 194/195 pair.
+#
+# Shape (5 cards):
+#   edge  194 NPU 4    TP=1 DP=1                  -> API 8510
+#   cloud 0 (prefill) 195 NPU 0,1  DP=1 TP=2      -> ONE kv handshake group
+#   cloud 1 (decode)  195 NPU 2,3  DP=2 TP=1      -> TWO decode replicas
+#   proxy 195:8102 (CPU only)
+#
+# WHY ASYMMETRIC: the MooncakeConnectorV1 producer binds a ZMQ ROUTER per rank
+# (mooncake_connector.py:319, bind=True) on
+#     kv_port + data_parallel_rank * tp * pp * pcp + device_index
+# and the LWD non-MoE path resets `data_parallel_rank` to 0 in every rank
+# (vllm/v1/engine/core.py:1377 -> parallel.py:1111), so DP>1 on a *producer*
+# collides ("Address already in use"). The consumer side only creates a
+# zmq.REQ with bind=False (mooncake_connector.py:1546-1551), so DP>1 on decode
+# is safe.
+#
+# Topology rules used here (vllm/config/lwd/topology.py):
+#   * with pd.enabled the instances need NOT share a DP count (:411-417)
+#   * the edge never listens: no ctrl_port / data_port / coord_port
+#   * every cloud DP needs ctrl_port and data_port (:401-407, :487-494)
+#   * every cloud DP with coordination enabled needs coord_port (:415-418)
+#   * exactly one prefill and one decode cloud ({stage_role} ==
+#     {"prefill","decode"}, :444-445)
+#
+# Both hosts must run this exact file: LwdTopology hashes it and every process
+# logs "[LWD][config] ... digest=<16 hex>"; differing digests mean stale copies.
+deployment:
+  mode: 0
+  scene: lwd_cluster
+  edges_num: 1
+  clouds_num: 2
+  data_plane_comm: host
+  data_plane_host:
+    # Host budget gate counts one pool pair per edge -> cloud DP link:
+    # (1 prefill + 2 decode) DPs => 3 links => 3 * 4 * (256 + 32) = 3456 MiB,
+    # under the 12288 MiB budget
+    # (vllm_ascend/.../lwd_host_channels.py:201-216, 262-266).
+    up_buffer_size: 256
+    down_buffer_size: 32
+    # sidecar = one transport daemon per host, spawned by the first engine
+    # process. Both peers must use the same value; in_process also works.
+    deployment: sidecar
+  pd:
+    enabled: true
+    max_inflight_windows: 4
+    request_ttl_s: 1800.0
+feature_ctrl:
+  enable_early_recv: true
+edges:
+  - id: 0
+    dp:
+      - dp_idx: 0
+        addr: 76.76.26.194
+    coordination:
+      enabled: true
+      pd_proxy_url: http://76.76.26.195:8102/v1/chat/completions
+      tenant_key_file: /vllm-workspace/lwd_tenant.key
+      consumer_id: edge-0
+clouds:
+  - id: 0
+    stage_role: prefill
+    dp:
+      # DP=1: a single kv handshake group (the producer binds)
+      - dp_idx: 0
+        addr: 76.76.26.195
+        ctrl_port: 6100
+        data_port: 7200
+        coord_port: 8100
+    coordination:
+      enabled: true
+  - id: 1
+    stage_role: decode
+    dp:
+      # DP=2: two independent decode replicas, one card each (NPU 2, NPU 3).
+      # The consumer connects out, so both replicas may share one kv_port base.
+      - dp_idx: 0
+        addr: 76.76.26.195
+        ctrl_port: 6110
+        data_port: 7210
+        coord_port: 8110
+      - dp_idx: 1
+        addr: 76.76.26.195
+        ctrl_port: 6111
+        data_port: 7211
+        coord_port: 8111
+    coordination:
+      enabled: true
+# lwd_cluster requires a full mesh: the single edge reaches both clouds.
+instance_links:
+  - {edge: 0, cloud: 0}
+  - {edge: 0, cloud: 1}

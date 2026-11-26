@@ -4,11 +4,6 @@
       "cloud_id": 0,
       "target_dp": 0,
       "url": "http://76.76.26.195:8100/v1/chat/completions"
-    },
-    {
-      "cloud_id": 0,
-      "target_dp": 1,
-      "url": "http://76.76.26.195:8101/v1/chat/completions"
     }
   ],
   "decode": [
