@@ -14,12 +14,15 @@
 | `Transformer与模型文件结构-读图指南.md` | 那 21 页的清单、矩阵示例合规表、整数/小数对照 |
 | `vLLM进程与线程.drawio` | 10 页进程/线程图（进程树、进程数换算、ZMQ 三通道、启动时序、死亡检测、本仓真实进程树） |
 | `vLLM进程与线程-读图指南.md` | 那 10 页的进程数公式、端口表、六个坑 |
+| `vLLM图捕获.drawio` | 10 页图捕获图（为什么需要、捕获与回放、三个硬约束、四种模式、桶与 dispatch、昇腾 ACL Graph、排障） |
+| `vLLM图捕获-读图指南.md` | 那 10 页的一页纸答案、本仓真实配置、六个坑、六条必背日志 |
 | `README.md`（本文件） | 绘制规范 + 工具用法 + 新图 SOP |
 | `tools/` | 画布引擎、泳道引擎、格式器、三个校验器（结构 / 渲染 / 配色） |
 | `tools/pages/` | 生命周期那 9 页的**页面源码**（`p1.py … p9.py` + `build.py`） |
 | `tools/mooncake/` | Mooncake 那 10 页的**页面源码**（`m1.py … m10.py` + `build.py`） |
 | `tools/transformer/` | Transformer 那 21 页的**页面源码**（`t1.py … t21.py` + `ex.py` 运行示例 + `mth.py` 矩阵工具箱） |
 | `tools/proc/` | 进程/线程那 10 页的**页面源码**（`t1.py … t10.py` + `build.py` + `common.py`） |
+| `tools/graph/` | 图捕获那 10 页的**页面源码**（`g1.py … g10.py` + `build.py` + `common.py`） |
 
 ---
 

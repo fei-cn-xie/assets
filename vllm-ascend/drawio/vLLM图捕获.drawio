@@ -1,0 +1,1711 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="drawio" pages="10">
+  <diagram id="pg0" name="① 为什么需要图捕获">
+    <mxGraphModel dx="1600" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1576" pageHeight="1090" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="t1" value="① 为什么需要图捕获：CPU 在「下发」，NPU 在「等」" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=17;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="20" width="1500" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t2" value="一句话：推理的每一步都要把整层的成百上千个算子&lt;b&gt;逐个提交&lt;/b&gt;给设备。decode 时每步只算很少的 token，于是&lt;b&gt;提交的时间开始和计算的时间同一个量级&lt;/b&gt;——图捕获就是把「逐个提交」压成「一次提交」。" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="36" y="48" width="1500" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="t3" value="&lt;b&gt;第一步：先看清一步推理里其实有两条时间线&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="122" width="1200" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t4" value="&lt;b&gt;普通执行（eager / 逐算子下发）&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="156" width="700" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n5" value="&lt;font style=&quot;font-size:10px&quot;&gt;CPU：&lt;b&gt;算子1&lt;/b&gt; 提交 → &lt;b&gt;算子2&lt;/b&gt; 提交 → &lt;b&gt;算子3&lt;/b&gt; 提交 → …（每层几十个，几十层）&lt;br&gt;NPU：　　　　　　　执行1　　　　　执行2　　　　　执行3 …&lt;br&gt;&lt;br&gt;两条线在&lt;b&gt;同一个流&lt;/b&gt;上交替：CPU 提交一个，NPU 才能算一个。当「执行」很短（decode 只算 1 个 token）时，&lt;b&gt;NPU 有大量时间在等 CPU 提交下一个算子&lt;/b&gt;。&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="36" y="186" width="700" height="150" as="geometry"/>
+        </mxCell>
+        <mxCell id="t6" value="&lt;b&gt;图捕获之后（回放）&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="796" y="156" width="664" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n7" value="&lt;font style=&quot;font-size:10px&quot;&gt;CPU：&lt;b&gt;replay()&lt;/b&gt; —— 只提交一次&lt;br&gt;NPU：　　▷ 整段计算连着跑（中间不再等 CPU）&lt;br&gt;&lt;br&gt;整张图的算子序列、依赖、参数在&lt;b&gt;启动时就录好了&lt;/b&gt;；回放时 CPU 只发一条命令，剩下的交给驱动/硬件按录好的顺序跑。&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="796" y="186" width="664" height="150" as="geometry"/>
+        </mxCell>
+        <mxCell id="e8" value="捕获这一步做完之后" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeColor=#666666;fillColor=#666666;fontColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="386" y="346" as="sourcePoint"/>
+            <mxPoint x="1128" y="346" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t9" value="&lt;b&gt;第二步：为什么 decode 阶段最吃亏（prefill 反而还好）&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="362" width="1200" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n10" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="396" width="700" height="176" as="geometry"/>
+        </mxCell>
+        <mxCell id="t11" value="&lt;b&gt;prefill（一次算整段 prompt）&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="46" y="404" width="680" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t12" value="&lt;font style=&quot;font-size:10px&quot;&gt;一次要算 N 个 token（几百到几万），矩阵很「宽」。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;device 上的计算时间长 → 提交开销被摊薄，CPU 追得上。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;所以 prefill 不做整图捕获也影响不大。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="46" y="430" width="680" height="134" as="geometry"/>
+        </mxCell>
+        <mxCell id="n13" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="796" y="396" width="664" height="176" as="geometry"/>
+        </mxCell>
+        <mxCell id="t14" value="&lt;b&gt;decode（一次只算新生成的 1 个 token）&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="806" y="404" width="644" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t15" value="&lt;font style=&quot;font-size:10px&quot;&gt;每请求 1 个 query token（spec decode 时是 1+N）。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;计算量极小 → 每步的时间几乎由「下发次数」决定。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;而层数 × 每层算子数 一个都不能少 → 提交开销成为主导。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;所以「图」几乎只为 decode 而生。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="806" y="430" width="644" height="134" as="geometry"/>
+        </mxCell>
+        <mxCell id="n16" value="&lt;b&gt;代价与收益（本仓文档的原话）&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;① &lt;b&gt;收益&lt;/b&gt;：把 host 侧的上千次下发压成一次，换来的是「稳态 decode 性能」（vllm/docs/configuration/optimization.md:25 原文：跳过图捕获可以最快启动，&lt;b&gt;代价是稳态 decode 性能&lt;/b&gt;）。&lt;br&gt;② &lt;b&gt;代价&lt;/b&gt;：启动变慢（要真跑一遍来录）+ 显存变多（每张图要占一份内存池），而且形状必须固定（见 ④ 的三条硬约束）。&lt;br&gt;③ Ascend 侧的设计目标与 CUDA 一致：&lt;font style=&quot;font-size:9px&quot;&gt;reduce host launch overhead for small and medium runtime shapes&lt;/font&gt;（vllm-ascend/docs/.../ACL_Graph.md:7）。&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="612" width="1424" height="118" as="geometry"/>
+        </mxCell>
+        <mxCell id="n17" value="&lt;b&gt;代码锚点（想自己去翻的时候用）&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot; color=&quot;#666666&quot;&gt;收益/代价的定性描述：vllm/docs/configuration/optimization.md:25、vllm/docs/design/cuda_graphs.md:43-46、vllm/docs/configuration/conserving_memory.md:48-65&lt;br&gt;decode 每请求只有 1 个 query token：vllm/config/vllm.py:661-679&lt;br&gt;「uniform decode」判定：vllm/v1/cudagraph_dispatcher.py:37、vllm/v1/worker/gpu_model_runner.py:3888-3907&lt;br&gt;host 侧同步被当作热路径敌人：vllm/envs.py:635-643（VLLM_GPU_SYNC_CHECK）、vllm/utils/gpu_sync_debug.py:3&lt;br&gt;Ascend 的设计目标原文：vllm-ascend/docs/source/developer_guide/Design_Documents/ACL_Graph.md:7&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="764" width="1424" height="104" as="geometry"/>
+        </mxCell>
+        <mxCell id="n18" value="&lt;b&gt;一句话记住这一页：&lt;/b&gt;图捕获不是「让算子变快」，而是&lt;b&gt;把下发的次数变少&lt;/b&gt;——prefill 计算量大、摊得开；decode 每步只有 1 个 token，省下的 CPU 提交时间直接变成端到端的 token 间隔（TPOT）。" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="900" width="1424" height="58" as="geometry"/>
+        </mxCell>
+        <mxCell id="t19" value="&lt;b&gt;图例&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="992" width="104" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="n20" value="客户端" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#eceff1;strokeColor=#607d8b;" vertex="1" parent="1">
+          <mxGeometry x="148" y="989" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n21" value="边端 edge" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="276" y="989" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n22" value="云 P (prefill)" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="404" y="989" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n23" value="云 D (decode)" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="532" y="989" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n24" value="PD Proxy" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#b0e3e6;strokeColor=#0e8088;" vertex="1" parent="1">
+          <mxGeometry x="660" y="989" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n25" value="中立/通用" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="788" y="989" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n26" value="失败/取消" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="916" y="989" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="e27" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#9673a6;fillColor=#9673a6;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="148" y="1038" as="sourcePoint"/>
+            <mxPoint x="204" y="1038" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t28" value="控制面 ZMQ" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="210" y="1026" width="190" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="e29" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#d6b656;fillColor=#d6b656;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="398" y="1038" as="sourcePoint"/>
+            <mxPoint x="454" y="1038" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t30" value="数据面 UCX·Mooncake" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="460" y="1026" width="190" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="e31" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="648" y="1038" as="sourcePoint"/>
+            <mxPoint x="704" y="1038" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t32" value="HTTP" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="710" y="1026" width="190" height="24" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="pg1" name="② 捕获与回放">
+    <mxGraphModel dx="1600" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1576" pageHeight="1086" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="t1" value="② 什么是图：把「跑一遍」录下来，以后一次「播」" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=17;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="20" width="1500" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t2" value="一句话：&lt;b&gt;捕获&lt;/b&gt;＝在专用 stream 上真正跑一遍 forward，同时把设备上发生的算子序列与地址关系录成图；&lt;b&gt;回放&lt;/b&gt;＝一条命令重放整张图，CPU 不再逐个提交。" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="36" y="48" width="1500" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="t3" value="&lt;b&gt;第一步：三步看清它到底「录」了什么&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="120" width="1200" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n4" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="36" y="154" width="466" height="214" as="geometry"/>
+        </mxCell>
+        <mxCell id="t5" value="&lt;b&gt;① 普通执行：每次都重来一遍&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="46" y="162" width="446" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t6" value="&lt;font style=&quot;font-size:10px&quot;&gt;Python 每步重新执行一遍模型代码：&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;· 读当前的输入张量&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;· 逐个调用算子（kernel/launch）&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;· CPU 把每个算子提交给设备&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;没有记忆：第 100 步和第 1 步做的事情完全一样，&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;但 CPU 还是要把这上千次提交再做一遍。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="46" y="188" width="446" height="172" as="geometry"/>
+        </mxCell>
+        <mxCell id="n7" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="526" y="154" width="466" height="214" as="geometry"/>
+        </mxCell>
+        <mxCell id="t8" value="&lt;b&gt;② 捕获：真跑一遍，同时录下来&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="536" y="162" width="446" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t9" value="&lt;font style=&quot;font-size:10px&quot;&gt;在专用 stream 上放 &lt;b&gt;torch.cuda.graph(...)&lt;/b&gt;（昇腾是 torch.npu.graph）：&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;· 里面真的把 forward 跑了一次&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;· 设备上发生的算子、依赖、地址，被录成一张图&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;· 输入张量的&lt;b&gt;地址&lt;/b&gt;也被记下（回放时必须一样）&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;代价：这一步要真花钱（时间 + 一份内存池）。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="536" y="188" width="446" height="172" as="geometry"/>
+        </mxCell>
+        <mxCell id="n10" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="1016" y="154" width="444" height="214" as="geometry"/>
+        </mxCell>
+        <mxCell id="t11" value="&lt;b&gt;③ 回放：一句 replay()&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1026" y="162" width="424" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t12" value="&lt;font style=&quot;font-size:10px&quot;&gt;以后每步只做：&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;· 把新输入 &lt;b&gt;copy_&lt;/b&gt; 到捕获时那几块固定 buffer 里&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;· 调一次 &lt;b&gt;graph.replay()&lt;/b&gt;&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;· 从固定输出 buffer 里读结果&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;CPU 只提交一次；设备按录好的顺序连着跑。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;注意：Python 代码&lt;b&gt;不会再执行&lt;/b&gt;。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1026" y="188" width="424" height="172" as="geometry"/>
+        </mxCell>
+        <mxCell id="e13" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="272" y="388" as="sourcePoint"/>
+            <mxPoint x="759" y="388" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e14" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="762" y="388" as="sourcePoint"/>
+            <mxPoint x="1238" y="388" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n15" value="&lt;b&gt;最关键的一条性质：录进去的只有「设备操作」，Python 逻辑不再执行&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;本仓文档原话：这段代码在捕获期间执行，&lt;b&gt;只有它发出的 GPU 操作会被记录并在回放时执行，它的 Python 本体不会再跑一遍&lt;/b&gt;（vllm/docs/design/model_runner_v2.md:198）。&lt;br&gt;推论 1：图里的 &lt;b&gt;if / for&lt;/b&gt; 只在捕获时决定一次，回放时不会重新判断——所以形状、分支、循环次数都必须固定。&lt;br&gt;推论 2：图里的 &lt;b&gt;.item() / print / 分配内存&lt;/b&gt; 也只会发生一次，值会被「烤」进图里（后面 ④ 会讲这条坑）。&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="428" width="1424" height="108" as="geometry"/>
+        </mxCell>
+        <mxCell id="t16" value="&lt;b&gt;第二步：一个类比（记住这个就够了）&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="536" width="1000" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n17" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="570" width="700" height="150" as="geometry"/>
+        </mxCell>
+        <mxCell id="t18" value="&lt;b&gt;像「宏」（macro）/ 像「录屏回放」&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="46" y="578" width="680" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t19" value="&lt;font style=&quot;font-size:10px&quot;&gt;· 普通执行 = 每一步都手工点一遍菜单；&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;· 捕获 = 手工点一次，把动作序列录成一个宏；&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;· 回放 = 以后按一下宏的快捷键，它把整串动作重放。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;宏能成立的前提：&lt;b&gt;每次点的位置必须一样&lt;/b&gt;（＝地址固定）、&lt;b&gt;菜单结构不能变&lt;/b&gt;（＝形状固定）。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="46" y="604" width="680" height="108" as="geometry"/>
+        </mxCell>
+        <mxCell id="n20" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="796" y="570" width="664" height="150" as="geometry"/>
+        </mxCell>
+        <mxCell id="t21" value="&lt;b&gt;它「不是」什么（三个常见误解）&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="806" y="578" width="644" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t22" value="&lt;font style=&quot;font-size:10px&quot;&gt;· 不是「把模型编译成更快的算子」——那是 torch.compile 干的事；&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;· 不是「缓存计算结果」——它不省计算，只省「提交」；&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;· 不是「自动加速一切」——形状一变就要换一张图，没有对应图就退回普通执行。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="806" y="604" width="644" height="108" as="geometry"/>
+        </mxCell>
+        <mxCell id="n23" value="&lt;b&gt;代码锚点（想自己去翻的时候用）&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot; color=&quot;#666666&quot;&gt;捕获的真实代码（跑一遍并录）：vllm/compilation/cuda_graph.py:315-321（with torch.cuda.graph(...): output = self.runnable(...)）&lt;br&gt;回放就一行：vllm/compilation/cuda_graph.py:362（entry.cudagraph.replay()）&lt;br&gt;「只录 GPU 操作、Python 不再跑」：vllm/docs/design/model_runner_v2.md:198&lt;br&gt;录下来的产物是「零参可调用列表」：vllm/compilation/breakable_cudagraph.py:3-21&lt;br&gt;Ascend 上的对应实现：vllm-ascend/vllm_ascend/compilation/acl_graph.py（捕获与回放各一处）&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="760" width="1424" height="104" as="geometry"/>
+        </mxCell>
+        <mxCell id="n24" value="&lt;b&gt;一句话记住这一页：&lt;/b&gt;捕获 = 「真跑一遍顺便录下来」，回放 = 「一条命令重放」；它省的是 CPU 的提交次数，不是计算量——所以前提是「形状固定、地址固定、图里不能有 CPU 同步」。" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="896" width="1424" height="58" as="geometry"/>
+        </mxCell>
+        <mxCell id="t25" value="&lt;b&gt;图例&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="988" width="104" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="n26" value="客户端" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#eceff1;strokeColor=#607d8b;" vertex="1" parent="1">
+          <mxGeometry x="148" y="985" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n27" value="边端 edge" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="276" y="985" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n28" value="云 P (prefill)" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="404" y="985" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n29" value="云 D (decode)" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="532" y="985" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n30" value="PD Proxy" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#b0e3e6;strokeColor=#0e8088;" vertex="1" parent="1">
+          <mxGeometry x="660" y="985" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n31" value="中立/通用" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="788" y="985" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n32" value="失败/取消" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="916" y="985" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="e33" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#9673a6;fillColor=#9673a6;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="148" y="1034" as="sourcePoint"/>
+            <mxPoint x="204" y="1034" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t34" value="控制面 ZMQ" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="210" y="1022" width="190" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="e35" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#d6b656;fillColor=#d6b656;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="398" y="1034" as="sourcePoint"/>
+            <mxPoint x="454" y="1034" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t36" value="数据面 UCX·Mooncake" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="460" y="1022" width="190" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="e37" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="648" y="1034" as="sourcePoint"/>
+            <mxPoint x="704" y="1034" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t38" value="HTTP" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="710" y="1022" width="190" height="24" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="pg2" name="③ 捕获内部 10 步">
+    <mxGraphModel dx="1600" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1576" pageHeight="1424" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="t1" value="③ 一次捕获里发生了什么（10 步，按代码顺序）" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=17;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="20" width="1500" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t2" value="一句话：&lt;b&gt;包一层 wrapper → 开闸门 → 切到侧流 → 从大到小逐个桶：warmup 几遍 → 同步 → 在 torch.cuda.graph 里真跑一遍&lt;/b&gt; → 关闸门、锁 workspace。注意：捕获是在「profile 量完显存、KV 块池也建好」之后才做的。" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="36" y="48" width="1500" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="t3" value="&lt;b&gt;左列：准备阶段（1-5）　右列：逐桶录制（6-10）&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="126" width="1300" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n4" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="158" width="690" height="118" as="geometry"/>
+        </mxCell>
+        <mxCell id="t5" value="&lt;b&gt;①　包 wrapper（决定「图从哪开始到哪结束」）&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="46" y="166" width="670" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t6" value="&lt;font style=&quot;font-size:9px&quot; color=&quot;#333333&quot;&gt;FULL：在整模型外面包一层 CUDAGraphWrapper。&lt;br&gt;PIECEWISE：由编译后端给&lt;b&gt;每个子图&lt;/b&gt;各包一层（每个 attention 之间一段）。&lt;br&gt;&lt;font color=&quot;#c0392b&quot;&gt;这一步决定了图的粒度，也决定了 attention 在不在图里。&lt;/font&gt;&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="46" y="190" width="670" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="n7" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="306" width="690" height="118" as="geometry"/>
+        </mxCell>
+        <mxCell id="t8" value="&lt;b&gt;②　开「捕获闸门」&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="46" y="314" width="670" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t9" value="&lt;font style=&quot;font-size:9px&quot; color=&quot;#333333&quot;&gt;全局标志位打开：此刻允许捕获。若在别的时候触发捕获，会直接抛 &lt;font style=&quot;font-size:9px&quot;&gt;CUDA graph capturing detected at an inappropriate time&lt;/font&gt;。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="46" y="338" width="670" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="n10" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="454" width="690" height="132" as="geometry"/>
+        </mxCell>
+        <mxCell id="t11" value="&lt;b&gt;③　切到侧流 + 冻住 GC + 清缓存量基线&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="46" y="462" width="670" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t12" value="&lt;font style=&quot;font-size:9px&quot; color=&quot;#333333&quot;&gt;必须在&lt;b&gt;非默认 stream&lt;/b&gt; 上捕获，这样只录到本次的算子（不然会把别人的也录进去）。&lt;br&gt;然后 synchronize + empty_cache，记下此刻的空闲显存 → 用来事后算「图占了多少钱」。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="46" y="486" width="670" height="92" as="geometry"/>
+        </mxCell>
+        <mxCell id="n13" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="36" y="616" width="690" height="118" as="geometry"/>
+        </mxCell>
+        <mxCell id="t14" value="&lt;b&gt;④　拿到「进程级」的 graph 显存池&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="46" y="624" width="670" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t15" value="&lt;font style=&quot;font-size:9px&quot; color=&quot;#333333&quot;&gt;整个进程只有一个 pool（不是每张图一个）。所以多张图共用一块池，占用≈各桶峰值的最大值。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="46" y="648" width="670" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="n16" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="36" y="764" width="690" height="132" as="geometry"/>
+        </mxCell>
+        <mxCell id="t17" value="&lt;b&gt;⑤　排好捕获顺序：从大到小&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="46" y="772" width="670" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t18" value="&lt;font style=&quot;font-size:9px&quot; color=&quot;#333333&quot;&gt;代码注释写得很直白：先抓大形状，小形状可以复用大形状已经分配过的池内存。&lt;br&gt;&lt;font color=&quot;#c0392b&quot;&gt;反过来（先小后大）会多占显存，甚至 OOM。&lt;/font&gt;&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="46" y="796" width="670" height="92" as="geometry"/>
+        </mxCell>
+        <mxCell id="n19" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="778" y="158" width="682" height="118" as="geometry"/>
+        </mxCell>
+        <mxCell id="t20" value="&lt;b&gt;⑥　每个桶先 warmup 几遍&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="788" y="166" width="662" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t21" value="&lt;font style=&quot;font-size:9px&quot; color=&quot;#333333&quot;&gt;在&lt;b&gt;无图模式&lt;/b&gt;下把这一步空跑 N 遍（cudagraph_num_of_warmups，V1 默认 1）。目的是让算子库/通信库把 lazy 初始化都做完。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="788" y="190" width="662" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="n22" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="778" y="306" width="682" height="118" as="geometry"/>
+        </mxCell>
+        <mxCell id="t23" value="&lt;b&gt;⑦　warmup 完必须同步一次&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="788" y="314" width="662" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t24" value="&lt;font style=&quot;font-size:9px&quot; color=&quot;#333333&quot;&gt;注释原因：warmup 可能在辅助流上跑，不等它完成就开始捕获，会录到一半。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="788" y="338" width="662" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="n25" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="778" y="454" width="682" height="146" as="geometry"/>
+        </mxCell>
+        <mxCell id="t26" value="&lt;b&gt;⑧　把输入「钉」到固定地址（dummy run 里做）&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="788" y="462" width="662" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t27" value="&lt;font style=&quot;font-size:9px&quot; color=&quot;#333333&quot;&gt;input_ids / positions / slot_mapping / attn_metadata 全部取&lt;b&gt;预先分配好的持久 buffer 的切片&lt;/b&gt;；&lt;br&gt;捕获时 slot_mapping 全填 -1（跳过真正写 KV），attn_metadata 用 for_cudagraph_capture 专用构造。&lt;br&gt;这就是「地址固定」约束的落地方式。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="788" y="486" width="662" height="106" as="geometry"/>
+        </mxCell>
+        <mxCell id="n28" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="778" y="630" width="682" height="146" as="geometry"/>
+        </mxCell>
+        <mxCell id="t29" value="&lt;b&gt;⑨　真正的录制：在 torch.cuda.graph 里跑一遍 forward&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="788" y="638" width="662" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t30" value="&lt;font style=&quot;font-size:9px&quot; color=&quot;#333333&quot;&gt;&lt;font style=&quot;font-size:9px&quot;&gt;with torch.cuda.graph(cudagraph, pool=全局pool, stream=当前侧流): output = self.runnable(...)&lt;/font&gt;&lt;br&gt;这一跑被录成图；output 只留&lt;b&gt;弱引用&lt;/b&gt;（省显存，因为它是池里的同一块）。&lt;br&gt;昇腾侧对应 &lt;font style=&quot;font-size:9px&quot;&gt;torch.npu.graph(...)&lt;/font&gt;。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="788" y="662" width="662" height="106" as="geometry"/>
+        </mxCell>
+        <mxCell id="n31" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="778" y="806" width="682" height="118" as="geometry"/>
+        </mxCell>
+        <mxCell id="t32" value="&lt;b&gt;⑩　收尾：关闸门、锁 workspace、打日志&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="788" y="814" width="662" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t33" value="&lt;font style=&quot;font-size:9px&quot; color=&quot;#333333&quot;&gt;关掉捕获闸门；把通信 workspace 的尺寸&lt;b&gt;锁死&lt;/b&gt;（回放期间改尺寸会让图里的指针失效）；打印 &lt;font style=&quot;font-size:9px&quot;&gt;Graph capturing finished in N secs, took X GiB&lt;/font&gt;。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="788" y="838" width="662" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="n34" value="&lt;b&gt;它在启动流程里的位置（很容易记错）&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;正确的顺序是：&lt;b&gt;加载权重 → profile（eager 空跑一遍量激活峰值）→ 按剩余显存切 KV 块池 → 然后才捕获图&lt;/b&gt;。&lt;br&gt;原因：捕获本身也要占显存，而且要用「图显存池」去估；所以必须先把权重和 KV 的账算清，才知道还能不能抓图、抓多大。&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="958" width="1424" height="96" as="geometry"/>
+        </mxCell>
+        <mxCell id="n35" value="&lt;b&gt;代码锚点（想自己去翻的时候用）&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot; color=&quot;#666666&quot;&gt;捕获入口（V1）：vllm/v1/worker/gpu_model_runner.py:6843 → :6997 → :6949 → :5851&lt;br&gt;捕获入口（V2，本分支默认）：vllm/v1/worker/gpu/model_runner.py:998-1071 → vllm/v1/worker/gpu/cudagraph_utils.py:398-488&lt;br&gt;启动时序（profile→KV→捕获）：vllm/v1/engine/core.py:254、:308、:354、:356；vllm/v1/worker/gpu_worker.py:773-816&lt;br&gt;闸门：vllm/compilation/monitor.py:87-104；侧流：vllm/distributed/parallel_state.py:1637-1666&lt;br&gt;全局 pool：vllm/compilation/cuda_graph.py:200、:305-308；平台单例 vllm/platforms/interface.py:1174-1181&lt;br&gt;录制那一行：vllm/compilation/cuda_graph.py:315-321；从大到小：vllm/v1/worker/gpu_model_runner.py:6858-6860、vllm/v1/cudagraph_dispatcher.py:326-350&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="1088" width="1424" height="112" as="geometry"/>
+        </mxCell>
+        <mxCell id="n36" value="&lt;b&gt;一句话记住这一页：&lt;/b&gt;捕获 = 开闸门 + 侧流 + 逐桶（warmup → 同步 → 在 graph 上下文里真跑一遍）」；输入必须来自预分配的持久 buffer；顺序必须从大到小；结束要锁 workspace。" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="1234" width="1424" height="58" as="geometry"/>
+        </mxCell>
+        <mxCell id="t37" value="&lt;b&gt;图例&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="1326" width="104" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="n38" value="客户端" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#eceff1;strokeColor=#607d8b;" vertex="1" parent="1">
+          <mxGeometry x="148" y="1323" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n39" value="边端 edge" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="276" y="1323" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n40" value="云 P (prefill)" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="404" y="1323" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n41" value="云 D (decode)" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="532" y="1323" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n42" value="PD Proxy" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#b0e3e6;strokeColor=#0e8088;" vertex="1" parent="1">
+          <mxGeometry x="660" y="1323" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n43" value="中立/通用" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="788" y="1323" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n44" value="失败/取消" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="916" y="1323" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="e45" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#9673a6;fillColor=#9673a6;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="148" y="1372" as="sourcePoint"/>
+            <mxPoint x="204" y="1372" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t46" value="控制面 ZMQ" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="210" y="1360" width="190" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="e47" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#d6b656;fillColor=#d6b656;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="398" y="1372" as="sourcePoint"/>
+            <mxPoint x="454" y="1372" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t48" value="数据面 UCX·Mooncake" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="460" y="1360" width="190" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="e49" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="648" y="1372" as="sourcePoint"/>
+            <mxPoint x="704" y="1372" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t50" value="HTTP" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="710" y="1360" width="190" height="24" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="pg3" name="④ 三个硬约束">
+    <mxGraphModel dx="1600" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1576" pageHeight="1258" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="t1" value="④ 三个硬约束：图为什么「挑食」" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=17;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="20" width="1500" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t2" value="一句话：录下来的图里记的是&lt;b&gt;具体的地址和具体的形状&lt;/b&gt;，所以回放时必须一模一样；图里也不能有「回头问 CPU」的操作。三条约束各自对应一类常见故障。" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="36" y="48" width="1500" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="t3" value="&lt;b&gt;约束一：形状固定 —— 所以要「按桶捕获 + padding」&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="120" width="1200" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n4" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="36" y="152" width="700" height="168" as="geometry"/>
+        </mxCell>
+        <mxCell id="t5" value="&lt;b&gt;为什么必须固定&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="46" y="160" width="680" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t6" value="&lt;font style=&quot;font-size:10px&quot;&gt;图里的循环次数、reshape、kernel 的 grid 大小都由形状决定。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;形状变了 = 图里那些数都对不上 → 只能换一张图。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;而形状在真实流量里千变万化（1 个请求 / 7 个请求 / 44 个 token…），不可能每个都抓。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="46" y="186" width="680" height="126" as="geometry"/>
+        </mxCell>
+        <mxCell id="n7" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="796" y="152" width="664" height="168" as="geometry"/>
+        </mxCell>
+        <mxCell id="t8" value="&lt;b&gt;本仓怎么解决：有限个桶 + 向上取整&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="806" y="160" width="644" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t9" value="&lt;font style=&quot;font-size:10px&quot;&gt;只抓有限的一组尺寸（cudagraph_capture_sizes，如 1,2,4,8,16,…,512）。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;运行时的 batch 先「对齐到最近的桶」＝ padding（多出来的位置填占位）。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;padding 的具体落点：block_table 填 NULL_BLOCK_ID、slot_mapping 填 -1。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;副作用：padding 带来的空算力，也算在图的开销里（有 num_paddings 统计）。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="806" y="186" width="644" height="126" as="geometry"/>
+        </mxCell>
+        <mxCell id="t10" value="&lt;b&gt;约束二：地址固定 —— 所以要用「持久 buffer + copy_」&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="328" width="1200" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n11" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="36" y="360" width="700" height="176" as="geometry"/>
+        </mxCell>
+        <mxCell id="t12" value="&lt;b&gt;为什么必须固定&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="46" y="368" width="680" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t13" value="&lt;font style=&quot;font-size:10px&quot;&gt;图里记的是张量的&lt;b&gt;显存地址&lt;/b&gt;，不是「第几个参数」。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;回放时如果输入换了一块新显存，图还是往老地址读 → 读到的是垃圾。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;所以每次进图前必须把新数据写进&lt;b&gt;捕获时那几块地址&lt;/b&gt;。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="46" y="394" width="680" height="134" as="geometry"/>
+        </mxCell>
+        <mxCell id="n14" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="796" y="360" width="664" height="176" as="geometry"/>
+        </mxCell>
+        <mxCell id="t15" value="&lt;b&gt;本仓怎么解决：预分配 + 每步 copy_&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="806" y="368" width="644" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t16" value="&lt;font style=&quot;font-size:10px&quot;&gt;input_ids / positions / query_start_loc / seq_lens 等一次性按最大长度分配好（持久 buffer）。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;每步只做 copy_ 覆写这些 buffer 的前 N 个位置。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;代码里甚至有开关：debug 模式下会比对「捕获期与回放期的输入地址是否一致」，不一致直接抛 &lt;font style=&quot;font-size:9px&quot;&gt;Input addresses for cudagraphs are different during replay&lt;/font&gt;。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="806" y="394" width="644" height="134" as="geometry"/>
+        </mxCell>
+        <mxCell id="t17" value="&lt;b&gt;约束三：图里不能有「回头问 CPU」的操作&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="544" width="1200" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n18" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="36" y="576" width="700" height="176" as="geometry"/>
+        </mxCell>
+        <mxCell id="t19" value="&lt;b&gt;为什么&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="46" y="584" width="680" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t20" value="&lt;font style=&quot;font-size:10px&quot;&gt;回放时 CPU 只发一条命令，之后不再参与。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;所以图里任何需要「读回一个值再决定下一步」的操作都没法工作：.item() / print / 动态分配 / 条件分支里的 Python 判断。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;更糟的是它们不会报错——&lt;b&gt;只会把捕获那一刻的值「烤」进图里&lt;/b&gt;，于是你拿到一个永远算出旧结果、但一点也不报错的图。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="46" y="610" width="680" height="134" as="geometry"/>
+        </mxCell>
+        <mxCell id="n21" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="796" y="576" width="664" height="176" as="geometry"/>
+        </mxCell>
+        <mxCell id="t22" value="&lt;b&gt;本仓的对应处理&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="806" y="584" width="644" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t23" value="&lt;font style=&quot;font-size:10px&quot;&gt;捕获闸门：在非捕获窗口触发捕获会直接抛&lt;font style=&quot;font-size:9px&quot;&gt;CUDA graph capturing detected at an inappropriate time&lt;/font&gt;。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;捕获期禁止重新分配：attention 后端看 forward_context.capturing 决定「只登记任务、不申请 workspace」。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;一次性准备全在图外：dummy run 里把 metadata 都构造好再进图。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="806" y="610" width="644" height="134" as="geometry"/>
+        </mxCell>
+        <mxCell id="n24" value="&lt;b&gt;三张「故障 → 原因」速查（对得上就是这三条之一）&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;① 输出全是重复/错乱的旧结果 → 某处 .item() 或分支被烤进图（约束三）。&lt;br&gt;② 报 Input addresses ... different during replay → 有代码在回放时换了输入张量（约束二）。&lt;br&gt;③ 并发一上来反而变慢、图「没了」→ 形状超了最大桶，静默回落 eager（约束一）。&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="792" width="1424" height="96" as="geometry"/>
+        </mxCell>
+        <mxCell id="n25" value="&lt;b&gt;代码锚点（想自己去翻的时候用）&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot; color=&quot;#666666&quot;&gt;桶与 padding：vllm/config/compilation.py:655-658（capture_sizes）、vllm/forward_context.py:29-58（BatchDescriptor）、vllm/v1/worker/gpu_model_runner.py:2353-2355 / :4150-4152（padding 落点）&lt;br&gt;持久 buffer 与 copy_：vllm/v1/worker/gpu/input_batch.py:19-40、vllm/v1/worker/gpu_model_runner.py:4435、:1815&lt;br&gt;地址校验断言：vllm/compilation/cuda_graph.py:348-357；breakable_cudagraph.py:422&lt;br&gt;闸门与捕获期禁止分配：vllm/compilation/monitor.py:87-104；vllm-ascend/vllm_ascend/ascend_forward_context.py:177（capturing 标志）&lt;br&gt;「.item() 被烤进图」的仓内注释：vllm/model_executor/models/cohere_compass.py:1633、vllm/v1/attention/backends/rocm_aiter_fa.py:778&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="922" width="1424" height="112" as="geometry"/>
+        </mxCell>
+        <mxCell id="n26" value="&lt;b&gt;一句话记住这一页：&lt;/b&gt;形状固定 → 按桶捕获 + padding；地址固定 → 持久 buffer + copy_；不能问 CPU → 一切动态准备都放在图外。三条里破一条，要么报错、要么静默算错、要么悄悄退回 eager。" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="1068" width="1424" height="58" as="geometry"/>
+        </mxCell>
+        <mxCell id="t27" value="&lt;b&gt;图例&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="1160" width="104" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="n28" value="客户端" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#eceff1;strokeColor=#607d8b;" vertex="1" parent="1">
+          <mxGeometry x="148" y="1157" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n29" value="边端 edge" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="276" y="1157" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n30" value="云 P (prefill)" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="404" y="1157" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n31" value="云 D (decode)" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="532" y="1157" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n32" value="PD Proxy" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#b0e3e6;strokeColor=#0e8088;" vertex="1" parent="1">
+          <mxGeometry x="660" y="1157" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n33" value="中立/通用" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="788" y="1157" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n34" value="失败/取消" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="916" y="1157" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="e35" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#9673a6;fillColor=#9673a6;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="148" y="1206" as="sourcePoint"/>
+            <mxPoint x="204" y="1206" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t36" value="控制面 ZMQ" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="210" y="1194" width="190" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="e37" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#d6b656;fillColor=#d6b656;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="398" y="1206" as="sourcePoint"/>
+            <mxPoint x="454" y="1206" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t38" value="数据面 UCX·Mooncake" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="460" y="1194" width="190" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="e39" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="648" y="1206" as="sourcePoint"/>
+            <mxPoint x="704" y="1206" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t40" value="HTTP" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="710" y="1194" width="190" height="24" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="pg4" name="⑤ 四种图模式">
+    <mxGraphModel dx="1600" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1576" pageHeight="1346" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="t1" value="⑤ 四种图模式：图从哪里开始、到哪里结束" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=17;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="20" width="1500" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t2" value="一句话：&lt;b&gt;PIECEWISE&lt;/b&gt; 把 attention 挖出去（attention 之间那些层进图），&lt;b&gt;FULL&lt;/b&gt; 连 attention 一起进图（但只给「形状整齐的 decode」用）。vLLM 默认是两者都要（FULL_AND_PIECEWISE），按 batch 形状挑。" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="36" y="48" width="1500" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="t3" value="&lt;b&gt;第一步：同一段 forward 的三种切法（沙色＝逐个 eager 下发，绿＝分段图里跑的段，橙＝整张图一起跑）&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="122" width="1200" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t4" value="&lt;b&gt;① eager（NONE）：全部逐个算子下发&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="154" width="1424" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="n5" value="ln" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="178" width="90" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n6" value="qkv" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="130" y="178" width="90" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n7" value="attn" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="224" y="178" width="90" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n8" value="o_proj" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="318" y="178" width="90" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n9" value="ln" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="412" y="178" width="80" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n10" value="MLP" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="496" y="178" width="110" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n11" value="…下一层…" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="610" y="178" width="780" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="t12" value="&lt;b&gt;② PIECEWISE：attention 留 eager、其余进图（层数越多，图段越多）&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="238" width="1424" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="n13" value="ln" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="36" y="262" width="90" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n14" value="qkv" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="130" y="262" width="90" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n15" value="attn" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="224" y="262" width="90" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n16" value="o_proj" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="318" y="262" width="90" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n17" value="ln" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="412" y="262" width="80" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n18" value="MLP" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="496" y="262" width="110" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n19" value="…下一层…" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="610" y="262" width="780" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="t20" value="&lt;b&gt;③ FULL：整层连 attention 一起进图（只允许「整齐的 decode」形状）&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="322" width="1424" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="n21" value="ln" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="36" y="346" width="90" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n22" value="qkv" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="130" y="346" width="90" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n23" value="attn" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="224" y="346" width="90" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n24" value="o_proj" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="318" y="346" width="90" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n25" value="ln" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="412" y="346" width="80" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n26" value="MLP" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="496" y="346" width="110" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n27" value="…下一层…" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="610" y="346" width="780" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="t28" value="&lt;b&gt;第二步：四种模式的定义与本仓用法&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="390" width="1200" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n29" value="&lt;b&gt;模式&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="36" y="422" width="200" height="38" as="geometry"/>
+        </mxCell>
+        <mxCell id="n30" value="&lt;b&gt;什么进图&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="236" y="422" width="560" height="38" as="geometry"/>
+        </mxCell>
+        <mxCell id="n31" value="&lt;b&gt;代价/特点&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="796" y="422" width="420" height="38" as="geometry"/>
+        </mxCell>
+        <mxCell id="n32" value="&lt;b&gt;典型用途&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="1216" y="422" width="260" height="38" as="geometry"/>
+        </mxCell>
+        <mxCell id="n33" value="&lt;font style=&quot;font-size:11px&quot;&gt;NONE&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="460" width="200" height="38" as="geometry"/>
+        </mxCell>
+        <mxCell id="n34" value="&lt;font style=&quot;font-size:11px&quot;&gt;完全不用图（= --enforce-eager 的效果）&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="236" y="460" width="560" height="38" as="geometry"/>
+        </mxCell>
+        <mxCell id="n35" value="&lt;font style=&quot;font-size:11px&quot;&gt;启动最快、稳态最慢&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="796" y="460" width="420" height="38" as="geometry"/>
+        </mxCell>
+        <mxCell id="n36" value="&lt;font style=&quot;font-size:11px&quot;&gt;P 侧、edge、调试&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="1216" y="460" width="260" height="38" as="geometry"/>
+        </mxCell>
+        <mxCell id="n37" value="&lt;font style=&quot;font-size:11px&quot;&gt;PIECEWISE&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="498" width="200" height="38" as="geometry"/>
+        </mxCell>
+        <mxCell id="n38" value="&lt;font style=&quot;font-size:11px&quot;&gt;只把「attention 之间」的部分进图，attention 留在 eager&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="236" y="498" width="560" height="38" as="geometry"/>
+        </mxCell>
+        <mxCell id="n39" value="&lt;font style=&quot;font-size:11px&quot;&gt;形状要求宽松，能覆盖 prefill；图段数随层数增长&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="796" y="498" width="420" height="38" as="geometry"/>
+        </mxCell>
+        <mxCell id="n40" value="&lt;font style=&quot;font-size:11px&quot;&gt;O1 默认；prefill/mixed 批次&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="1216" y="498" width="260" height="38" as="geometry"/>
+        </mxCell>
+        <mxCell id="n41" value="&lt;font style=&quot;font-size:11px&quot;&gt;FULL&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="536" width="200" height="38" as="geometry"/>
+        </mxCell>
+        <mxCell id="n42" value="&lt;font style=&quot;font-size:11px&quot;&gt;整模型一张图，含 attention&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="236" y="536" width="560" height="38" as="geometry"/>
+        </mxCell>
+        <mxCell id="n43" value="&lt;font style=&quot;font-size:11px&quot;&gt;最快，但要求 batch 形状规整（uniform decode）且地址固定&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="796" y="536" width="420" height="38" as="geometry"/>
+        </mxCell>
+        <mxCell id="n44" value="&lt;font style=&quot;font-size:11px&quot;&gt;只在 decode 用&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="1216" y="536" width="260" height="38" as="geometry"/>
+        </mxCell>
+        <mxCell id="n45" value="&lt;font style=&quot;font-size:11px&quot;&gt;FULL_DECODE_ONLY&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="574" width="200" height="38" as="geometry"/>
+        </mxCell>
+        <mxCell id="n46" value="&lt;font style=&quot;font-size:11px&quot;&gt;decode 用 FULL，其余一律 eager&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="236" y="574" width="560" height="38" as="geometry"/>
+        </mxCell>
+        <mxCell id="n47" value="&lt;font style=&quot;font-size:11px&quot;&gt;P/D 分离里 decode 实例的标准配置&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="796" y="574" width="420" height="38" as="geometry"/>
+        </mxCell>
+        <mxCell id="n48" value="&lt;font style=&quot;font-size:11px&quot;&gt;本仓 D 侧脚本就是这么配的&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="1216" y="574" width="260" height="38" as="geometry"/>
+        </mxCell>
+        <mxCell id="n49" value="&lt;font style=&quot;font-size:11px&quot;&gt;FULL_AND_PIECEWISE&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="612" width="200" height="38" as="geometry"/>
+        </mxCell>
+        <mxCell id="n50" value="&lt;font style=&quot;font-size:11px&quot;&gt;decode 用 FULL，其它用 PIECEWISE&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="236" y="612" width="560" height="38" as="geometry"/>
+        </mxCell>
+        <mxCell id="n51" value="&lt;font style=&quot;font-size:11px&quot;&gt;默认（O2）；兼顾两类流量，显存与启动开销最大&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="796" y="612" width="420" height="38" as="geometry"/>
+        </mxCell>
+        <mxCell id="n52" value="&lt;font style=&quot;font-size:11px&quot;&gt;vLLM 默认&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="1216" y="612" width="260" height="38" as="geometry"/>
+        </mxCell>
+        <mxCell id="n53" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="36" y="686" width="700" height="168" as="geometry"/>
+        </mxCell>
+        <mxCell id="t54" value="&lt;b&gt;为什么 PIECEWISE 要把 attention 挖出去&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="46" y="694" width="680" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t55" value="&lt;font style=&quot;font-size:10px&quot;&gt;attention 是不透明的 custom op，且它的形状随「KV 长度」变化——&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;而 KV 长度每个请求都不同、每步都在变，无法在捕获时固定。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;所以编译时在 attention 处「打个断点」：前面进图、attention eager、后面再进图。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;这也解释了为什么 PIECEWISE 的图段数 ≈ 层数 ×2。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="46" y="720" width="680" height="126" as="geometry"/>
+        </mxCell>
+        <mxCell id="n56" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="796" y="686" width="664" height="168" as="geometry"/>
+        </mxCell>
+        <mxCell id="t57" value="&lt;b&gt;那 FULL 凭什么能把 attention 也放进去&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="806" y="694" width="644" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t58" value="&lt;font style=&quot;font-size:10px&quot;&gt;因为 decode 阶段的形状是「整齐」的：每请求 1 个 query token（spec decode 时 1+N），batch 大小又被 padding 到固定的桶。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;此时 attention 的 dynamic 部分只剩「KV 长度数组」，而它可以像别的输入一样被 copy_ 进固定 buffer。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;所以 FULL 只对「uniform decode」开放——这行判断在 dispatcher 里。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="806" y="720" width="644" height="126" as="geometry"/>
+        </mxCell>
+        <mxCell id="n59" value="&lt;b&gt;怎么选（实用建议）&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;① 想最快跑通/调试 → &lt;b&gt;NONE&lt;/b&gt;（--enforce-eager）：启动最快、报错最直白。&lt;br&gt;② 单机混跑 prefill+decode → 默认 &lt;b&gt;FULL_AND_PIECEWISE&lt;/b&gt;（O2）。&lt;br&gt;③ P/D 分离 → P 侧 &lt;b&gt;NONE 或 PIECEWISE&lt;/b&gt;、D 侧 &lt;b&gt;FULL_DECODE_ONLY&lt;/b&gt;（本仓部署脚本正是这样：P 与 edge 加 --enforce-eager，D 配 FULL_DECODE_ONLY）。&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="894" width="1424" height="92" as="geometry"/>
+        </mxCell>
+        <mxCell id="n60" value="&lt;b&gt;代码锚点（想自己去翻的时候用）&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot; color=&quot;#666666&quot;&gt;模式枚举与语义：vllm/config/compilation.py:53-110、:614-649&lt;br&gt;默认值来自 -O 级别：vllm/config/vllm.py:277（O0→NONE）、:300（O1→PIECEWISE）、:323/:346（O2/O3→FULL_AND_PIECEWISE）、:447（默认 O2）&lt;br&gt;PIECEWISE 的切点 = attention 类 op：vllm/config/compilation.py:772-790、:1169（set_splitting_ops_for_v1）&lt;br&gt;attention 是「捕获期要打断」的 custom op：vllm/model_executor/layers/attention/attention.py:758-794（eager_break_during_capture）&lt;br&gt;两种 wrapper 的嵌套：vllm/v1/worker/gpu_model_runner.py:5453-5493&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="1020" width="1424" height="104" as="geometry"/>
+        </mxCell>
+        <mxCell id="n61" value="&lt;b&gt;一句话记住这一页：&lt;/b&gt;PIECEWISE＝把 attention 挖空的「分段图」，形状宽松、段数多；FULL＝整张图，最快但只吃「整齐的 decode」；vLLM 默认两种都抓，运行时按 batch 形状挑一种。" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="1156" width="1424" height="58" as="geometry"/>
+        </mxCell>
+        <mxCell id="t62" value="&lt;b&gt;图例&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="1248" width="104" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="n63" value="客户端" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#eceff1;strokeColor=#607d8b;" vertex="1" parent="1">
+          <mxGeometry x="148" y="1245" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n64" value="边端 edge" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="276" y="1245" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n65" value="云 P (prefill)" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="404" y="1245" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n66" value="云 D (decode)" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="532" y="1245" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n67" value="PD Proxy" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#b0e3e6;strokeColor=#0e8088;" vertex="1" parent="1">
+          <mxGeometry x="660" y="1245" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n68" value="中立/通用" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="788" y="1245" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n69" value="失败/取消" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="916" y="1245" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n70" value="FULL 的图范围" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="1044" y="1245" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="e71" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#9673a6;fillColor=#9673a6;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="148" y="1294" as="sourcePoint"/>
+            <mxPoint x="204" y="1294" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t72" value="控制面 ZMQ" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="210" y="1282" width="190" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="e73" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#d6b656;fillColor=#d6b656;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="398" y="1294" as="sourcePoint"/>
+            <mxPoint x="454" y="1294" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t74" value="数据面 UCX·Mooncake" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="460" y="1282" width="190" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="e75" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="648" y="1294" as="sourcePoint"/>
+            <mxPoint x="704" y="1294" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t76" value="HTTP" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="710" y="1282" width="190" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="e77" value="" style="endArrow=open;html=1;rounded=0;dashed=1;fontSize=10;strokeColor=#a1887f;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="898" y="1294" as="sourcePoint"/>
+            <mxPoint x="954" y="1294" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t78" value="虚线/灰 = 仍在 eager 执行" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="960" y="1282" width="200" height="24" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="pg5" name="⑥ 桶与 dispatch">
+    <mxGraphModel dx="1600" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1576" pageHeight="1306" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="t1" value="⑥ 形状桶与 dispatch：这一步到底用哪张图" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=17;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="20" width="1500" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t2" value="一句话：启动时按「桶」抓了一批图；运行时先把本步的 batch 形状&lt;b&gt;向上取整到某个桶&lt;/b&gt;，再按 (token 数, 是否整齐 decode, LoRA 数) 去查表 —— 查不到就用 eager。" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="36" y="48" width="1500" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="t3" value="&lt;b&gt;第一步：桶不是连续的，是一串阶梯（本仓默认栅格）&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="120" width="1200" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n4" value="&lt;font style=&quot;font-size:10px&quot;&gt;默认栅格 = &lt;b&gt;1, 2, 4&lt;/b&gt; + &lt;b&gt;8, 16, 24, …, 248&lt;/b&gt;（步长 8）+ &lt;b&gt;256, 272, …, 上限&lt;/b&gt;（步长 16），上限默认 &lt;b&gt;512&lt;/b&gt;（Blackwell 1024），且不超过 max_num_batched_tokens。&lt;br&gt;还会补上 max_num_batched_tokens 本身；开 spec decode 时按 uniform_decode_query_len 的倍数补桶。&lt;br&gt;&lt;font color=&quot;#c0392b&quot;&gt;含义：batch 越小越「细」，越大越「粗」——因为小 batch 的延迟最敏感。&lt;/font&gt;&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="152" width="1424" height="96" as="geometry"/>
+        </mxCell>
+        <mxCell id="t5" value="&lt;b&gt;第二步：一个 5 个请求、共 5 个 token 的 decode step 会发生什么&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="250" width="1200" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n6" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="282" width="700" height="158" as="geometry"/>
+        </mxCell>
+        <mxCell id="t7" value="&lt;b&gt;① 先算本步形状&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="46" y="290" width="680" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t8" value="&lt;font style=&quot;font-size:10px&quot;&gt;num_tokens = 5（5 个请求各 1 个新 token）&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;uniform_decode = True（大家都只算 1 个 token）&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;查表：5 → 落到桶 8（向上取整）&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="46" y="316" width="680" height="116" as="geometry"/>
+        </mxCell>
+        <mxCell id="n9" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="796" y="282" width="664" height="158" as="geometry"/>
+        </mxCell>
+        <mxCell id="t10" value="&lt;b&gt;② 把形状 padding 到 8&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="806" y="290" width="644" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t11" value="&lt;font style=&quot;font-size:10px&quot;&gt;多出来的 3 个位置填占位：&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;· block_table 填 NULL_BLOCK_ID（不指向真实块）&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;· slot_mapping 填 -1（跳过写 KV）&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;· seq_lens / query_start_loc 补成合法值&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;输出只取前 5 个位置的结果（其余丢弃）。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="806" y="316" width="644" height="116" as="geometry"/>
+        </mxCell>
+        <mxCell id="t12" value="&lt;b&gt;第三步：dispatch 的查表顺序（三条路，最后一条是保底）&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="448" width="1200" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n13" value="&lt;b&gt;① 先查 FULL 的精确键&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;(padded num_tokens, uniform, 活跃 LoRA 数) 完全匹配&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="36" y="480" width="430" height="92" as="geometry"/>
+        </mxCell>
+        <mxCell id="n14" value="&lt;b&gt;② 再查 PIECEWISE 的放宽键&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;PIECEWISE 不关心 num_reqs / uniform，键更宽松&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="506" y="480" width="460" height="92" as="geometry"/>
+        </mxCell>
+        <mxCell id="n15" value="&lt;b&gt;③ 都不中 → 返回 NONE（eager）&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px;color:#c0392b&quot;&gt;⚠ 这一步&lt;b&gt;没有任何日志&lt;/b&gt;，是最隐蔽的「图没了」&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="996" y="480" width="464" height="92" as="geometry"/>
+        </mxCell>
+        <mxCell id="e16" value="没中" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1" source="n13" target="n14">
+          <mxGeometry relative="1" as="geometry">
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e17" value="没中" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1" source="n14" target="n15">
+          <mxGeometry relative="1" as="geometry">
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n18" value="&lt;b&gt;四个「提前退出、直接 eager」的条件（都会让图静默失效）&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;① 模式是 NONE（本来就没图）；② 桶还没初始化（还没捕获完）；③ &lt;b&gt;num_tokens 超过最大桶&lt;/b&gt;（并发突然变高最容易踩）；④ 只允许 NONE 的特殊场景（例如某些 attention 后端 / encoder-decoder 不支持 FULL）。&lt;br&gt;排查手法：看 KV cache usage 与 Running 请求数是否刚好越过了最大桶；或者直接开 &lt;font style=&quot;font-size:9px&quot;&gt;--cudagraph-metrics&lt;/font&gt; 看命中率。&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="36" y="612" width="1424" height="118" as="geometry"/>
+        </mxCell>
+        <mxCell id="t19" value="&lt;b&gt;第四步：桶的上下界怎么被卡住（三个数决定）&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="732" width="1200" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n20" value="&lt;b&gt;参数&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="36" y="764" width="320" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n21" value="&lt;b&gt;管什么&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="356" y="764" width="460" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n22" value="&lt;b&gt;对桶的影响&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="816" y="764" width="600" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n23" value="&lt;font style=&quot;font-size:11px&quot;&gt;max_num_seqs&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="798" width="320" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n24" value="&lt;font style=&quot;font-size:11px&quot;&gt;同时跑的请求数上限&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="356" y="798" width="460" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n25" value="&lt;font style=&quot;font-size:11px&quot;&gt;决定「最大桶大约多大」&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="816" y="798" width="600" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n26" value="&lt;font style=&quot;font-size:11px&quot;&gt;max_num_batched_tokens&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="832" width="320" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n27" value="&lt;font style=&quot;font-size:11px&quot;&gt;一步的 token 预算&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="356" y="832" width="460" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n28" value="&lt;font style=&quot;font-size:11px&quot;&gt;再给一个上界（chunked prefill 会打到这里）&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="816" y="832" width="600" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n29" value="&lt;font style=&quot;font-size:11px&quot;&gt;max_cudagraph_capture_size&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="866" width="320" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n30" value="&lt;font style=&quot;font-size:11px&quot;&gt;显式上限（默认 512 / Blackwell 1024）&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="356" y="866" width="460" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n31" value="&lt;font style=&quot;font-size:11px&quot;&gt;超过就一律 eager&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="816" y="866" width="600" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n32" value="&lt;font style=&quot;font-size:11px&quot;&gt;--cudagraph-capture-sizes&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="900" width="320" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n33" value="&lt;font style=&quot;font-size:11px&quot;&gt;手工指定桶列表&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="356" y="900" width="460" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n34" value="&lt;font style=&quot;font-size:11px&quot;&gt;想省显存就缩小它（如 [1,2,4,8,16]）&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="816" y="900" width="600" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n35" value="&lt;b&gt;代码锚点（想自己去翻的时候用）&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot; color=&quot;#666666&quot;&gt;栅格与上限推导：vllm/config/vllm.py:2196-2463（:2262-2269 上限、:2376-2388 栅格、:2348-2349 取 min、:2398-2400 spec 倍数）&lt;br&gt;桶键 BatchDescriptor：vllm/forward_context.py:29-58；bs→padded 映射 vllm/v1/cudagraph_dispatcher.py:72-91&lt;br&gt;注册桶：cudagraph_dispatcher.py:166-233；dispatch 决策与四条早退：:235-324（早退 :274-281、回落 NONE :320-324）&lt;br&gt;padding 落点：vllm/v1/worker/gpu_model_runner.py:2353-2355（NULL_BLOCK_ID）、:4150-4152（slot_mapping=-1）&lt;br&gt;按 attention 后端降级：vllm/config/compilation.py:1382-1545&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="970" width="1424" height="112" as="geometry"/>
+        </mxCell>
+        <mxCell id="n36" value="&lt;b&gt;一句话记住这一页：&lt;/b&gt;桶是一串「阶梯」，运行时向上取整 + padding；dispatch 先查 FULL 精确键、再查 PIECEWISE 放宽键、都不中就静默回 eager。&lt;b&gt;「并发一高就变慢」十有八九是越过了最大桶。&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="1116" width="1424" height="58" as="geometry"/>
+        </mxCell>
+        <mxCell id="t37" value="&lt;b&gt;图例&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="1208" width="104" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="n38" value="客户端" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#eceff1;strokeColor=#607d8b;" vertex="1" parent="1">
+          <mxGeometry x="148" y="1205" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n39" value="边端 edge" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="276" y="1205" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n40" value="云 P (prefill)" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="404" y="1205" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n41" value="云 D (decode)" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="532" y="1205" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n42" value="PD Proxy" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#b0e3e6;strokeColor=#0e8088;" vertex="1" parent="1">
+          <mxGeometry x="660" y="1205" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n43" value="中立/通用" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="788" y="1205" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n44" value="失败/取消" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="916" y="1205" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="e45" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#9673a6;fillColor=#9673a6;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="148" y="1254" as="sourcePoint"/>
+            <mxPoint x="204" y="1254" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t46" value="控制面 ZMQ" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="210" y="1242" width="190" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="e47" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#d6b656;fillColor=#d6b656;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="398" y="1254" as="sourcePoint"/>
+            <mxPoint x="454" y="1254" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t48" value="数据面 UCX·Mooncake" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="460" y="1242" width="190" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="e49" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="648" y="1254" as="sourcePoint"/>
+            <mxPoint x="704" y="1254" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t50" value="HTTP" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="710" y="1242" width="190" height="24" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="pg6" name="⑦ 启动期捕获流程">
+    <mxGraphModel dx="1600" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1576" pageHeight="1296" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="t1" value="⑦ 启动期的捕获流程：它排在「权重 → profile → KV」之后" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=17;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="20" width="1500" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t2" value="一句话：&lt;b&gt;加载权重 → profile 量激活峰值 → 切 KV 块池 → 估算图显存 → 逐桶捕获&lt;/b&gt;。所以启动日志里「Graph capturing finished」永远出现在「Available KV cache memory」之后。" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="36" y="48" width="1500" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="t3" value="&lt;b&gt;第一步：启动时间线（前四步都是「为图做准备的账」）&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="124" width="1200" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n4" value="&lt;b&gt;① 加载权重&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot; color=&quot;#666666&quot;&gt;权重先吃掉显存&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="156" width="224" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="n5" value="&lt;b&gt;② profile 空跑&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot; color=&quot;#666666&quot;&gt;eager 跑一遍，量激活峰值&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="272" y="156" width="224" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="e6" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="262" y="195" as="sourcePoint"/>
+            <mxPoint x="270" y="195" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n7" value="&lt;b&gt;③ 切 KV 块池&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot; color=&quot;#666666&quot;&gt;剩余显存才给 KV&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="508" y="156" width="224" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="e8" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="498" y="195" as="sourcePoint"/>
+            <mxPoint x="506" y="195" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n9" value="&lt;b&gt;④ 估算图显存&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot; color=&quot;#666666&quot;&gt;可选；失败不影响正确性&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="744" y="156" width="224" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="e10" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="734" y="195" as="sourcePoint"/>
+            <mxPoint x="742" y="195" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n11" value="&lt;b&gt;⑤ 逐桶捕获&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot; color=&quot;#666666&quot;&gt;从大到小真跑一遍&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="980" y="156" width="224" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="e12" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="970" y="195" as="sourcePoint"/>
+            <mxPoint x="978" y="195" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n13" value="&lt;b&gt;⑥ 锁 workspace&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot; color=&quot;#666666&quot;&gt;回放期不许改尺寸&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="1216" y="156" width="224" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="e14" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1206" y="195" as="sourcePoint"/>
+            <mxPoint x="1214" y="195" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t15" value="&lt;b&gt;第二步：四个容易搞错的点&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="242" width="1200" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n16" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="36" y="274" width="700" height="132" as="geometry"/>
+        </mxCell>
+        <mxCell id="t17" value="&lt;b&gt;①　捕获必须在 profile 与 KV 之后&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="48" y="282" width="676" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t18" value="&lt;font style=&quot;font-size:9px&quot;&gt;因为图本身要占显存（进程级图池），且要用这个池去估算。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;先抓图再算 KV，会把 KV 预算算错、甚至启动 OOM。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="48" y="306" width="676" height="92" as="geometry"/>
+        </mxCell>
+        <mxCell id="n19" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="796" y="274" width="664" height="132" as="geometry"/>
+        </mxCell>
+        <mxCell id="t20" value="&lt;b&gt;②　图池是「进程级」的，不是每桶一份&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="808" y="282" width="640" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t21" value="&lt;font style=&quot;font-size:9px&quot;&gt;所有桶共用一块池，占用 ≈ 各桶峰值的最大值。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;所以必须&lt;b&gt;从大到小&lt;/b&gt;捕获：大桶先占下够用的池，小桶复用它。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="808" y="306" width="640" height="92" as="geometry"/>
+        </mxCell>
+        <mxCell id="n22" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="36" y="446" width="700" height="132" as="geometry"/>
+        </mxCell>
+        <mxCell id="t23" value="&lt;b&gt;③　每个桶都要 warmup 几遍再录&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="48" y="454" width="676" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t24" value="&lt;font style=&quot;font-size:9px&quot;&gt;warmup 会触发算子库/通信库的 lazy 初始化；不 warmup 直接录，&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;图里会混进「第一次才发生」的初始化动作，回放时行为不一致。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="48" y="478" width="676" height="92" as="geometry"/>
+        </mxCell>
+        <mxCell id="n25" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="796" y="446" width="664" height="132" as="geometry"/>
+        </mxCell>
+        <mxCell id="t26" value="&lt;b&gt;④　启动成本是可量化的&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="808" y="454" width="640" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t27" value="&lt;font style=&quot;font-size:9px&quot;&gt;日志会打「Graph capturing finished in N secs, took X GiB」，&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;还会同时打印「估算 vs 实际」的图显存对比，方便判断要不要缩桶。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="808" y="478" width="640" height="92" as="geometry"/>
+        </mxCell>
+        <mxCell id="t28" value="&lt;b&gt;第三步：这份「启动保险」的价格&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="586" width="1200" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n29" value="&lt;b&gt;项&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="36" y="618" width="220" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n30" value="&lt;b&gt;本仓口径&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="256" y="618" width="760" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n31" value="&lt;b&gt;应对&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="1016" y="618" width="420" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n32" value="&lt;font style=&quot;font-size:11px&quot;&gt;启动时间&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="654" width="220" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n33" value="&lt;font style=&quot;font-size:11px&quot;&gt;典型 5~20 秒（随桶数与模型深度增长）&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="256" y="654" width="760" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n34" value="&lt;font style=&quot;font-size:11px&quot;&gt;桶越多、层越深越慢&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="1016" y="654" width="420" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n35" value="&lt;font style=&quot;font-size:11px&quot;&gt;显存&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="690" width="220" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n36" value="&lt;font style=&quot;font-size:11px&quot;&gt;进程级图池 ≈ 各桶峰值取 max（不是相加）&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="256" y="690" width="760" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n37" value="&lt;font style=&quot;font-size:11px&quot;&gt;可从 KV 预算里扣掉这部分&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="1016" y="690" width="420" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n38" value="&lt;font style=&quot;font-size:11px&quot;&gt;显存不够时&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="726" width="220" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n39" value="&lt;font style=&quot;font-size:11px&quot;&gt;捕获段&lt;b&gt;没有 try/except 回退&lt;/b&gt;，OOM 直接失败启动&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="256" y="726" width="760" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n40" value="&lt;font style=&quot;font-size:11px&quot;&gt;所以先调小桶或降 gpu-memory-utilization&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="1016" y="726" width="420" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n41" value="&lt;font style=&quot;font-size:11px&quot;&gt;稳态收益&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="762" width="220" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n42" value="&lt;font style=&quot;font-size:11px&quot;&gt;decode 每步少发上千次命令 → TPOT 下降&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="256" y="762" width="760" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n43" value="&lt;font style=&quot;font-size:11px&quot;&gt;prefill 大 batch 基本不受益&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="1016" y="762" width="420" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n44" value="&lt;b&gt;想省这笔钱，有三个旋钮（按代价从小到大）&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;① &lt;b&gt;缩小桶列表&lt;/b&gt;：&lt;font style=&quot;font-size:9px&quot;&gt;--cudagraph-capture-sizes [1,2,4,8,16]&lt;/font&gt;——桶少了，池变小、启动变快，代价是更多请求落到 eager。&lt;br&gt;② &lt;b&gt;降模式&lt;/b&gt;：只留 decode 的图（FULL_DECODE_ONLY），别抓 mixed 的 PIECEWISE。&lt;br&gt;③ &lt;b&gt;关掉&lt;/b&gt;：--enforce-eager / -O0——启动最快，稳态 decode 变慢。&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="834" width="1424" height="92" as="geometry"/>
+        </mxCell>
+        <mxCell id="n45" value="&lt;b&gt;代码锚点（想自己去翻的时候用）&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot; color=&quot;#666666&quot;&gt;启动顺序（profile→KV→编译/捕获）：vllm/v1/engine/core.py:254、:308、:354、:356；vllm/v1/worker/gpu_worker.py:773-816&lt;br&gt;图显存估算：vllm/v1/worker/gpu_worker.py:580-592；vllm/v1/worker/gpu_model_runner.py:6674-6710&lt;br&gt;捕获主循环（从大到小、逐桶 warmup）：vllm/v1/worker/gpu_model_runner.py:6905-6914、:6949-6995&lt;br&gt;锁 workspace：vllm/v1/worker/gpu_model_runner.py:6934-6936&lt;br&gt;耗时与显存日志：vllm/v1/worker/gpu_model_runner.py:6942-6946；估算 vs 实际 vllm/v1/worker/gpu_worker.py:818-832&lt;br&gt;缩桶的两个开关：vllm/engine/arg_utils.py:1660-1665（--cudagraph-capture-sizes）、vllm/docs/configuration/conserving_memory.md:48-65&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="960" width="1424" height="112" as="geometry"/>
+        </mxCell>
+        <mxCell id="n46" value="&lt;b&gt;一句话记住这一页：&lt;/b&gt;捕获排在「权重 → profile → KV」之后；图池是进程级共用、必须从大到小抓；桶越多启动越慢、显存越多；想省就缩桶或降模式，别指望它自己回退。" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="1106" width="1424" height="58" as="geometry"/>
+        </mxCell>
+        <mxCell id="t47" value="&lt;b&gt;图例&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="1198" width="104" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="n48" value="客户端" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#eceff1;strokeColor=#607d8b;" vertex="1" parent="1">
+          <mxGeometry x="148" y="1195" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n49" value="边端 edge" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="276" y="1195" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n50" value="云 P (prefill)" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="404" y="1195" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n51" value="云 D (decode)" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="532" y="1195" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n52" value="PD Proxy" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#b0e3e6;strokeColor=#0e8088;" vertex="1" parent="1">
+          <mxGeometry x="660" y="1195" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n53" value="中立/通用" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="788" y="1195" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n54" value="失败/取消" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="916" y="1195" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="e55" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#9673a6;fillColor=#9673a6;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="148" y="1244" as="sourcePoint"/>
+            <mxPoint x="204" y="1244" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t56" value="控制面 ZMQ" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="210" y="1232" width="190" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="e57" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#d6b656;fillColor=#d6b656;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="398" y="1244" as="sourcePoint"/>
+            <mxPoint x="454" y="1244" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t58" value="数据面 UCX·Mooncake" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="460" y="1232" width="190" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="e59" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="648" y="1244" as="sourcePoint"/>
+            <mxPoint x="704" y="1244" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t60" value="HTTP" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="710" y="1232" width="190" height="24" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="pg7" name="⑧ 回放路径">
+    <mxGraphModel dx="1600" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1576" pageHeight="1222" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="t1" value="⑧ 回放期：一次 decode step 从 scheduler 到 replay 再到吐 token" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=17;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="20" width="1500" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t2" value="一句话：&lt;b&gt;图只覆盖「模型 forward」这一段&lt;/b&gt;；进图前要备好静态输入，出图后还要算 logits、采样、回收——这些都在图外。" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="36" y="48" width="1500" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="t3" value="&lt;b&gt;把一次 step 从头走到尾，标出「图内 / 图外」&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="124" width="1300" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n4" value="&lt;b&gt;①　调度器出计划&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot; color=&quot;#333333&quot;&gt;SchedulerOutput：每请求算几个 token + 新块的 block_ids。&lt;font color=&quot;#666666&quot;&gt;（图外，EngineCore 主线程）&lt;/font&gt;&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="156" width="1424" height="62" as="geometry"/>
+        </mxCell>
+        <mxCell id="n5" value="&lt;b&gt;②　决定这一步用哪个桶 / 哪张图&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot; color=&quot;#333333&quot;&gt;按 padded num_tokens + uniform + LoRA 数查表 → 得到 cudagraph_mode 与 batch_descriptor。&lt;b&gt;查不到就是 NONE（eager）&lt;/b&gt;。&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="36" y="228" width="1424" height="62" as="geometry"/>
+        </mxCell>
+        <mxCell id="n6" value="&lt;b&gt;③　备好静态输入（图外）&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot; color=&quot;#333333&quot;&gt;把本步的 input_ids / positions / slot_mapping / seq_lens 用 copy_ 写进持久 buffer 的前 N 个位置；slot_mapping 按 padded 长度补齐。&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="36" y="300" width="1424" height="62" as="geometry"/>
+        </mxCell>
+        <mxCell id="n7" value="&lt;b&gt;④　进 forward context（图外）&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot; color=&quot;#333333&quot;&gt;set_forward_context(attn_metadata, ..., num_tokens=num_tokens_padded, cudagraph_runtime_mode=&lt;mode&gt;, batch_descriptor=&lt;desc&gt;)——把「本步用哪张图」写进上下文，wrapper 在 forward 里读它。&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="36" y="372" width="1424" height="62" as="geometry"/>
+        </mxCell>
+        <mxCell id="n8" value="&lt;b&gt;⑤　命中图 → replay()（图内只这一下）&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot; color=&quot;#333333&quot;&gt;显存里已有这张图 → 一条 &lt;b&gt;graph.replay()&lt;/b&gt;；CPU 只提交一次，设备按录好的顺序跑完整个 forward。&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="36" y="444" width="1424" height="68" as="geometry"/>
+        </mxCell>
+        <mxCell id="n9" value="&lt;b&gt;⑥　取输出（图外，且输出是「池子里那块静态显存」）&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot; color=&quot;#333333&quot;&gt;写 right 的是捕获期就定好的输出 buffer（弱引用）；再用它算 logits——注意 logits 与采样&lt;b&gt;不在图里&lt;/b&gt;。&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="36" y="522" width="1424" height="62" as="geometry"/>
+        </mxCell>
+        <mxCell id="n10" value="&lt;b&gt;⑦　采样 + 回收 + 回 CPU（图外）&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot; color=&quot;#333333&quot;&gt;选 token、判结束、把结果搬回 CPU、写进 EngineCoreOutputs 发给前端。&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="36" y="594" width="1424" height="62" as="geometry"/>
+        </mxCell>
+        <mxCell id="n11" value="&lt;b&gt;⑧　KV 真正写进去的时机&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot; color=&quot;#333333&quot;&gt;写 KV 发生在 attention 自己的 op 里（图内），但&lt;b&gt;写到哪&lt;/b&gt;由进图前算好的 slot_mapping 决定；padding 的位置填 -1，等于跳过。&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="36" y="666" width="1424" height="62" as="geometry"/>
+        </mxCell>
+        <mxCell id="n12" value="&lt;b&gt;为什么「采样 / logits」一定要留在图外（三个理由）&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;① &lt;b&gt;形状不定&lt;/b&gt;：这一步要采几个 token 取决于 batch 里各请求的状态，而且 spec decode 还要按 draft 结果变；&lt;br&gt;② &lt;b&gt;要问 CPU&lt;/b&gt;：判结束、算 stop 条件、生成输出事件都是 CPU 逻辑，进了图就再也问不了；&lt;br&gt;③ &lt;b&gt;要回主机&lt;/b&gt;：把 sampled token 搬回 CPU 是同步操作，图里禁止。&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="744" width="1424" height="108" as="geometry"/>
+        </mxCell>
+        <mxCell id="n13" value="&lt;b&gt;代码锚点（想自己去翻的时候用）&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot; color=&quot;#666666&quot;&gt;execute_model 与选路：vllm/v1/worker/gpu_model_runner.py:4188、:4289-4310、:3954-4066&lt;br&gt;进 forward context：同文件 :4446-4457；命中后 replay：vllm/compilation/cuda_graph.py:242-246、:258-265、:362&lt;br&gt;V2 的显式 replay（FULL 连输入都不传）：vllm/v1/worker/gpu/model_runner.py:1901-1909；vllm/v1/worker/gpu/cudagraph_utils.py:529-542&lt;br&gt;图外算 logits / 采样：gpu_model_runner.py:4478-4499（logits）、:4567（sample_tokens）、:3690（回 CPU 记账）&lt;br&gt;KV 写入与 slot_mapping：:4388-4397、:4455；vllm/model_executor/layers/attention/attention.py:750-794&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="886" width="1424" height="112" as="geometry"/>
+        </mxCell>
+        <mxCell id="n14" value="&lt;b&gt;一句话记住这一页：&lt;/b&gt;图只包住「模型 forward」；进图前备好静态输入并告诉上下文用哪张图，出图后算 logits / 采样 / 回 CPU。所以图能省的只是&lt;b&gt;forward 内部的下发次数&lt;/b&gt;，省不了采样与调度。" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="1032" width="1424" height="58" as="geometry"/>
+        </mxCell>
+        <mxCell id="t15" value="&lt;b&gt;图例&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="1124" width="104" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="n16" value="客户端" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#eceff1;strokeColor=#607d8b;" vertex="1" parent="1">
+          <mxGeometry x="148" y="1121" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n17" value="边端 edge" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="276" y="1121" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n18" value="云 P (prefill)" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="404" y="1121" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n19" value="云 D (decode)" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="532" y="1121" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n20" value="PD Proxy" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#b0e3e6;strokeColor=#0e8088;" vertex="1" parent="1">
+          <mxGeometry x="660" y="1121" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n21" value="中立/通用" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="788" y="1121" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n22" value="失败/取消" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="916" y="1121" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n23" value="数据面（KV 写入）" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="1044" y="1121" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="e24" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#9673a6;fillColor=#9673a6;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="148" y="1170" as="sourcePoint"/>
+            <mxPoint x="204" y="1170" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t25" value="控制面 ZMQ" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="210" y="1158" width="190" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="e26" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#d6b656;fillColor=#d6b656;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="398" y="1170" as="sourcePoint"/>
+            <mxPoint x="454" y="1170" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t27" value="数据面 UCX·Mooncake" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="460" y="1158" width="190" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="e28" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="648" y="1170" as="sourcePoint"/>
+            <mxPoint x="704" y="1170" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t29" value="HTTP" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="710" y="1158" width="190" height="24" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="pg8" name="⑨ 昇腾 ACL Graph">
+    <mxGraphModel dx="1600" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1576" pageHeight="1518" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="t1" value="⑨ 昇腾侧：ACL Graph，以及本仓「D 用图、P 和 edge 不用」的选择" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=17;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="20" width="1500" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t2" value="一句话：昇腾上叫 &lt;b&gt;ACL Graph&lt;/b&gt;（PyTorch 里是 &lt;code&gt;torch.npu.NPUGraph&lt;/code&gt;），用法与 CUDA Graph 同构；&lt;b&gt;最大差别是回放前要先在 host 侧刷新 attention 参数&lt;/b&gt;。本仓部署里只有 D 侧开图。" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="36" y="48" width="1500" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="t3" value="&lt;b&gt;第一步：两者「同一套抽象，两处实现」&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="122" width="1200" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n4" value="&lt;b&gt;维度&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="36" y="154" width="260" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n5" value="&lt;b&gt;CUDA 侧&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="296" y="154" width="560" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n6" value="&lt;b&gt;昇腾侧&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="856" y="154" width="600" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n7" value="&lt;font style=&quot;font-size:11px&quot;&gt;图对象&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="188" width="260" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n8" value="&lt;font style=&quot;font-size:11px&quot;&gt;torch.cuda.CUDAGraph&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="296" y="188" width="560" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n9" value="&lt;font style=&quot;font-size:11px&quot;&gt;torch.npu.NPUGraph（vllm-ascend 里做了别名）&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="856" y="188" width="600" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n10" value="&lt;font style=&quot;font-size:11px&quot;&gt;捕获上下文&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="222" width="260" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n11" value="&lt;font style=&quot;font-size:11px&quot;&gt;torch.cuda.graph(...)&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="296" y="222" width="560" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n12" value="&lt;font style=&quot;font-size:11px&quot;&gt;torch.npu.graph(...)（acl_graph.py 主线）&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="856" y="222" width="600" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n13" value="&lt;font style=&quot;font-size:11px&quot;&gt;内存池&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="256" width="260" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n14" value="&lt;font style=&quot;font-size:11px&quot;&gt;graph_pool_handle（平台钩子透传）&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="296" y="256" width="560" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n15" value="&lt;font style=&quot;font-size:11px&quot;&gt;同一个钩子最终也落到 torch.npu.graph_pool_handle&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="856" y="256" width="600" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n16" value="&lt;font style=&quot;font-size:11px&quot;&gt;包装器&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="290" width="260" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n17" value="&lt;font style=&quot;font-size:11px&quot;&gt;CUDAGraphWrapper&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="296" y="290" width="560" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n18" value="&lt;font style=&quot;font-size:11px&quot;&gt;ACLGraphWrapper（平台注册给 vLLM）&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="856" y="290" width="600" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n19" value="&lt;font style=&quot;font-size:11px&quot;&gt;模式枚举&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="324" width="260" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n20" value="&lt;font style=&quot;font-size:11px&quot;&gt;CUDAGraphMode：NONE/PIECEWISE/FULL…&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="296" y="324" width="560" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n21" value="&lt;font style=&quot;font-size:11px&quot;&gt;完全复用同一套枚举&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="856" y="324" width="600" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n22" value="&lt;font style=&quot;font-size:11px&quot;&gt;回放前&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="358" width="260" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n23" value="&lt;font style=&quot;font-size:11px&quot;&gt;直接 replay()&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="296" y="358" width="560" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n24" value="&lt;font style=&quot;font-size:11px&quot;&gt;&lt;b&gt;必须先刷 host 侧参数&lt;/b&gt;再 replay（见下）&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="856" y="358" width="600" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="t25" value="&lt;b&gt;第二步：昇腾独有的「回放前刷新」——这是最该记住的一条&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="400" width="1200" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n26" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="36" y="432" width="700" height="186" as="geometry"/>
+        </mxCell>
+        <mxCell id="t27" value="&lt;b&gt;问题：attention 的这几个量每步都在变&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="46" y="440" width="680" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t28" value="&lt;font style=&quot;font-size:10px&quot;&gt;· actual_seq_lengths（query 累计长度）&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;· actual_seq_lengths_kv（每个请求当前的 KV 长度）&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;· block_table（本步用哪些块）&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;它们在昇腾上是以 &lt;b&gt;host 侧 Python list&lt;/b&gt; 的形式随 metadata 传的，而图里只认地址——所以不能只 replay，必须先把这些值刷进去。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="46" y="466" width="680" height="144" as="geometry"/>
+        </mxCell>
+        <mxCell id="n29" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="796" y="432" width="664" height="186" as="geometry"/>
+        </mxCell>
+        <mxCell id="t30" value="&lt;b&gt;解法：register_task + graph_task_update&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="806" y="440" width="644" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t31" value="&lt;font style=&quot;font-size:10px&quot;&gt;把 attention 算子用 register_task 注册成图里的任务，并附一个 ParamProvider（负责取上面的动态值）；&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;回放前用 &lt;font style=&quot;font-size:9px&quot;&gt;torch.npu.graph_task_update_begin/end&lt;/font&gt; 包住一次算子调用 → 把这些参数更新进图；&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;然后才 replay。对应实现：UpdatableGraph / graph_task_* API。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="806" y="466" width="644" height="144" as="geometry"/>
+        </mxCell>
+        <mxCell id="t32" value="&lt;b&gt;第三步：本仓部署脚本怎么配（这一条能解释很多现象）&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="626" width="1200" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n33" value="&lt;b&gt;D 侧（decode）：开图&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;--compilation-config '{&quot;cudagraph_mode&quot;:&quot;FULL_DECODE_ONLY&quot;}'，有的包还显式给 cudagraph_capture_sizes&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px;color:#666666&quot;&gt;sidecar/cloud_d.sh:31 · mooncake_pd_195/decode.sh:34&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="36" y="658" width="460" height="112" as="geometry"/>
+        </mxCell>
+        <mxCell id="n34" value="&lt;b&gt;P 侧（prefill）：--enforce-eager&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;prefill 是长宽矩阵、形状差异大；且 P 只跑一次就交接，省启动时间更划算&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px;color:#666666&quot;&gt;cloud_p.sh:26 · prefill.sh:33&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="516" y="658" width="460" height="112" as="geometry"/>
+        </mxCell>
+        <mxCell id="n35" value="&lt;b&gt;edge：--enforce-eager，而且代码里直接跳过捕获&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;LwdEdgeWorker 覆写了 compile_or_warm_up_model，直接返回 0 秒——因为 edge 的 forward 被 LWD 劫持，只做 embed/unembed&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px;color:#666666&quot;&gt;lwd_edge_worker.py:122-131（日志 [lwd-edge] skip model warmup/capture）&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="996" y="658" width="464" height="112" as="geometry"/>
+        </mxCell>
+        <mxCell id="n36" value="&lt;b&gt;两个重要澄清&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;① &lt;b&gt;「LWD 下必须 enforce-eager」并不存在于代码里&lt;/b&gt;——全仓 grep 找不到这条强制；它只是部署脚本的约定（P/edge 加 flag、D 开 FULL_DECODE_ONLY）。&lt;br&gt;② &lt;b&gt;eager 与 --compilation-config 同时给不会报错&lt;/b&gt;：eager 会静默胜出（一条 warning_once + 一条 info），用户给的 cudagraph_mode 被丢弃、永远不捕获。&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="810" width="1424" height="104" as="geometry"/>
+        </mxCell>
+        <mxCell id="t37" value="&lt;b&gt;第四步：昇腾侧已知限制（遇到别当成 bug 猜）&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="916" width="1200" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n38" value="&lt;b&gt;限制&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="36" y="948" width="320" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="n39" value="&lt;b&gt;表现 / 应对&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="356" y="948" width="1060" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="n40" value="&lt;font style=&quot;font-size:11px&quot;&gt;PIECEWISE 需要编译&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="980" width="320" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="n41" value="&lt;font style=&quot;font-size:11px&quot;&gt;必须 VLLM_COMPILE 或开 breakable，否则启动即 AssertionError&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="356" y="980" width="1060" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="n42" value="&lt;font style=&quot;font-size:11px&quot;&gt;DP 要取最小&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="1012" width="320" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="n43" value="&lt;font style=&quot;font-size:11px&quot;&gt;cudagraph_mode 跨 DP rank 取最小：一个 rank 是 NONE 就全体 NONE&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="356" y="1012" width="1060" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="n44" value="&lt;font style=&quot;font-size:11px&quot;&gt;TP × query_len 对齐&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="1044" width="320" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="n45" value="&lt;font style=&quot;font-size:11px&quot;&gt;FULL decode 的桶要对齐到 LCM(query_len, TP)（临时 workaround）&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="356" y="1044" width="1060" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="n46" value="&lt;font style=&quot;font-size:11px&quot;&gt;流资源耗尽&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="1076" width="320" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="n47" value="&lt;font style=&quot;font-size:11px&quot;&gt;报 207008 / Alloc sq cq fail → 调小 capture sizes 或升级 HDK&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="356" y="1076" width="1060" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="n48" value="&lt;font style=&quot;font-size:11px&quot;&gt;超桶静默掉出&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="1108" width="320" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="n49" value="&lt;font style=&quot;font-size:11px&quot;&gt;num_tokens 超过最大桶 → 直接回 eager，&lt;b&gt;没有日志&lt;/b&gt;&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="356" y="1108" width="1060" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="n50" value="&lt;b&gt;代码锚点（想自己去翻的时候用）&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot; color=&quot;#666666&quot;&gt;ACL 图包装器与捕获/回放：vllm-ascend/vllm_ascend/compilation/acl_graph.py:156-302（torch.npu.graph 在 :210；replay :297-302；捕获失败文案 :228-243）&lt;br&gt;参数刷新：vllm-ascend/vllm_ascend/compilation/updatable_graph.py:72-76、:147-174&lt;br&gt;平台接入（wrapper 与静态图支持）：vllm-ascend/vllm_ascend/platform.py:159-160、:218-222；模式降级 :1171-1246、:1346-1352&lt;br&gt;CUDA→NPU 名字别名：vllm-ascend/vllm_ascend/worker/model_runner_v1.py:6687-6739；V2 版 worker/v2/utils.py:162-171&lt;br&gt;edge 跳过捕获：vllm-ascend/vllm_ascend/worker/lwd_edge_model/lwd_edge_worker.py:122-131&lt;br&gt;部署侧 flag：assets/c_home/bash/pds/30rc_1124/sidecar/cloud_d.sh:31（D 开图）、cloud_p.sh:26 与 edge.sh:30（enforce-eager）&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="1174" width="1424" height="120" as="geometry"/>
+        </mxCell>
+        <mxCell id="n51" value="&lt;b&gt;一句话记住这一页：&lt;/b&gt;昇腾的图叫 ACL Graph，用法与 CUDA 同构，但&lt;b&gt;回放前要多一步「host 侧刷 attention 参数」&lt;/b&gt;；本仓只在 D 侧开 FULL_DECODE_ONLY，P 与 edge 一律 eager（edge 还在代码里直接跳过捕获）。" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="1328" width="1424" height="58" as="geometry"/>
+        </mxCell>
+        <mxCell id="t52" value="&lt;b&gt;图例&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="1420" width="104" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="n53" value="客户端" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#eceff1;strokeColor=#607d8b;" vertex="1" parent="1">
+          <mxGeometry x="148" y="1417" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n54" value="边端 edge" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="276" y="1417" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n55" value="云 P (prefill)" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="404" y="1417" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n56" value="云 D (decode)" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="532" y="1417" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n57" value="PD Proxy" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#b0e3e6;strokeColor=#0e8088;" vertex="1" parent="1">
+          <mxGeometry x="660" y="1417" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n58" value="中立/通用" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="788" y="1417" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n59" value="失败/取消" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="916" y="1417" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="e60" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#9673a6;fillColor=#9673a6;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="148" y="1466" as="sourcePoint"/>
+            <mxPoint x="204" y="1466" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t61" value="控制面 ZMQ" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="210" y="1454" width="190" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="e62" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#d6b656;fillColor=#d6b656;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="398" y="1466" as="sourcePoint"/>
+            <mxPoint x="454" y="1466" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t63" value="数据面 UCX·Mooncake" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="460" y="1454" width="190" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="e64" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="648" y="1466" as="sourcePoint"/>
+            <mxPoint x="704" y="1466" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t65" value="HTTP" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="710" y="1454" width="190" height="24" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="pg9" name="⑩ 排障与坑">
+    <mxGraphModel dx="1600" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1576" pageHeight="1446" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="t1" value="⑩ 排障与坑：六种「以为开了图、其实没有」" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=17;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="20" width="1500" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t2" value="一句话：图失效几乎都不报错——要么&lt;b&gt;静默回落 eager&lt;/b&gt;，要么&lt;b&gt;开着但算错&lt;/b&gt;。这页是排查顺序：先看有没有捕获，再看有没有命中，最后看是不是越了桶。" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="36" y="48" width="1500" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="t3" value="&lt;b&gt;六种情况（按「先怀疑谁」排序）&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="120" width="1300" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n4" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="36" y="152" width="1424" height="84" as="geometry"/>
+        </mxCell>
+        <mxCell id="t5" value="&lt;b&gt;①　启动日志里根本没有捕获&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="48" y="158" width="1400" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t6" value="&lt;font style=&quot;font-size:9px&quot; color=&quot;#333333&quot;&gt;现象：没有 Graph capturing finished / Capturing ACL graph&lt;br&gt;原因：被 --enforce-eager 或 -O0 一票否决；或 cudagraph_mode=NONE　→　处置：看有没有 Enforce eager set, disabling torch.compile and CUDAGraphs 这条 warning&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="48" y="180" width="1400" height="52" as="geometry"/>
+        </mxCell>
+        <mxCell id="n7" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="36" y="246" width="1424" height="84" as="geometry"/>
+        </mxCell>
+        <mxCell id="t8" value="&lt;b&gt;②　捕获了但并发一高就变慢&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="48" y="252" width="1400" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t9" value="&lt;font style=&quot;font-size:9px&quot; color=&quot;#333333&quot;&gt;现象：低并发时快、并发上到某个数就退回原速&lt;br&gt;原因：&lt;b&gt;num_tokens 超过最大桶&lt;/b&gt;（默认 512）→ dispatcher 直接回 NONE，且无日志　→　处置：看最大桶与 max_num_seqs 的关系；必要时 --max-cudagraph-capture-size 调大或压并发&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="48" y="274" width="1400" height="52" as="geometry"/>
+        </mxCell>
+        <mxCell id="n10" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="36" y="340" width="1424" height="84" as="geometry"/>
+        </mxCell>
+        <mxCell id="t11" value="&lt;b&gt;③　捕获时就 OOM / 启动直接失败&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="48" y="346" width="1400" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t12" value="&lt;font style=&quot;font-size:9px&quot; color=&quot;#333333&quot;&gt;现象：Graph capturing ... 之后进程退出&lt;br&gt;原因：图池显存放不下（捕获段没有 try/except 回退）　→　处置：缩桶（--cudagraph-capture-sizes 1,2,4,8,16）或降 gpu-memory-utilization&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="48" y="368" width="1400" height="52" as="geometry"/>
+        </mxCell>
+        <mxCell id="n13" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="36" y="434" width="1424" height="84" as="geometry"/>
+        </mxCell>
+        <mxCell id="t14" value="&lt;b&gt;④　所有请求都拿到同一个旧结果&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="48" y="440" width="1400" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t15" value="&lt;font style=&quot;font-size:9px&quot; color=&quot;#333333&quot;&gt;现象：输出重复、内容像是缓存的&lt;br&gt;原因：某处 .item() / 分支被「烤」进图（约束三）　→　处置：把该逻辑挪到图外；或先 --enforce-eager 验证是不是图的问题&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="48" y="462" width="1400" height="52" as="geometry"/>
+        </mxCell>
+        <mxCell id="n16" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="36" y="528" width="1424" height="84" as="geometry"/>
+        </mxCell>
+        <mxCell id="t17" value="&lt;b&gt;⑤　报 Input addresses ... different during replay&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="48" y="534" width="1400" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t18" value="&lt;font style=&quot;font-size:9px&quot; color=&quot;#333333&quot;&gt;现象：回放时抛地址不一致&lt;br&gt;原因：有代码在回放期换了输入张量（没走持久 buffer）　→　处置：改成 copy_ 进固定 buffer；查这段日志的栈找到改地址的地方&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="48" y="556" width="1400" height="52" as="geometry"/>
+        </mxCell>
+        <mxCell id="n19" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="36" y="622" width="1424" height="84" as="geometry"/>
+        </mxCell>
+        <mxCell id="t20" value="&lt;b&gt;⑥　昇腾上捕获报错 207008 / Alloc sq cq fail&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="48" y="628" width="1400" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t21" value="&lt;font style=&quot;font-size:9px&quot; color=&quot;#333333&quot;&gt;现象：RuntimeError，提示流资源不足或旧 HDK&lt;br&gt;原因：capture sizes 太大 / HDK 版本旧　→　处置：调小 capture sizes；或升级 HDK（仓内文案给的处理建议）&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="48" y="650" width="1400" height="52" as="geometry"/>
+        </mxCell>
+        <mxCell id="t22" value="&lt;b&gt;四步排查法（照着走，不要一上来就改代码）&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="694" width="1300" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n23" value="&lt;font style=&quot;font-size:10px&quot;&gt;① &lt;b&gt;确认模式&lt;/b&gt;：看启动日志的 cudagraph 模式与桶数（有没有被 eager 否决、有没有被 NPU 降级）。&lt;br&gt;② &lt;b&gt;确认捕获&lt;/b&gt;：有没有 Graph capturing finished in N secs, took X GiB；显存是否符合预期。&lt;br&gt;③ &lt;b&gt;确认命中&lt;/b&gt;：开指标（--cudagraph-metrics）看命中率；或临时移除 --disable-log-stats 观察。&lt;br&gt;④ &lt;b&gt;确认形状&lt;/b&gt;：对比 Running 请求数 × 每请求 token 数与最大桶，判断是不是「越桶掉出」。&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="726" width="1424" height="92" as="geometry"/>
+        </mxCell>
+        <mxCell id="t24" value="&lt;b&gt;必背的六条日志&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="820" width="1300" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n25" value="&lt;b&gt;日志原文（关键字）&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="36" y="852" width="760" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="n26" value="&lt;b&gt;级别&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="796" y="852" width="120" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="n27" value="&lt;b&gt;含义&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="916" y="852" width="400" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="n28" value="&lt;font style=&quot;font-size:11px&quot;&gt;Enforce eager set, disabling torch.compile and CUDAGraphs...&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="884" width="760" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="n29" value="&lt;font style=&quot;font-size:11px&quot;&gt;WARNING&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="796" y="884" width="120" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="n30" value="&lt;font style=&quot;font-size:11px&quot;&gt;eager 一票否决&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="916" y="884" width="400" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="n31" value="&lt;font style=&quot;font-size:11px&quot;&gt;Capturing ACL graph (FULL, BatchDescriptor(...))&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="916" width="760" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="n32" value="&lt;font style=&quot;font-size:11px&quot;&gt;DEBUG&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="796" y="916" width="120" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="n33" value="&lt;font style=&quot;font-size:11px&quot;&gt;昇腾每抓一张图（需开 debug 日志）&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="916" y="916" width="400" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="n34" value="&lt;font style=&quot;font-size:11px&quot;&gt;Graph capturing finished in N secs, took X GiB&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="948" width="760" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="n35" value="&lt;font style=&quot;font-size:11px&quot;&gt;INFO&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="796" y="948" width="120" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="n36" value="&lt;font style=&quot;font-size:11px&quot;&gt;捕获完成：耗时与图显存&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="916" y="948" width="400" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="n37" value="&lt;font style=&quot;font-size:11px&quot;&gt;CUDA graph pool memory: X GiB (actual), Y GiB (estimated)&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="980" width="760" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="n38" value="&lt;font style=&quot;font-size:11px&quot;&gt;INFO&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="796" y="980" width="120" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="n39" value="&lt;font style=&quot;font-size:11px&quot;&gt;估算 vs 实际&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="916" y="980" width="400" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="n40" value="&lt;font style=&quot;font-size:11px&quot;&gt;ACL graph replay is active (logged once).&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="1012" width="760" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="n41" value="&lt;font style=&quot;font-size:11px&quot;&gt;INFO&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="796" y="1012" width="120" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="n42" value="&lt;font style=&quot;font-size:11px&quot;&gt;journal 里确认图真的在用&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="916" y="1012" width="400" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="n43" value="&lt;font style=&quot;font-size:11px&quot;&gt;cudagraph_mode X is unsupported on NPU; falling back to NONE.&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="1044" width="760" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="n44" value="&lt;font style=&quot;font-size:11px&quot;&gt;INFO&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="796" y="1044" width="120" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="n45" value="&lt;font style=&quot;font-size:11px&quot;&gt;被平台降级了&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="916" y="1044" width="400" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="n46" value="&lt;b&gt;代码锚点（想自己去翻的时候用）&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot; color=&quot;#666666&quot;&gt;静默回落 NONE（无日志）：vllm/v1/cudagraph_dispatcher.py:274-282&lt;br&gt;eager 警告与降级：vllm/config/vllm.py:1591-1597；vllm-ascend/vllm_ascend/platform.py:1218-1222、:1346-1352&lt;br&gt;捕获失败的昇腾文案：vllm-ascend/vllm_ascend/compilation/acl_graph.py:228-243&lt;br&gt;地址不一致断言：vllm/compilation/cuda_graph.py:348-357&lt;br&gt;日志原文：vllm/v1/worker/gpu_model_runner.py:6942-6946（耗时/显存）、vllm-ascend/vllm_ascend/compilation/acl_graph.py:182、:301&lt;br&gt;指标开关：vllm-ascend/docs/source/developer_guide/Design_Documents/ACL_Graph.md:105&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="1110" width="1424" height="112" as="geometry"/>
+        </mxCell>
+        <mxCell id="n47" value="&lt;b&gt;一句话记住这一页：&lt;/b&gt;图的问题九成不报错——先看「有没有捕获」，再看「有没有命中」，最后看「形状是否越桶」；任何一次怀疑，都用 --enforce-eager 做对照实验来二分。" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="1256" width="1424" height="58" as="geometry"/>
+        </mxCell>
+        <mxCell id="t48" value="&lt;b&gt;图例&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="1348" width="104" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="n49" value="客户端" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#eceff1;strokeColor=#607d8b;" vertex="1" parent="1">
+          <mxGeometry x="148" y="1345" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n50" value="边端 edge" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="276" y="1345" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n51" value="云 P (prefill)" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="404" y="1345" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n52" value="云 D (decode)" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="532" y="1345" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n53" value="PD Proxy" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#b0e3e6;strokeColor=#0e8088;" vertex="1" parent="1">
+          <mxGeometry x="660" y="1345" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n54" value="中立/通用" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="788" y="1345" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n55" value="失败/取消" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="916" y="1345" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="e56" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#9673a6;fillColor=#9673a6;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="148" y="1394" as="sourcePoint"/>
+            <mxPoint x="204" y="1394" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t57" value="控制面 ZMQ" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="210" y="1382" width="190" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="e58" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#d6b656;fillColor=#d6b656;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="398" y="1394" as="sourcePoint"/>
+            <mxPoint x="454" y="1394" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t59" value="数据面 UCX·Mooncake" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="460" y="1382" width="190" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="e60" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="648" y="1394" as="sourcePoint"/>
+            <mxPoint x="704" y="1394" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t61" value="HTTP" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="710" y="1382" width="190" height="24" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
