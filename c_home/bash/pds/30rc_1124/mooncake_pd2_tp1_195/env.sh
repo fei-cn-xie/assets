@@ -58,7 +58,7 @@ export PD_DECODE_MASTER_PORT="${PD_DECODE_MASTER_PORT:-29536}"
 # one block, hence max_num_seqs 32. These three values are shared by both sides
 # on purpose: max_model_len is hashed into the KV connector's extra config
 # layout, and the batch limits bound what the pipeline as a whole can admit.
-export PD_MAX_MODEL_LEN="${PD_MAX_MODEL_LEN:-32768}"
+export PD_MAX_MODEL_LEN="${PD_MAX_MODEL_LEN:-512}"
 export PD_MAX_NUM_SEQS="${PD_MAX_NUM_SEQS:-32}"
 export PD_MAX_NUM_BATCHED_TOKENS="${PD_MAX_NUM_BATCHED_TOKENS:-8192}"
 export PD_GPU_MEM_UTIL="${PD_GPU_MEM_UTIL:-0.95}"
@@ -89,6 +89,12 @@ fi
 
 pd_runtime_env() {
   export LD_LIBRARY_PATH="$PD_MOONCAKE_LIB${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+  # vLLM derives every peer address from get_ip(), which honours VLLM_HOST_IP and
+  # otherwise auto-detects an interface. On this host auto-detection picked a
+  # docker bridge (76.1.1.2) and the KV handshake metadata advertised that
+  # address instead of 76.76.26.195. The working edge-cloud package sets it in
+  # every engine script; set it here once for both engines.
+  export VLLM_HOST_IP="$PD_HOST"
   export HCCL_IF_IP="$PD_HOST"
   export GLOO_SOCKET_IFNAME="$PD_NIC_NAME"
   export TP_SOCKET_IFNAME="$PD_NIC_NAME"
@@ -152,7 +158,7 @@ import sys
 
 names = (
     "CODEBASE_DIR", "PYTHONPATH", "ASCEND_RT_VISIBLE_DEVICES",
-    "HCCL_IF_IP", "GLOO_SOCKET_IFNAME", "TP_SOCKET_IFNAME", "HCCL_SOCKET_IFNAME",
+    "VLLM_HOST_IP", "HCCL_IF_IP", "GLOO_SOCKET_IFNAME", "TP_SOCKET_IFNAME", "HCCL_SOCKET_IFNAME",
     "PYTORCH_NPU_ALLOC_CONF", "HCCL_OP_EXPANSION_MODE", "HCCL_BUFFSIZE",
     "VLLM_WORKER_MULTIPROC_METHOD", "OMP_PROC_BIND", "OMP_NUM_THREADS",
     "TASK_QUEUE_ENABLE", "VLLM_LOGGING_LEVEL", "LD_PRELOAD", "LD_LIBRARY_PATH",
