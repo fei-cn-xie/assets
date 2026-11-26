@@ -20,7 +20,7 @@ base_runtime_env
 
 export VLLM_HOST_IP=76.76.26.195
 export MASTER_ADDR=76.76.26.195
-export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3
+export ASCEND_RT_VISIBLE_DEVICES=0,1
 
 base_preflight 9060
 
@@ -29,7 +29,7 @@ base_run "$BASE_PYTHON" -m vllm.entrypoints.cli.main serve /home/weight/Qwen3.6-
   --port 9060 \
   --served-model-name qwen3.6 \
   --pipeline-parallel-size 1 \
-  --tensor-parallel-size 4 \
+  --tensor-parallel-size 2 \
   --additional-config '{"enable_cpu_binding":true}' \
   --trust-remote-code \
   --max-model-len 65536 \
