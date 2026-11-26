@@ -1,19 +1,17 @@
-# LWD edge/cloud PD topology — asymmetric multi-DP on the 194/195 pair.
+# LWD edge/cloud PD topology — 2 DP x 1 TP on both cloud instances.
 #
 # Shape (5 cards):
-#   edge  194 NPU 4    TP=1 DP=1                  -> API 8510
-#   cloud 0 (prefill) 195 NPU 0,1  DP=1 TP=2      -> ONE kv handshake group
-#   cloud 1 (decode)  195 NPU 2,3  DP=2 TP=1      -> TWO decode replicas
+#   edge  194 NPU 4    TP=1 DP=1                    -> API 8510
+#   cloud 0 (prefill) 195 NPU 0,1  DP=2 TP=1        -> 2 prefill replicas
+#   cloud 1 (decode)  195 NPU 2,3  DP=2 TP=1        -> 2 decode replicas
 #   proxy 195:8102 (CPU only)
 #
-# WHY ASYMMETRIC: the MooncakeConnectorV1 producer binds a ZMQ ROUTER per rank
-# (mooncake_connector.py:319, bind=True) on
-#     kv_port + data_parallel_rank * tp * pp * pcp + device_index
-# and the LWD non-MoE path resets `data_parallel_rank` to 0 in every rank
-# (vllm/v1/engine/core.py:1377 -> parallel.py:1111), so DP>1 on a *producer*
-# collides ("Address already in use"). The consumer side only creates a
-# zmq.REQ with bind=False (mooncake_connector.py:1546-1551), so DP>1 on decode
-# is safe.
+# Requires the fix/lwd-multidp-dense-pd branches: for a dense model each DP rank
+# process collapses data_parallel_size/rank to 1, which used to (a) fail the KV
+# extra-config DP check when the engine core re-validates its config after the DP
+# handshake and (b) put every producer rank on the same KV handshake port. The
+# fix keeps the deployment-wide DP in ParallelConfig.data_parallel_size_global
+# and derives the port from data_parallel_index instead.
 #
 # Topology rules used here (vllm/config/lwd/topology.py):
 #   * with pd.enabled the instances need NOT share a DP count (:411-417)
@@ -33,7 +31,7 @@ deployment:
   data_plane_comm: host
   data_plane_host:
     # Host budget gate counts one pool pair per edge -> cloud DP link:
-    # (1 prefill + 2 decode) DPs => 3 links => 3 * 4 * (256 + 32) = 3456 MiB,
+    # (2 prefill + 2 decode) DPs => 4 links => 4 * 4 * (256 + 32) = 4608 MiB,
     # under the 12288 MiB budget
     # (vllm_ascend/.../lwd_host_channels.py:201-216, 262-266).
     up_buffer_size: 256
@@ -61,19 +59,25 @@ clouds:
   - id: 0
     stage_role: prefill
     dp:
-      # DP=1: a single kv handshake group (the producer binds)
+      # TP=1 per replica, one card each (NPU 0 and NPU 1). The producer binds one
+      # KV handshake port per DP rank: 14570 and 14571.
       - dp_idx: 0
         addr: 76.76.26.195
         ctrl_port: 6100
         data_port: 7200
         coord_port: 8100
+      - dp_idx: 1
+        addr: 76.76.26.195
+        ctrl_port: 6101
+        data_port: 7201
+        coord_port: 8101
     coordination:
       enabled: true
   - id: 1
     stage_role: decode
     dp:
-      # DP=2: two independent decode replicas, one card each (NPU 2, NPU 3).
-      # The consumer connects out, so both replicas may share one kv_port base.
+      # Same shape on the decode side (NPU 2 and NPU 3). The consumer connects
+      # out, so its kv_port base only has to stay clear of the producer's.
       - dp_idx: 0
         addr: 76.76.26.195
         ctrl_port: 6110
