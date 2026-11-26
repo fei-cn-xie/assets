@@ -9,8 +9,15 @@
 from __future__ import annotations
 
 import importlib
+import io
 import os
 import sys
+
+try:                      # Windows 控制台默认 GBK，打印 ⑪ 这类字符会炸，强制 UTF-8
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8",
+                                  errors="replace")
+except Exception:
+    pass
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 TOOLS = os.path.dirname(HERE)
@@ -22,7 +29,8 @@ for p in (TOOLS, HERE):
 import dg                      # noqa: E402
 import format as fmt           # noqa: E402
 
-PAGES = ["t1", "t2", "t3", "t4", "t5", "t6", "t7", "t8", "t9", "t10"]
+PAGES = ["t1", "t2", "t3", "t4", "t5", "t6", "t7", "t8", "t9", "t10",
+         "t11", "t12", "t13", "t14", "t15", "t16"]
 DEFAULT_OUT = os.path.join(DRAWIO_DIR, "vLLM进程与线程.drawio")
 
 
