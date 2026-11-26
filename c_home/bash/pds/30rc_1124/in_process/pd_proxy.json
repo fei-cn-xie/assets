@@ -15,5 +15,7 @@
   ],
   "max_attempts": 4096,
   "max_response_bytes": 1048576,
-  "request_timeout_s": 600.0
+  "request_timeout_s": 600.0,
+  "max_connections": 1000,
+  "max_keepalive_connections": 100
 }

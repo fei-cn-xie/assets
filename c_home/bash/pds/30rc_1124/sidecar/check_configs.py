@@ -456,7 +456,17 @@ def validate_topology(path: Path, label: str) -> int:
 
 
 PROXY_TARGET_KEYS = {"cloud_id", "target_dp", "url", "headers"}
-PROXY_KEYS = {"prefill", "decode", "max_attempts", "max_response_bytes", "request_timeout_s"}
+PROXY_KEYS = {
+    "prefill",
+    "decode",
+    "max_attempts",
+    "max_response_bytes",
+    "request_timeout_s",
+    # Added upstream when the proxy gained a shared httpx pool
+    # (proxy.py:66-67); both have defaults, but the example config spells them out.
+    "max_connections",
+    "max_keepalive_connections",
+}
 
 
 def validate_proxy(path: Path, label: str) -> int:
