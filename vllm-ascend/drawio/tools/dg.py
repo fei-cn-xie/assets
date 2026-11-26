@@ -18,30 +18,31 @@ from dataclasses import dataclass, field
 #   line  = 平面           (控制面 ZMQ / 数据面 UCX·Mooncake / HTTP)
 # 状态类只用一种色：失败/取消/超时 = fail。就绪/完成不另设色，靠文字表达。
 C = {
-    "client": ("#eceff1", "#607d8b"),     # 客户端（冷灰：不能和"注记"的 #f5f5f5 撞）
+    "client": ("#eceff1", "#607d8b"),     # 客户端（冷灰）
     "edge": ("#dae8fc", "#6c8ebf"),       # 边端 edge 实例
     "cloudp": ("#ffe6cc", "#d79b00"),     # 云 P（prefill）
     "cloudd": ("#d5e8d4", "#82b366"),     # 云 D（decode）
     "proxy": ("#b0e3e6", "#0e8088"),      # PD Proxy
-    "neutral": ("#ffffff", "#b3b3b3"),    # 中立：通用 vLLM 代码/进程骨架/分组带/表格
+    # 中立：沙色暖灰。**不用白色**——白色既可能"本来就中立"也可能是"忘了上色"，
+    # 留着白就看不出哪个模块配色漏了。
+    "neutral": ("#efe9dd", "#a1887f"),
     "fail": ("#f8cecc", "#b85450"),       # 失败 / 取消 / 超时 / 终止
     # 进程泳道灰度梯度：只用于"按进程切泳道"的页面（P02/P05/P09）。
-    # 灰阶不是颜色，所以不与角色色冲突；图例里单列一项说明。
-    "proc1": ("#ffffff", "#9e9e9e"),
-    "proc2": ("#f1f1f1", "#9e9e9e"),
-    "proc3": ("#e4e4e4", "#8a8a8a"),
-    "proc4": ("#d7d7d7", "#8a8a8a"),
-    "proc5": ("#c9c9c9", "#757575"),
+    # 从 #f4f4f4 起，不用纯白；灰阶不是颜色，不与角色色冲突。
+    "proc1": ("#f4f4f4", "#9e9e9e"),
+    "proc2": ("#e8e8e8", "#9e9e9e"),
+    "proc3": ("#dcdcdc", "#8a8a8a"),
+    "proc4": ("#d0d0d0", "#8a8a8a"),
+    "proc5": ("#c4c4c4", "#757575"),
     # 平面（只用于线，不用于填充）
-    "ctrl": ("#ffffff", "#9673a6"),       # 控制面 ZMQ
+    "ctrl": ("#efe9dd", "#9673a6"),       # 控制面 ZMQ
     "data": ("#fff2cc", "#d6b656"),       # 数据面 UCX / Mooncake
-    "http": ("#ffffff", "#666666"),       # HTTP
-    # 兼容旧名
-    "grey": ("#ffffff", "#b3b3b3"),
-    "code": ("#f5f5f5", "#999999"),
-    "ok": ("#ffffff", "#82b366"),
+    "http": ("#efe9dd", "#666666"),       # HTTP
+    "grey": ("#efe9dd", "#a1887f"),       # 中立别名
+    "code": ("#efe9dd", "#a1887f"),       # 注记/说明栏（与中立同色，靠 note 形状区分）
+    "ok": ("#efe9dd", "#82b366"),
     "warn": ("#f8cecc", "#b85450"),
-    "phase": ("#ffffff", "#b3b3b3"),
+    "phase": ("#e7e0d4", "#b3a89c"),      # 阶段分组带（比中立稍深一档的沙色）
 }
 
 # 统一的 legend 项（顺序固定，措辞固定）
@@ -73,11 +74,13 @@ STYLES = {
     "head": "rounded=0;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;"
             "fontSize=12;fontStyle=1;",
     "phase": "rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;"
-             "spacingLeft=0;fontSize=11;fontStyle=1;dashed=1;",
+             "spacingLeft=0;fontSize=11;fontStyle=1;dashed=1;"
+             "fillColor=#e7e0d4;strokeColor=#b3a89c;",
     "lane": "rounded=0;html=1;whiteSpace=wrap;align=center;verticalAlign=top;"
             "fontSize=12;fontStyle=1;opacity=45;",
     "note": "shape=note;html=1;whiteSpace=wrap;align=left;verticalAlign=top;"
-            "spacingLeft=6;spacingTop=4;fontSize=10;size=11;",
+            "spacingLeft=6;spacingTop=4;fontSize=10;size=11;"
+            "fillColor=#efe9dd;strokeColor=#a1887f;",
     "code": "rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;"
             "spacingLeft=4;fontFamily=Courier New;fontSize=9;",
     "text": "text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;",

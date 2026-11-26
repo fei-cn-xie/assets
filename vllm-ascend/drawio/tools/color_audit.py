@@ -25,7 +25,7 @@ except Exception:
 import dg                                       # noqa: E402
 from render_check import load, parse_style      # noqa: E402
 
-# 填色 → 语义（只列本项目在用的；顺序即优先级）
+# 填色 → 语义（只列本项目在用的；不存在"白色合法"这一项）
 FILL_ROLE = {
     "#dae8fc": "边端 edge",
     "#ffe6cc": "云 P",
@@ -34,26 +34,28 @@ FILL_ROLE = {
     "#f8cecc": "失败/取消",
     "#fff2cc": "数据面(黄)",
     "#eceff1": "客户端",
-    "#f5f5f5": "注记(说明栏)",
-    "#f1f1f1": "灰阶 proc2",
-    "#e4e4e4": "灰阶 proc3",
-    "#d7d7d7": "灰阶 proc4",
-    "#c9c9c9": "灰阶 proc5",
-    "#ffffff": "白(中立)/proc1",
+    "#efe9dd": "中立/通用",
+    "#e7e0d4": "阶段分组带",
+    "#f4f4f4": "灰阶 proc1",
+    "#e8e8e8": "灰阶 proc2",
+    "#dcdcdc": "灰阶 proc3",
+    "#d0d0d0": "灰阶 proc4",
+    "#c4c4c4": "灰阶 proc5",
 }
-# 改版中被淘汰、不该再出现的颜色
-LEGACY_FILL = {
+# 明确不允许的填色：白色（看色差时看不出来）、以及改版淘汰的旧色
+FORBIDDEN_FILL = {
+    "#ffffff": "白色（区分不出「本来就中立」还是「忘了上色」）",
     "#ffd9b3": "旧·云P深橙",
     "#e1d5e7": "旧·控制面紫(当填充用)",
     "#eeeeee": "旧·灰",
-    "#f8cecc": None,          # 正常（失败色）
+    "#f5f5f5": "旧·近白",
 }
 LINE_ROLE = {
     "#9673a6": "控制面 ZMQ", "#d6b656": "数据面", "#666666": "HTTP/普通",
     "#9e9e9e": "灰阶描边", "#8a8a8a": "灰阶描边", "#757575": "灰阶描边",
-    "#b3b3b3": "中立描边", "#b85450": "失败", "#6c8ebf": "边端", "#d79b00": "云 P",
-    "#82b366": "云 D", "#0e8088": "PD Proxy", "#999999": "注记",
-    "#000000": "默认黑",
+    "#b3b3b3": "中立描边", "#a1887f": "中立描边", "#b85450": "失败",
+    "#6c8ebf": "边端", "#d79b00": "云 P", "#82b366": "云 D", "#0e8088": "PD Proxy",
+    "#999999": "注记", "#607d8b": "客户端", "#000000": "默认黑",
 }
 
 
@@ -115,11 +117,12 @@ def audit(path: str, verbose: bool = False) -> int:
             if ly is not None and ly - 6 <= v.y <= ly + 30 and 100 <= v.w <= 260:
                 continue                      # 图例色块
             name = FILL_ROLE.get(fill)
-            if name is None:
-                bad_fill.append((v.id, fill, st.get("strokeColor"), v.label[:40]))
+            if fill in FORBIDDEN_FILL:
+                bad_fill.append((v.id, fill, FORBIDDEN_FILL[fill], v.label[:44]))
+                name = f"✗{fill}"
+            elif name is None:
+                bad_fill.append((v.id, fill, "未登记", v.label[:44]))
                 name = f"?{fill}"
-            if fill in LEGACY_FILL and LEGACY_FILL[fill]:
-                bad_fill.append((v.id, fill, "LEGACY", v.label[:40]))
             fills[name] += 1
             # 文案↔填色一致性（启发式，只扫"内容方框"：圆角 + 带 .py: 锚点）
             # 内容方框 = 圆角 + 带 .py 锚点；排除表格 cell（font-size:11px 包裹）
@@ -147,16 +150,18 @@ def audit(path: str, verbose: bool = False) -> int:
                 bad_line.append((e.id, col))
 
         total = sum(fills.values())
-        whiteish = sum(c for n, c in fills.items() if n.startswith("白(中立)"))
+        neutralish = sum(c for n, c in fills.items() if "中立" in n)
+        greys = sum(c for n, c in fills.items() if "灰阶" in n)
         summary = "  ".join(f"{n}×{c}" for n, c in fills.most_common())
         print(f"[{pi:02d}] {page['name'][:22]:<22} {total:>4} {len(page['edges']):>4}  {summary}")
 
-        if total and whiteish / total > 0.85 and total > 8:
-            problems.append(f"[{pi:02d} {page['name']}] {whiteish}/{total} 个方块是白色，"
-                            f"几乎没有角色色（看图会觉得发白）")
+        # 只有"几乎全是中立色、且没有灰阶分层"才判为发白（P09 那种三列灰阶是合法的）
+        if total and not greys and neutralish / total > 0.85 and total > 8:
+            problems.append(f"[{pi:02d} {page['name']}] {neutralish}/{total} 个方块是中立色、"
+                            f"又没有灰阶分层，看图会发白")
         if same_as_lane:
             problems.append(f"[{pi:02d} {page['name']}] {same_as_lane} 个方块与所在泳道同色，"
-                            f"层次看不出来（泳道给底色、方块给白）")
+                            f"层次看不出来（泳道给底色、方块给中立色）")
         for cid, fill, stroke, label in bad_fill:
             problems.append(f"[{pi:02d}] 非规范填色 {cid} {fill} {stroke} :: {label}")
         for cid, col in bad_line:
