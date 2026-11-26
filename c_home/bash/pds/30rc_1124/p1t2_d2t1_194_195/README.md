@@ -1,6 +1,29 @@
-# p1t2_d2t1_194_195：非对称多 DP 的 LWD 边云 PD
+# p1t2_d2t1_194_195：非对称多 DP 的 LWD 边云 PD（⛔ 已证伪，不可拉起）
 
 目录名 = `p{P的DP}×t{P的TP}_d{D的DP}×t{D的TP}_{边端主机}_{云主机}`。
+
+## ⛔ 状态：本包在 dense 模型下**跑不起来**，原因不在脚本
+
+实机验证（日志 `private_home/pds_multidp_fix/1126-1433/decode.log`）：decode 侧
+KV 分配（6.76 GiB）、mamba 上限、图捕获**全部通过**，最后死在引擎核心握手结束时的
+配置复检：
+
+```
+core.py:1206-1207   # Update config which may have changed from the handshake
+                    vllm_config.__post_init__()
+→ vllm_ascend/platform.py:820  check_kv_extra_config
+→ ValueError: KV transfer 'decode' config has a conflicting data parallel size.
+             Expected 1, but got 2.
+```
+
+`LWD` 的非 MoE 分支会先把 `data_parallel_size/rank` 抹成 1
+（`vllm/v1/engine/core.py:1377` → `config/parallel.py:1104-1113`），
+握手之后又重跑一次 `__post_init__`，于是第二次校验必然冲突。
+**与 MTP 无关，与 P/D 角色无关**，所以"把多 DP 挪到 decode"也救不回来。
+
+完整的代码级分析见 [../../../note/LWD多DP已知代码问题.md](../../../note/LWD多DP已知代码问题.md)。
+本目录保留为**拓扑模板 + 失败证据**：多 DP 的拓扑、proxy、端口分配、脚本骨架都验证过是对的，
+等上游修掉 I-2（`core.py:1207` 的二次校验）与 I-3（连接器用 `data_parallel_rank` 派生端口）后可直接复用。
 
 ```
 client ──8510──▶ edge (194, NPU 4, TP=1 DP=1)
@@ -11,8 +34,8 @@ client ──8510──▶ edge (194, NPU 4, TP=1 DP=1)
                     └── cloud 1 decode  (195 NPU 2,3)  DP=2 × TP=1  → coord 8110 / 8111
 ```
 
-为什么非对称，见下文「三次失败与最终形态」——**producer 侧不能 DP>1，consumer 侧可以**，
-而 decode 正是吞吐瓶颈，所以把多 DP 放在 decode 上。
+> 多 DP 想要真正可用：换 **MoE** 模型（走 `LwdCloudDPEngineCore` 分支），
+> 或保持 dense 用 [../sidecar](../sidecar/README.md)（DP=1、TP=2，已验证）。
 
 ## 卡与端口
 
@@ -33,16 +56,18 @@ client ──8510──▶ edge (194, NPU 4, TP=1 DP=1)
 }
 ```
 
-## 三次失败与最终形态（代码级原因）
+## 四次失败（代码级原因）
 
-| # | 报错 | 根因 | 处置 |
+| # | 报错 | 根因 | 能否配置解决 |
 | --- | --- | --- | --- |
-| 1 | `KV transfer 'prefill' config has a conflicting data parallel size. Expected 1, but got 2` | MTP drafter 以 DP=1 重建 `VllmConfig`（`vllm/v1/spec_decode/llm_base_proposer.py:1292` → `vllm/config/utils.py:127` → 重跑 `__post_init__`），与 `dp_size=2` 冲突 | decode 侧去掉 MTP（DP=1 的 prefill 仍可保留 MTP） |
-| 2 | `max_num_seqs (128) exceeds available Mamba cache blocks (123)` | 模型含 GDN(Mamba) 层，每个 decode 序列占一个 mamba block；TP=1 时 KV 池只够 123 个 | decode `--max-num-seqs 64` |
-| 3 | **`ZMQError: Address already in use (tcp://…:14570)`** | producer 的 `KVCacheSendingThread` 是 `zmq.ROUTER` 且 `bind=True`（`mooncake_connector.py:319`），端口 = `kv_port + data_parallel_rank*tp*pp*pcp + device_index`；LWD 非 MoE 分支把 `data_parallel_rank` 清零（`vllm/v1/engine/core.py:1377` → `parallel.py:1111`），两个 DP rank 算出同一端口 | **prefill 不做 DP**（DP=1、TP=2） |
+| 1 | `KV transfer 'prefill' ... Expected 1, but got 2` | MTP drafter 以 DP=1 重建 `VllmConfig`（`llm_base_proposer.py:1292` → `config/utils.py:127` → 重跑 `__post_init__`） | ✅ 关 MTP |
+| 2 | `max_num_seqs (128) exceeds available Mamba cache blocks (123)` | GDN(Mamba) 层每个 decode 序列占一个 block | ✅ 降到 64 |
+| 3 | `ZMQError: Address already in use (…:14570)` | producer 发送线程 `zmq.ROUTER` + `bind=True`（`mooncake_connector.py:319`），端口含被清零的 `data_parallel_rank` | ✅ prefill 不做 DP |
+| 4 | **`'decode' ... Expected 1, but got 2`**（握手后） | `core.py:1207` 重跑 `__post_init__`，而 DP 已被 `core.py:1377` 抹成 1 | ❌ **无解** |
 
-第 3 点的豁免条件：consumer 侧建的是 `zmq.REQ` 且 `bind=False`
-（`mooncake_connector.py:1546-1551`）——**只连不绑**，所以 decode 可以 DP>1。
+第 3 点曾以为"consumer 只连不绑"（`mooncake_connector.py:1546-1551` 用
+`zmq.REQ, bind=False`）就能让 decode 做多 DP，第 4 点证明这个推论不成立：
+**最后一次校验与角色无关**。
 
 ## 其它已排查 / 已规避的问题
 
@@ -88,11 +113,13 @@ LWD_GPU_MEM_UTIL=0.96 bash cloud_d.sh
 
 ## 改成其它规模
 
-| 想加的副本 | 能不能 | 怎么做 |
+前提：先修 I-2（`core.py:1207` 的握手后复检），否则**任何** DP>1 的云端引擎都起不来。
+
+| 想加的副本 | 修好 I-2 之后 | 怎么做 |
 | --- | --- | --- |
-| decode 再加一个 DP（d3） | **可以** | 拓扑给 cloud 1 加第 3 条 `dp:`（ctrl/data/coord 各新端口）、`pd_proxy.json` 加第 3 个 decode target、`--data-parallel-size 3`、卡要够 3 张 |
-| prefill 加 DP | **不能** | producer 会撞端口（见上表第 3 点），只能加 TP |
-| 两边都用 DP | 需要上游修复 | 把 `side_channel_port` 的 `data_parallel_rank` 换成 `data_parallel_index`（LWD 自己就用后者，见 `lwd_control_plane.py:102-103`） |
+| decode 再加 DP（d3） | 可以 | 拓扑给 cloud 1 加第 3 条 `dp:`（ctrl/data/coord 各新端口）、`pd_proxy.json` 加第 3 个 decode target、`--data-parallel-size 3`、卡要够 3 张 |
+| prefill 加 DP | 还要修 I-3 | producer 会撞端口：`side_channel_port` 的 `data_parallel_rank` 需换成 `data_parallel_index` |
+| 两边都用 DP | 两个都要修 | 同上 |
 
 ## 本目录做过的校验（均实跑）
 
@@ -103,6 +130,4 @@ LWD_GPU_MEM_UTIL=0.96 bash cloud_d.sh
 | 拉起参数 | 四个入口 `--dry-run` | P：TP=2/无 DP/MTP 保留/14570；D：DP=2/TP=1/无 MTP/64/0.95/14580 |
 | 拓扑与 proxy 一致性 | 结构断言 | prefill 1 个 DP、decode 2 个 DP，coord 8100/8110/8111，proxy 1+2 个 target |
 | 目录卫生 | — | 除 `check_configs.py` 外无脚本 |
-
-⚠️ 仍未实机验证：decode 侧 DP=2 在"consumer 只连不绑"的前提下是否真的能同时起两个 rank（代码依据充分，但这是第一次真机跑）。首次启动请看 decode 日志里是否出现两条
-`host data-plane links created ... dp_rank=0/1`，以及是否还报端口占用。
+| **实机** | 日志 `1126-1433` | 参数全部生效（DP=2、KV 6.76 GiB、64 seqs、图捕获通过），仅 I-2 拦下 |
