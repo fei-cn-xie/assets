@@ -145,6 +145,8 @@ the transport daemon`、`[LWD][handshake] host link not ready: …`、`[edge] re
 | **线条色 = 平面** | 紫 | 控制面 ZMQ |
 | | 黄 | 数据面 UCX / Mooncake |
 | | 灰 | HTTP / 进程创建 / 普通调用 |
+| **灰阶（非颜色）** | proc1…proc5 | 只在"按进程切泳道"的页面用（P02 启动时序、P05 KV、P09 Step），
+图例里单列一项"灰阶 = 进程泳道/分列"；灰阶不是角色色，所以不冲突 |
 
 补充约定：
 
