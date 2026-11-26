@@ -108,6 +108,7 @@ LWD_MODULE_OWNERSHIP = {
 | `PD_ENABLE_MTP` | 1 | 关掉可回收 draft 权重（边云包同款开关） |
 | `PD_SKIP_MM_PROFILING` | 0 | 置 1 时加 `--skip-mm-profiling`：不做视觉编码器的 profiling 预留，省显存但图像请求的预留会退化 |
 | `PD_MAX_MODEL_LEN` | 32768 | 每 token ≈96.6 KiB，32768 需 3.02 GiB |
+| `PD_API_SERVER_COUNT` | 空（= DP 数 2） | 置 1 时只起一个前端托管两个 DP 引擎；排查启动握手时可用来排除多前端因素 |
 
 边云包没有后两个的必要：云端不装视觉塔，draft 也是它唯一要担心的部分。
 
@@ -129,15 +130,23 @@ curl -s http://76.76.26.195:9060/v1/chat/completions \
   -d '{"model":"qwen3.6","messages":[{"role":"user","content":"你好"}],"max_tokens":32}'
 ```
 
-## 双分支对照测试：应该看到什么
+## 三处修复与本包的对照
 
-| 分支 | MTP | 预期首个失败点 | 归属修复 |
+本包在集中式路径上会依次暴露三个问题，`feat/pd-sep-lwd-v0.30.0` 全有，
+`fix/lwd-multidp-dense-pd` 全部修掉：
+
+| 顺序 | 失败现象 | 根因 | 修复（vllm / vllm-ascend） |
 | --- | --- | --- | --- |
-| `feat/pd-sep-lwd-v0.30.0` | 开（默认） | worker `load_model` → `_create_draft_vllm_config` → `replace()` → `Expected 1, but got 2` | `data_parallel_size_global` + `check_kv_extra_config` |
-| `feat/pd-sep-lwd-v0.30.0` | 关 | P 在 `register_kv_caches` → `ZMQError: Address already in use (…:30000)`；D 在握手后 `Expected 1, but got 2` | `side_channel_port` 用 `data_parallel_index` |
-| `fix/lwd-multidp-dense-pd` | 开或关 | 若 KV 充足则正常拉起；不足则报 `available KV cache memory` | — |
+| 1 | `KV transfer 'prefill' config has a conflicting data parallel size. Expected 1, but got 2` | dense 引擎把 DP 折叠成 1，二次校验时对不上 | `data_parallel_size_global` + `check_kv_extra_config` |
+| 2 | `ZMQError: Address already in use (…:30000)`，或握手后同样的 `Expected 1, but got 2` | 生产者各 rank 共用同一个 KV 端口 | 端口改用 `data_parallel_index` |
+| 3 | 某一个 DP rank 5 分钟拿不到 init（`Did not receive response from front-end process within 5 minutes`），随后 `DP Coordinator received unexpected message while waiting for engines to subscribe` | 非 LWD 的 dense DP 路径没把 `dp_rank` 作为 `engine_index` 传下去，两个 rank 的 ZMQ 身份都是 `\x00\x00`；ROUTER 对同一身份只保留最后一条连接 | `core.py:1399` 传 `engine_index=dp_rank` |
 
-一个包覆盖三处修复：MTP 开验证前两处，关掉验证第三处，且完全不走 LWD 代码路径。
+第 3 个问题**只影响非 LWD 的 DP>1 部署**：边云包正常，是因为 LWD 分支本来就传了
+`engine_index=dp_rank`（`core.py:1379`），而 MoE 的 `DPEngineCoreProc` 会自己按
+`data_parallel_rank` 取值——只有 dense 的非 LWD 路径既没传、又把 rank 折叠成了 0。
+
+同一个 run 里到底是 DP0 还是 DP1 报错会**随机互换**，这是身份冲突最典型的特征：
+谁先连上前端、谁的路由被后来的连接顶掉，取决于进程启动顺序。
 
 ## 如何确认 DP=2 真的生效
 
