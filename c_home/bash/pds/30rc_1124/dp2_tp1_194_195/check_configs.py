@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import ipaddress
 import json
+import re
 import sys
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -528,6 +529,42 @@ def validate_proxy(path: Path, label: str) -> int:
     return report.done()
 
 
+LAUNCHERS = ("edge.sh", "cloud_p.sh", "cloud_d.sh")
+MODEL_LEN_RE = re.compile(r'--max-model-len\s+(?:"\$\{LWD_MAX_MODEL_LEN:-(\d+)\}"|(\d+))')
+
+
+def _launcher_model_len(path: Path) -> int | None:
+    match = MODEL_LEN_RE.search(path.read_text(encoding="utf-8"))
+    if match is None:
+        return None
+    return int(match.group(1) or match.group(2))
+
+
+def validate_launch_parity(where: Path) -> int:
+    """All three launchers must agree on the ModelConfig-visible flags.
+
+    model_config_hash feeds the PD input-processor ABI fingerprint
+    (lwd_mm_identity.compute_processor_fingerprint) and max_model_len is not in
+    ModelConfig.compute_hash's ignored_factors, so any drift makes every request
+    fail with "PD input processor ABI does not match this cloud".
+    """
+    report = Report(f"launch parity ({where})")
+    lens: dict[str, int | None] = {}
+    for name in LAUNCHERS:
+        path = where / name
+        if not path.is_file():
+            report.check(False, f"{name} is missing")
+            continue
+        lens[name] = _launcher_model_len(path)
+        report.check(lens[name] is not None, f"{name}: has a readable --max-model-len")
+    values = {v for v in lens.values() if v is not None}
+    report.check(
+        len(values) <= 1,
+        "edge and both clouds must pass the same --max-model-len "
+        f"(got {lens}); the value is hashed into the PD ABI fingerprint",
+    )
+    return report.done()
+
 def main(argv: list[str]) -> int:
     # This directory holds exactly one deployment: one topology + one proxy file.
     topology = Path(argv[1]) if len(argv) > 1 else ROOT / "pd_host_topology.yaml"
@@ -535,6 +572,7 @@ def main(argv: list[str]) -> int:
     failures = 0
     failures += validate_topology(topology, "topology")
     failures += validate_proxy(proxy, "proxy")
+    failures += validate_launch_parity(ROOT)
     print()
     print("RESULT:", "ALL CHECKS PASSED" if not failures else f"{failures} FILE(S) FAILED")
     return 0 if not failures else 1

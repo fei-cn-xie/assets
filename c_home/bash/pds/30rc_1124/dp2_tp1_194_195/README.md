@@ -48,7 +48,7 @@ DP 协调端口：prefill `29600`、decode `29601`；master 端口 29525 / 29526
 
 | 参数 | 值 | 理由 |
 | --- | --- | --- |
-| `--max-model-len` | 32768 | TP=1 时 KV 只有 ≈6.7 GiB，32768 需 ≈2.2 GiB |
+| `--max-model-len` | 32768（**边端与两个云必须一致**） | TP=1 时 KV 只有 ≈6.7 GiB，32768 需 ≈2.2 GiB；该值进 `model_config_hash`，而它是 PD ABI 指纹的一部分，不一致就会 400 |
 | `--gpu-memory-utilization` | 0.95 | 0.90 时 KV 只有 3.3 GiB，65536 上下文直接失败 |
 | `--max-num-seqs` | 64 | 模型含 GDN(Mamba) 层，每 decode 序列占一个 mamba block；6.7 GiB 只有 ≈123 个 |
 | `--speculative-config` | MTP，3 tokens | 修好 DP 校验后 DP>1 也能用 MTP；若显存吃紧可去掉，能换来约 1 GiB KV |
@@ -108,5 +108,6 @@ curl -s http://76.76.26.194:8510/v1/chat/completions \
 | --- | --- | --- |
 | `Address already in use (...:14570)` | 用的是未修复的 vllm-ascend（端口仍按 `data_parallel_rank` 派生） | 确认 `PYTHONPATH` 指向 `fix/lwd-multidp-dense-pd` 分支 |
 | `conflicting data parallel size. Expected 1, but got 2` | 用的是未修复的 vllm（没有 `data_parallel_size_global`） | 同上，vllm 也要切到修复分支 |
+| 边端 500，proxy 打印 `status=400 reason='PD input processor ABI does not match this cloud'` | 边云 ABI 指纹不一致：`max_model_len` 进 `model_config_hash`，而它是 `compute_processor_fingerprint` 的一部分（`lwd_mm_identity.py:107-135`），云端按 32768、边端按 65536 就会拒 | 三个脚本的 `--max-model-len` 必须相同；`check_configs.py` 的 launch parity 检查会提前报出来 |
 | `max_num_seqs exceeds available Mamba cache blocks` | KV 池变小（例如加了 MTP 或降了 util） | 降 `LWD_MAX_NUM_SEQS` 或提 `LWD_GPU_MEM_UTIL` |
 | `KV cache is needed ... larger than available` | 上下文太长 | 降 `LWD_MAX_MODEL_LEN` |
