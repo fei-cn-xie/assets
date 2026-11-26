@@ -26,7 +26,60 @@ client ──8510──▶ edge (194, NPU 4, TP=1 DP=1)
 - **允许 P/D 的 DP 数不同**：`topology.py:411-417` 的"DP 数必须一致"只在 **PD 关闭**时校验；
   PD 开启时不做此限制。**edge 必须保持 DP=1 / TP=1**（`lwd_control_plane.py:102-106`）。
 
-## 已知限制：DP>1 不能开 MTP（本包首次拉起失败的原因）
+## ⛔ 状态：Qwen3.6-27B（dense）下不可运行
+
+三次拉起分别撞到三个阻断点，其中第 3 个**没有配置层的绕法**：
+
+| # | 现象 | 根因 | 能否配置解决 |
+| --- | --- | --- | --- |
+| 1 | `KV transfer 'prefill' config has a conflicting data parallel size. Expected 1, but got 2` | MTP drafter 以 DP=1 重建 VllmConfig，与 `kv_connector_extra_config.dp_size=2` 冲突 | 去掉 MTP（已做） |
+| 2 | `max_num_seqs (128) exceeds available Mamba cache blocks (123)` | TP=1 下 KV 池只够 123 个 mamba block | 降 `max_num_seqs`（已做，默认 64） |
+| 3 | **`ZMQError: Address already in use (tcp://76.76.26.195:14570)`** | 连接器用 `parallel_config.data_parallel_rank` 算握手端口，而 LWD 的非 MoE 分支会把它清零，两个 DP rank 绑同一端口 | **不能** |
+
+第 3 点的代码依据：
+
+```python
+# vllm_ascend/.../mooncake_connector.py:1762-1768
+self.side_channel_port = (
+    vllm_config.kv_transfer_config.kv_port
+    + vllm_config.parallel_config.data_parallel_rank * tp * pp * pcp   # ← 被清零的就是它
+)
+
+# vllm/config/parallel.py:1109-1111（LWD 非 MoE 分支会调用）
+def reconfigure_for_independent_dp_rank(self):
+    self.data_parallel_size = 1
+    self.data_parallel_size_local = 1
+    self.data_parallel_rank = 0        # ← 所有 rank 都变成 0
+```
+
+而 LWD 只为 **MoE** 模型保留了 DP rank：
+
+```python
+# vllm/v1/engine/core.py:1355-1390
+if lwd.role == "cloud" and vllm_config.model_config.is_moe and (lwd_dp_size > 1):
+    parallel_config.data_parallel_rank = dp_rank      # MoE：保留
+    engine_core = LwdCloudDPEngineCore(...)
+else:
+    parallel_config.reconfigure_for_independent_dp_rank()   # 非 MoE：清零
+    engine_core = LwdCloudEngineCore(...)
+```
+
+Qwen3.6-27B 是 dense（`Qwen3_5ForConditionalGeneration`，MoE 变体另有
+`Qwen3_5MoeForConditionalGeneration`），走 else 分支。**结论：dense 模型 + LWD + DP>1
+在本版本不可用**，需要上游把连接器的 `data_parallel_rank` 换成 `data_parallel_index`
+（LWD 自己就这么做，见 `lwd_control_plane.py:102-103` 的注释）。
+
+所以多 DP 目前只有两条可行路径：
+
+| 想要多 DP | 做法 |
+| --- | --- |
+| 换 **MoE** 模型 | LWD 的 `LwdCloudDPEngineCore` 分支会保留 DP rank，本目录的拓扑可直接复用 |
+| 保持 dense 模型 | 用 [../sidecar](../sidecar/README.md)（DP=1、TP=2），或等上游修复 |
+
+本目录保留下来作为**拓扑模板**：多 DP 的拓扑/proxy/端口分配/脚本骨架都是对的（`dp_size=2`
+的控制面、4 条 host 数据面链路都实际建立成功过），只差连接器这一处代码限制。
+
+## 已知限制：DP>1 不能开 MTP（第一次拉起失败的原因）
 
 首次按本目录拉起时，两个 cloud 都在 `load_model` 阶段挂掉，报：
 

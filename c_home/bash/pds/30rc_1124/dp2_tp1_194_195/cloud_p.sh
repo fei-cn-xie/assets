@@ -35,7 +35,7 @@ lwd_run "$LWD_PYTHON" -m vllm.entrypoints.cli.main serve /home/weight/Qwen3.6-27
   --kv-transfer-config '{"kv_connector":"MooncakeConnectorV1","kv_role":"kv_producer","kv_rank":0,"kv_port":14570,"kv_connector_extra_config":{"prefill":{"dp_size":2,"tp_size":1},"decode":{"dp_size":2,"tp_size":1}}}' \
   --enforce-eager \
   --trust-remote-code --served-model-name qwen3.6 \
-  --max-model-len "${LWD_MAX_MODEL_LEN:-32768}" --max-num-seqs 128 --max-num-batched-tokens 8192 \
+  --max-model-len "${LWD_MAX_MODEL_LEN:-32768}" --max-num-seqs "${LWD_MAX_NUM_SEQS:-64}" --max-num-batched-tokens 8192 \
   --gpu-memory-utilization "${LWD_GPU_MEM_UTIL:-0.95}" \
   --async-scheduling
 # NOTE: no --speculative-config here (unlike sidecar/cloud_p.sh). With DP>1 the
