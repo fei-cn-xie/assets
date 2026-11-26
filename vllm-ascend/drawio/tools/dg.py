@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 #   line  = 平面           (控制面 ZMQ / 数据面 UCX·Mooncake / HTTP)
 # 状态类只用一种色：失败/取消/超时 = fail。就绪/完成不另设色，靠文字表达。
 C = {
-    "client": ("#f5f5f5", "#666666"),     # 客户端
+    "client": ("#eceff1", "#607d8b"),     # 客户端（冷灰：不能和"注记"的 #f5f5f5 撞）
     "edge": ("#dae8fc", "#6c8ebf"),       # 边端 edge 实例
     "cloudp": ("#ffe6cc", "#d79b00"),     # 云 P（prefill）
     "cloudd": ("#d5e8d4", "#82b366"),     # 云 D（decode）

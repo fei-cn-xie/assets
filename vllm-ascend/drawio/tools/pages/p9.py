@@ -87,7 +87,7 @@ def build(doc: Doc) -> None:
         ("执行完 → `update_from_output` 第 N 步 → pop 队尾",
          "core.py:701-745", "proc3"),
         ("边侧把 batch_queue 深度改成按实例上限",
-         "lwd_edge_engine.py:168-177", "proc3"),
+         "lwd_edge_engine.py:168-177", "edge"),
     ]
     cy = 116
     q = []

@@ -11,10 +11,16 @@
 from __future__ import annotations
 
 import collections
+import io
 import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+try:                                   # 重定向时也别变成 GBK，否则表格全是乱码
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8",
+                                  errors="replace")
+except Exception:
+    pass
 
 import dg                                       # noqa: E402
 from render_check import load, parse_style      # noqa: E402
@@ -27,7 +33,8 @@ FILL_ROLE = {
     "#b0e3e6": "PD Proxy",
     "#f8cecc": "失败/取消",
     "#fff2cc": "数据面(黄)",
-    "#f5f5f5": "客户端/注记",
+    "#eceff1": "客户端",
+    "#f5f5f5": "注记(说明栏)",
     "#f1f1f1": "灰阶 proc2",
     "#e4e4e4": "灰阶 proc3",
     "#d7d7d7": "灰阶 proc4",
