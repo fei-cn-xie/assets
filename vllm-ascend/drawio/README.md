@@ -9,7 +9,7 @@
 | `vLLM生命周期-端到端.drawio` | 9 页成品图（部署/启动/模型加载×2/KV cache/PD·KV/单请求/控制面/Step 循环） |
 | `vLLM生命周期-读图指南.md` | 那 9 页的阅读顺序、三分侧对照表、常数速查、易踩的坑 |
 | `README.md`（本文件） | 绘制规范 + 工具用法 + 新图 SOP |
-| `tools/` | 画布引擎、泳道引擎、格式器、两个校验器 |
+| `tools/` | 画布引擎、泳道引擎、格式器、三个校验器（结构 / 渲染 / 配色） |
 | `tools/pages/` | 那 9 页的**页面源码**（`p1.py … p9.py` + `build.py`） |
 
 ---
@@ -22,6 +22,8 @@
    灰带 / 虚线框表达）。每页底部都必须有同一个 `legend_bar()`。
    **"按进程切泳道"的页面（P02/P05/P09）用灰阶梯度 `proc1…proc5`**——灰阶不是颜色，
    不会和角色色冲突；这些页的图例额外多一项说明"灰阶 = 进程泳道 / 分列"。
+   **泳道用 `lane_roles=` 指定灰阶底色，泳道里的方框一律白色**（`fill_map` 映射到
+   `neutral`）——方块和泳道同色会让整页糊成一片，`color_audit.py` 会专门检查这一条。
    `legend_bar()` 内部会临时清空该页的 `fill_map`，**保证图例在任何页面上都是规范色**。
 2. **每个节点都要带 `文件:行号`。** 图是给人顺着源码读的，没有锚点的框等于没写。
    锚点用 9px 灰字（`<font style="font-size:9px" color="#666666">`）。
@@ -104,10 +106,21 @@ $PY checkdrawio.py ../vLLM生命周期-端到端.drawio
 # 2) 语义层：反解 .drawio 自己渲染 PNG/SVG，并断言
 #    不可见 cell / 文字溢出 / 边端点悬空
 $PY render_check.py ../vLLM生命周期-端到端.drawio -o /tmp/render --scale 0.8 --svg
+
+# 3) 配色层：每页的填色/线色/图例是否符合调色板 + 是否"发白/与泳道同色"
+$PY color_audit.py ../vLLM生命周期-端到端.drawio
 ```
 
-三道都过 = 文件几何、可见性、文字都正确。**要判断视觉效果，最后再用 MCP 截图看 1~2 页**
+四道都过 = 文件几何、可见性、文字、配色都正确。**要判断视觉效果，最后再用 MCP 截图看 1~2 页**
 （`screenshot_diagram`），不要靠猜。
+
+`color_audit.py` 会抓四类问题，都是实际踩过的：
+
+- 出现不在调色板里的**历史遗留色**（改版后没清干净的）；
+- 线条用了非平面色；
+- 某页 **>85% 的方块是白色**（"这页看着发白、没有重点"）；
+- **方块与所在泳道同色**（层次看不出来 → 泳道给灰阶、方块给白）。
+- 图例缺失 / 缺少某个色块。
 
 `render_check.py` 的两个设计要点：
 
@@ -139,6 +152,7 @@ $PY render_check.py ../vLLM生命周期-端到端.drawio -o /tmp/render --scale 
 | `Seq(page, lanes, lane_w=, title=, subtitle=)` | 泳道时序；`lanes=[(key, 标签, role)]` |
 | `s.phase / s.step / s.steps / s.msg / s.selfmsg / s.note / s.gap` | 行构造器（按调用顺序自上而下） |
 | `s._layout_rows(dry=True)` | 取内容底部 y，用来放图例（不产生 cell） |
+| `Seq(..., lane_roles={key: role})` | **泳道底色单独指定**，不影响泳道内方框的颜色 |
 | `chain(...)` / `aligned(...)` | 垂直调用链 / 双列对齐（P04 这类页面可直接用） |
 
 ---

@@ -50,6 +50,8 @@ LEGEND_ITEMS = [
     ("云 D (decode)", "cloudd"), ("PD Proxy", "proxy"), ("中立/通用", "neutral"),
     ("失败/取消", "fail"),
 ]
+# 图例色块的期望填色（供 color_audit.py 校验）
+LEGEND_ITEMS_ROLES = [(C[role][0], role) for _, role in LEGEND_ITEMS]
 LEGEND_LINES = [
     ("控制面 ZMQ", "ctrl"), ("数据面 UCX·Mooncake", "data"), ("HTTP", "http"),
 ]

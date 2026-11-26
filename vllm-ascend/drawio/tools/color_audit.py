@@ -1,0 +1,142 @@
+"""Audit the colours actually written into a .drawio against the palette rules.
+
+每页做四件事：
+  1. 统计填色分布（白/角色色/灰阶/数据面），并给出"是否几乎没有色"的判断；
+  2. 报出**不在规范调色板里的历史遗留色**（改版后没清干净的）；
+  3. 检查线条颜色是否只来自平面色；
+  4. 检查每页都有且只有一个统一图例，且图例里的色块用的是规范色。
+
+用法： python color_audit.py <file.drawio> [--verbose]
+"""
+from __future__ import annotations
+
+import collections
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+import dg                                       # noqa: E402
+from render_check import load, parse_style      # noqa: E402
+
+# 填色 → 语义（只列本项目在用的；顺序即优先级）
+FILL_ROLE = {
+    "#dae8fc": "边端 edge",
+    "#ffe6cc": "云 P",
+    "#d5e8d4": "云 D",
+    "#b0e3e6": "PD Proxy",
+    "#f8cecc": "失败/取消",
+    "#fff2cc": "数据面(黄)",
+    "#f5f5f5": "客户端/注记",
+    "#f1f1f1": "灰阶 proc2",
+    "#e4e4e4": "灰阶 proc3",
+    "#d7d7d7": "灰阶 proc4",
+    "#c9c9c9": "灰阶 proc5",
+    "#ffffff": "白(中立)/proc1",
+}
+# 改版中被淘汰、不该再出现的颜色
+LEGACY_FILL = {
+    "#ffd9b3": "旧·云P深橙",
+    "#e1d5e7": "旧·控制面紫(当填充用)",
+    "#eeeeee": "旧·灰",
+    "#f8cecc": None,          # 正常（失败色）
+}
+LINE_ROLE = {
+    "#9673a6": "控制面 ZMQ", "#d6b656": "数据面", "#666666": "HTTP/普通",
+    "#9e9e9e": "灰阶描边", "#8a8a8a": "灰阶描边", "#757575": "灰阶描边",
+    "#b3b3b3": "中立描边", "#b85450": "失败", "#6c8ebf": "边端", "#d79b00": "云 P",
+    "#82b366": "云 D", "#0e8088": "PD Proxy", "#999999": "注记",
+    "#000000": "默认黑",
+}
+
+
+def audit(path: str, verbose: bool = False) -> int:
+    pages = load(path)
+    problems: list[str] = []
+    print(f"{os.path.basename(path)}: {len(pages)} pages\n")
+    print(f"{'页':<26} {'方块':>4} {'边':>4}  填色分布")
+    print("-" * 96)
+
+    for pi, page in enumerate(pages):
+        fills = collections.Counter()
+        bad_fill = []
+        bad_line = []
+        # 图例色块不参与"内容"统计（否则每页都会凭空多出 7 个角色色）
+        legend_y = [v.y for v in page["verts"].values()
+                    if v.label.replace("<b>", "").replace("</b>", "").strip() == "图例"]
+        ly = legend_y[0] if legend_y else None
+        lanes = [(v.id, v.x, v.y, v.w, (v.style.get("fillColor") or "").lower())
+                 for v in page["verts"].values()
+                 if v.w > 300 and v.h > 300 and "opacity=45" in v.style]
+        same_as_lane = 0
+        for v in page["verts"].values():
+            if v.w <= 0 or not v.label:
+                continue
+            st = v.style
+            fill = (st.get("fillColor") or "#ffffff").lower()
+            if st.get("__shape__") == "text" or fill == "none":
+                continue
+            if ly is not None and ly - 6 <= v.y <= ly + 30 and 100 <= v.w <= 260:
+                continue                      # 图例色块
+            name = FILL_ROLE.get(fill)
+            if name is None:
+                bad_fill.append((v.id, fill, st.get("strokeColor"), v.label[:40]))
+                name = f"?{fill}"
+            if fill in LEGACY_FILL and LEGACY_FILL[fill]:
+                bad_fill.append((v.id, fill, "LEGACY", v.label[:40]))
+            fills[name] += 1
+            for _lid, lx, ly_, lw, lfill in lanes:
+                if lx - 2 <= v.x <= lx + lw and ly_ - 2 <= v.y <= ly_ + 4000 \
+                        and lfill == fill:
+                    same_as_lane += 1
+                    break
+        for e in page["edges"].values():
+            col = (e.style.get("strokeColor") or "#000000").lower()
+            if col not in LINE_ROLE:
+                bad_line.append((e.id, col))
+
+        total = sum(fills.values())
+        whiteish = sum(c for n, c in fills.items() if n.startswith("白(中立)"))
+        summary = "  ".join(f"{n}×{c}" for n, c in fills.most_common())
+        print(f"[{pi:02d}] {page['name'][:22]:<22} {total:>4} {len(page['edges']):>4}  {summary}")
+
+        if total and whiteish / total > 0.85 and total > 8:
+            problems.append(f"[{pi:02d} {page['name']}] {whiteish}/{total} 个方块是白色，"
+                            f"几乎没有角色色（看图会觉得发白）")
+        if same_as_lane:
+            problems.append(f"[{pi:02d} {page['name']}] {same_as_lane} 个方块与所在泳道同色，"
+                            f"层次看不出来（泳道给底色、方块给白）")
+        for cid, fill, stroke, label in bad_fill:
+            problems.append(f"[{pi:02d}] 非规范填色 {cid} {fill} {stroke} :: {label}")
+        for cid, col in bad_line:
+            problems.append(f"[{pi:02d}] 非规范线色 {cid} {col}")
+
+        # 图例检查：必须恰好一个 "图例" 文本，且图例区色块齐全
+        legends = [v for v in page["verts"].values()
+                   if v.label.replace("<b>", "").replace("</b>", "").strip() == "图例"]
+        if len(legends) != 1:
+            problems.append(f"[{pi:02d} {page['name']}] 图例数量={len(legends)}（应为 1）")
+        else:
+            ly = legends[0].y
+            chips = [v for v in page["verts"].values()
+                     if abs(v.y - (ly - 3)) < 6 and 100 <= v.w <= 260 and v.label]
+            got = {(v.style.get("fillColor") or "").lower() for v in chips}
+            want = {c[0].lower() for c in dg.LEGEND_ITEMS_ROLES}
+            missing = want - got
+            if missing:
+                problems.append(f"[{pi:02d} {page['name']}] 图例缺色块: {sorted(missing)}")
+            if verbose:
+                print(f"      图例色块 {len(chips)} 个:", sorted(got))
+
+    print()
+    if problems:
+        print(f"{len(problems)} 个待处理项：")
+        for p in problems:
+            print("  -", p)
+        return 1
+    print("OK: 所有页面的填色/线色/图例都符合调色板规则")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(audit(sys.argv[1], "--verbose" in sys.argv))

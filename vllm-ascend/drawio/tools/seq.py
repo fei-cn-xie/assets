@@ -23,13 +23,14 @@ class Seq:
     """
 
     def __init__(self, page: Page, lanes, x0=LEFT, y0=110, lane_w=LANE_W,
-                 title="", subtitle="", show_lifeline=True):
+                 title="", subtitle="", show_lifeline=True, lane_roles=None):
         self.page = page
         self.x0, self.y0 = x0, y0
         self.lane_w = lane_w
         self.show_lifeline = show_lifeline
         self.rows: list[dict] = []
         self.lanes = lanes                     # [(key, label, role)]
+        self.lane_roles: dict = lane_roles or {}   # 泳道底色单独指定（不影响方框）
         self.key2i = {k: i for i, (k, _, _) in enumerate(lanes)}
         self.left_pad = 0
         self.title = title
@@ -104,12 +105,13 @@ class Seq:
         content_bottom = self._layout_rows(dry=True) + 40
         for i, (k, lab, role) in enumerate(self.lanes):
             x = self.lane_x(i)
+            lane_role = self.lane_roles.get(k, role)
             page.box(x, self.y0, self.lane_w, content_bottom - self.y0, "",
-                     "lane", role)
+                     "lane", lane_role)
             lab_html = f"<b>{lab}</b>"
             hdr_h = max(26, measure_h(lab_html, "", "", self.lane_w))
             box_for(page, x, self.y0 + 4, self.lane_w, lab_html, st="head",
-                    role=role, h=hdr_h)
+                    role=lane_role, h=hdr_h)
             if self.show_lifeline:
                 page.edge(src_pt=(self.lane_cx(i), self.y0 + 4 + hdr_h + 6),
                           dst_pt=(self.lane_cx(i), content_bottom - 12),

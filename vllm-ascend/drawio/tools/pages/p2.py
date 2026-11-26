@@ -5,16 +5,20 @@ from seq import Seq
 
 def build(doc: Doc) -> None:
     p = doc.page("02 启动时序", pw=2100, ph=2450)
-    # 本页讲"进程骨架"，与角色无关：泳道用**灰阶梯度**（灰阶不是角色色，不冲突），
-    # 只有真正角色专属的步骤用 hi_* 取角色色。箭头仍按平面着色。
+    # 本页讲"进程骨架"，与角色无关：**泳道**用灰阶梯度（灰阶不是角色色，不冲突），
+    # **方框**一律白色，这样方块能压在泳道上看得清；只有真正角色专属的步骤用 hi_* 取角色色。
+    # 箭头仍按平面着色。
     p.fill_map = {
-        "sh": "proc1", "fe": "proc2", "ec": "proc3", "wk": "proc4",
-        "sd": "proc5", "ot": "neutral",
-        "grey": "proc1", "edge": "proc2", "ctrl": "proc3", "cloudp": "proc4",
-        "proxy": "proc5", "cloudd": "neutral", "ok": "neutral",
+        "sh": "neutral", "fe": "neutral", "ec": "neutral", "wk": "neutral",
+        "sd": "neutral", "ot": "neutral",
+        "grey": "neutral", "edge": "neutral", "ctrl": "neutral",
+        "cloudp": "neutral", "proxy": "neutral", "cloudd": "neutral",
+        "ok": "neutral",
         "hi_edge": "edge", "hi_p": "cloudp", "hi_d": "cloudd",
         "hi_proxy": "proxy", "hi_fail": "fail",
     }
+    LANE_ROLES = {"sh": "proc1", "fe": "proc2", "ec": "proc3", "wk": "proc4",
+                  "sd": "proc5", "ot": "neutral"}
     s = Seq(
         p,
         lanes=[("sh", "启动脚本 / 环境", "grey"),
@@ -25,7 +29,8 @@ def build(doc: Doc) -> None:
                ("ot", "对端（P / D / 边）", "cloudd")],
         lane_w=290, title="② · 启动时序：从 bash 到 ready（进程级）",
         subtitle="三条脚本共用 env.sh；四段：配置与校验 → 进程树 → Worker 初始化 → 控制面/数据面握手 → KV 画像。"
-                   "模型加载细节见 P3/P4，KV 画像细节见 P5。")
+                   "模型加载细节见 P3/P4，KV 画像细节见 P5。",
+        lane_roles=LANE_ROLES)
 
     s.phase("① 脚本与环境（bash env.sh，三端共用）")
     s.step("sh", "env.sh：导出运行时变量",

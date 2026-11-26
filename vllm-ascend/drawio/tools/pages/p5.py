@@ -5,10 +5,12 @@ from seq import Seq
 
 def build(doc: Doc) -> None:
     p = doc.page("05 KV Cache 生命周期", pw=2200, ph=2700)
-    # 本页全部发生在"一个云实例"内部：进程泳道用灰阶梯度，
-    # 承载 KV 搬运的那条泳道用数据面色；边端对照注释用边端蓝。
-    p.fill_map = {"ctrl": "proc1", "proxy": "proc2", "cloudp": "proc3",
-                  "cloudd": "data", "grey": "proc1"}
+    # 本页全部发生在"一个云实例"内部：泳道用灰阶梯度，承载 KV 搬运的那条泳道用数据面色；
+    # 方框一律白色（压在灰/黄泳道上才看得清）；边端对照注释保留边端蓝。
+    p.fill_map = {"ctrl": "neutral", "proxy": "neutral", "cloudp": "neutral",
+                  "cloudd": "neutral", "grey": "neutral",
+                  "hi_p": "cloudp", "hi_d": "cloudd", "hi_fail": "fail"}
+    LANE_ROLES = {"ec": "proc1", "sch": "proc2", "wk": "proc3", "kv": "data"}
     s = Seq(
         p,
         lanes=[("ec", "EngineCore<br><font style='font-size:9px'>core.py 驱动</font>", "ctrl"),
@@ -17,7 +19,8 @@ def build(doc: Doc) -> None:
                ("kv", "Mooncake / 对端<br><font style='font-size:9px'>P → D 块级搬运</font>", "cloudd")],
         lane_w=390, title="⑤ · KV Cache 生命周期：从显存画像到跨机交接",
         subtitle="六段：规格收集 → 显存画像 → 块池建立 → 请求级分配/写入 → 释放/回收 → PD 交接。"
-                   "边端在第一步就断了（spec 为空），所以它既没有块池也没有 native 步进。")
+                   "边端在第一步就断了（spec 为空），所以它既没有块池也没有 native 步进。",
+        lane_roles=LANE_ROLES)
 
     s.phase("① 规格收集与显存画像（启动期，worker 全部 ready 之后）")
     s.step("ec", "`_initialize_kv_caches` 入口：注册 spec → 收集",
@@ -97,25 +100,25 @@ def build(doc: Doc) -> None:
     s.step("ec", "P：`request_finished` 产出 kv_transfer_params + **pin 块**",
            "vllm_ascend/distributed/kv_transfer/kv_p2p/mooncake_connector.py:2014-2076",
            "delay_free_blocks=True（:2056-2059）→ 调度器跳过 _free_blocks（scheduler.py:2648）"
-           "→ KVCacheTaskTracker.delayed_free_requests 记账", role="ctrl")
+           "→ KVCacheTaskTracker.delayed_free_requests 记账", role="hi_p")
     s.msg("ec", "kv", "P 导出：块级 pull 源地址 + lwd_handoff(p_end / i_end / r_pos / hit)", mode="data",
           role="data")
     s.step("kv", "D 发起块级 pull（RDMA / memcpy），非 layerwise",
            "mooncake_connector.py:3831-3932（recv 线程 :420 · :568）",
            "三个 layerwise 钩子 wait_for_layer_load/save_kv_layer/wait_for_save 全是 pass"
-           "（:1691/:1695/:1701）", role="cloudd")
+           "（:1691/:1695/:1701）", role="hi_d")
     s.step("ec", "D：`get_num_new_matched_tokens` → (i_end, True) → 进 "
                  "`WAITING_FOR_REMOTE_KVS`",
            "mooncake_connector.py:1914-1983 · scheduler.py:1273-1303（:1276）",
            "本轮该请求 forward token 数 = 0；allocate_slots 带 delay_cache_blocks=True",
-           role="ctrl")
+           role="hi_d")
     s.step("ec", "D：KV_READY 判定 = `num_computed_tokens == r_pos`",
            "vllm/v1/lwd_control/pd/cloud_scheduler.py:121-130",
-           "不满足直接 PD fail（`PD remote KV import failed`），不重算、不降级", role="ctrl")
+           "不满足直接 PD fail（`PD remote KV import failed`），不重算、不降级", role="hi_d")
     s.msg("ec", "kv", "D → P：DONE_RECVING_MSG（读完了）", mode="return", role="cloudd")
     s.step("ec", "P：`finished_sending` → `_free_blocks`（真正释放）",
            "vllm/v1/core/sched/scheduler.py:3086-3089 · mooncake_connector.py:213-224",
-           "超时兜底：`Force freed expired request`（:232-253）", role="ctrl")
+           "超时兜底：`Force freed expired request`（:232-253）", role="hi_p")
 
     s.gap(8)
     s.note(("ec", "kv"),
