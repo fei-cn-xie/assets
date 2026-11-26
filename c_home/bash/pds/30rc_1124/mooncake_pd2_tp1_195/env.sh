@@ -71,6 +71,13 @@ export PD_GPU_MEM_UTIL="${PD_GPU_MEM_UTIL:-0.95}"
 # LwdMTPProposer. If this deployment is short on KV, drop the draft with
 # PD_ENABLE_MTP=0 and expect ~6.8 GiB instead.
 export PD_ENABLE_MTP="${PD_ENABLE_MTP:-1}"
+# A centralized engine loads the multimodal model itself, so its profiling run also
+# covers the vision encoder. LWD clouds never do: the module ownership table gives
+# `visual` to the edge only (vllm/model_executor/models/utils.py:864-875), so the
+# cloud neither builds nor loads the tower (lwd_weight_filter.py). Skipping the
+# encoder profiling run frees part of that reservation at the cost of profiling
+# accuracy for image requests; turn it on when KV is short.
+export PD_SKIP_MM_PROFILING="${PD_SKIP_MM_PROFILING:-0}"
 
 PD_DRY_RUN=0
 if [[ $# == 1 && $1 == --dry-run ]]; then
@@ -112,6 +119,14 @@ pd_mtp_args() {
 
 # Warn when a port of this deployment is already taken (a stale engine, or the
 # LWD deployment still running), which would otherwise fail deep inside vLLM.
+# Optional multimodal profiling switch (see PD_SKIP_MM_PROFILING in the header).
+pd_mm_args() {
+  PD_MM_ARGS=()
+  if [[ $PD_SKIP_MM_PROFILING == 1 ]]; then
+    PD_MM_ARGS+=(--skip-mm-profiling)
+  fi
+}
+
 pd_preflight() {
   local port
   local busy=()

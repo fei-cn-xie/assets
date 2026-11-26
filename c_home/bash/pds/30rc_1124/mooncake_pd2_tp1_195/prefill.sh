@@ -19,6 +19,7 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/env.sh"
 pd_runtime_env
 pd_mtp_args
+pd_mm_args
 
 export ASCEND_RT_VISIBLE_DEVICES=0,1
 
@@ -37,4 +38,5 @@ pd_run "$PD_PYTHON" -m vllm.entrypoints.cli.main serve "$PD_MODEL" \
   --max-model-len "$PD_MAX_MODEL_LEN" --max-num-seqs "$PD_MAX_NUM_SEQS" --max-num-batched-tokens "$PD_MAX_NUM_BATCHED_TOKENS" \
   --gpu-memory-utilization "$PD_GPU_MEM_UTIL" \
   --async-scheduling \
+  ${PD_MM_ARGS[@]+"${PD_MM_ARGS[@]}"} \
   ${PD_MTP_ARGS[@]+"${PD_MTP_ARGS[@]}"}

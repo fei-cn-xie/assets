@@ -11,6 +11,7 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/env.sh"
 pd_runtime_env
 pd_mtp_args
+pd_mm_args
 
 export ASCEND_RT_VISIBLE_DEVICES=2,3
 
@@ -30,4 +31,5 @@ pd_run "$PD_PYTHON" -m vllm.entrypoints.cli.main serve "$PD_MODEL" \
   --gpu-memory-utilization "$PD_GPU_MEM_UTIL" \
   --async-scheduling \
   --compilation-config '{"cudagraph_mode":"FULL_DECODE_ONLY"}' \
+  ${PD_MM_ARGS[@]+"${PD_MM_ARGS[@]}"} \
   ${PD_MTP_ARGS[@]+"${PD_MTP_ARGS[@]}"}

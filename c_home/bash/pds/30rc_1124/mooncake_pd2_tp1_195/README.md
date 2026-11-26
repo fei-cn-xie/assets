@@ -59,18 +59,33 @@ TP=1 意味着每个副本把完整 64 层模型装进一张卡（50.2 GB ≈ 46
 | **集中式部署（MTP 开）** | **0.30 GiB** → 起不来（32768 需要 3.02 GiB） |
 | 集中式部署若关掉 MTP（预估） | ≈6.8 GiB → 够用 |
 
-两个**固有差异**解释了为什么同样的 flag 在集中式更吃内存：
+同样是 64 GB 卡、同样 TP=1、同样的 flag，边云能起而集中式起不来，原因在**代码结构**而不是脚本：
 
-1. LWD 的云端 worker 会跳过视觉塔权重（日志 `[LWD] role=cloud skips loading tensors of visual`），
-   集中式加载完整多模态模型；
-2. LWD 用自己的 `LwdMTPProposer`，集中式走通用 MTP proposer，draft 权重更大。
-
-因此本包默认**与边云一致开着 MTP**；真的起不来时，第一个该关的开关就是它：
-
-```bash
-PD_ENABLE_MTP=0 bash prefill.sh    # 另一个终端同样
-PD_ENABLE_MTP=0 bash decode.sh
+```python
+# vllm/model_executor/models/utils.py:864-875
+LWD_MODULE_OWNERSHIP = {
+    "model.embed_tokens": both,          # 边、云都加载
+    "lm_head":            both,
+    "model.layers":       cloud only,    # 语言模型层只在云侧
+    "model.norm":         cloud only,
+    "visual":             edge only,     # ← 视觉塔只有边端 owns
+    "model.mtp":          cloud only,
+}
 ```
+
+这张表有三处消费者，所以边端与云端的权重是**物理不同**的两份：
+
+| 消费者 | 行为 |
+| --- | --- |
+| 建模型 | `make_layers` 的 LWD 分支 + `lwd_skips_module()` 守卫，云进程**根本不构造** `visual.*` |
+| 加载权重 | `model_loader/lwd_weight_filter.py` 由同一张表推导 skip keys，checkpoint 里的 `visual.*` 张量**不读**（日志 `[LWD] role=cloud skips loading tensors of visual`，`default_loader.py:367`） |
+| 离线切分 | `scripts/lwd/split_lwd_checkpoint.py` 用同一张表 |
+
+所以**边云部署的视觉能力在边端**：edge 拥有 `visual`，编码后经 UP 把 embeddings 送给云；云侧只跑语言模型 + MTP。
+你用边云包拉起来的服务当然有视觉能力——那部分由边端承担，云端的卡上从来没有视觉塔。
+
+集中式没有角色切分：**每个 DP 副本都要装视觉塔 + 语言模型 + MTP draft**，而且它的 profiling 还要跑一遍
+编码器（`MultimodalConfig.skip_mm_profiling` 默认 False，`arg_utils.py:622/1427`）。这就是 6.76 GiB 与 0.25 GiB 的差距来源。
 
 单 token KV ≈ 96.6 KiB（3.02 GiB / 32768），据此估算：可用 KV 1 GiB ≈ 10.8k tokens。
 
@@ -81,10 +96,20 @@ PD_ENABLE_MTP=0 bash decode.sh
 
 | 想要 | 做法 |
 | --- | --- |
-| 先能起来 | `PD_ENABLE_MTP=0` |
+| 先能起来 | `PD_ENABLE_MTP=0`，必要时再加 `PD_SKIP_MM_PROFILING=1` |
 | 更长上下文 | 确认 KV 余量后 `PD_MAX_MODEL_LEN=65536`（需 6.05 GiB） |
 | 更高并发 | `PD_MAX_NUM_SEQS=64`，但需 `Available Mamba cache blocks ≥ 64` |
 | 再挤显存 | `PD_GPU_MEM_UTIL=0.97`（+1.2 GiB），注意碎片风险 |
+
+## 集中式的三个内存开关
+
+| 变量 | 默认 | 作用 |
+| --- | --- | --- |
+| `PD_ENABLE_MTP` | 1 | 关掉可回收 draft 权重（边云包同款开关） |
+| `PD_SKIP_MM_PROFILING` | 0 | 置 1 时加 `--skip-mm-profiling`：不做视觉编码器的 profiling 预留，省显存但图像请求的预留会退化 |
+| `PD_MAX_MODEL_LEN` | 32768 | 每 token ≈96.6 KiB，32768 需 3.02 GiB |
+
+边云包没有后两个的必要：云端不装视觉塔，draft 也是它唯一要担心的部分。
 
 ## 启动
 
