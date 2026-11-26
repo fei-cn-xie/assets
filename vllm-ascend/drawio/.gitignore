@@ -1,0 +1,11 @@
+# drawio 工作目录的本地噪声
+#  - draw.io 桌面版的自动保存/备份文件（形如 .$xxx.drawio.dtmp / .bkp）
+#  - 自检渲染产物
+#  - Python 缓存
+.$*
+.bkp
+*.dtmp
+.rendercheck/
+render/
+__pycache__/
+*.pyc
