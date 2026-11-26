@@ -1,7 +1,11 @@
-# multi_dp：集中式多 DP 的 LWD 边云 PD（194 边端 + 195 双 DP 云）
+# dp2_tp1_194_195：LWD 边云 PD，每个 cloud 2 个 DP × TP=1
 
-在 [../sidecar](../sidecar/README.md)（edge + P + D，P/D 各 1 个 TP=2 副本）的基础上改成
-**多 DP**：195 的两对卡各自跑 **2 个 data-parallel 副本**，而不是 1 个 TP=2 副本。
+在 [../sidecar](../sidecar/README.md)（P/D 各 1 个 TP=2 副本）的基础上改成**多 DP**：
+195 的两对卡各自跑 **2 个 data-parallel 副本**，而不是 1 个 TP=2 副本。
+edge 仍占 194 的第 4 号卡。
+
+> 目录名 = `dp{每云DP数}_tp{每副本TP数}_{边端主机}_{云主机}`。
+> 后续要别的规模（如 dp4、tp2）时，按本目录复制并改名，改法见文末「改成其它 DP 数」。
 
 ```
 client ──8510──▶ edge (194, NPU 4, TP=1 DP=1)
@@ -22,9 +26,9 @@ client ──8510──▶ edge (194, NPU 4, TP=1 DP=1)
 - **允许 P/D 的 DP 数不同**：`topology.py:411-417` 的"DP 数必须一致"只在 **PD 关闭**时校验；
   PD 开启时不做此限制。**edge 必须保持 DP=1 / TP=1**（`lwd_control_plane.py:102-106`）。
 
-## 卡与端口
+## 卡与端口（当前值）
 
-| 角色 | 主机 / 卡 | 并行 | API | kv_port（base） | LWD ctrl / data / coord |
+| 角色 | 主机 / 卡 | 并行 | API | kv_port（基址） | LWD ctrl / data / coord |
 | --- | --- | --- | --- | --- | --- |
 | edge | 194 / NPU 4 | TP=1 DP=1 | 8510 | — | 不监听 |
 | cloud 0 prefill | 195 / NPU 0,1 | **DP=2 × TP=1** | 8600 | 14570 | 6100/7200/8100、6101/7201/8101 |
@@ -41,10 +45,10 @@ client ──8510──▶ edge (194, NPU 4, TP=1 DP=1)
 
 | 文件 | 与 sidecar 的关系 |
 | --- | --- |
-| `env.sh` | **逐字相同**（UCX / topology / dry-run） |
+| `env.sh` | **逐字相同** |
 | `edge.sh` | **逐字相同**（194 / NPU 4 / 8510 / TP=1） |
 | `start_proxy.sh` | **逐字相同**（8102） |
-| `check_configs.py` | 相同，但内存估算按 **cloud DP 数**计（见下） |
+| `check_configs.py` | 相同，但内存估算按 **cloud DP 数**计 |
 | `pd_host_topology.yaml` | 每个 cloud 从 1 个 dp 变成 2 个 dp |
 | `pd_proxy.json` | 从 2 个目标变成 4 个（2 prefill + 2 decode） |
 | `cloud_p.sh` / `cloud_d.sh` | TP 2→1，新增 `--data-parallel-*`，kv_port 改基址 |
@@ -52,7 +56,7 @@ client ──8510──▶ edge (194, NPU 4, TP=1 DP=1)
 ## 启动
 
 ```bash
-python3 check_configs.py        # 拓扑 + proxy 自检（含 4 个 DP 的端口冲突检查）
+python3 check_configs.py        # 拓扑 + proxy 自检（含每个 DP 的端口冲突检查）
 
 # 195：先 P 后 D
 bash cloud_p.sh
@@ -71,17 +75,38 @@ curl -s http://76.76.26.194:8510/v1/chat/completions \
   -d '{"model":"qwen3.6","messages":[{"role":"user","content":"你好"}],"max_tokens":32}'
 ```
 
-## 内存账（这笔账在多 DP 下会翻倍）
+## 内存账（多 DP 会线性放大）
 
-edge 拥有 **每条 edge→cloud DP 链路**一个连接池（`lwd_host_channels.py:262-266`）：
+edge 拥有**每条 edge→cloud DP 链路**一个连接池（`lwd_host_channels.py:262-266`）：
 
 ```
-links = 2 × 4 个 cloud DP = 8
+links = 2 × (Np + Nd) 个 cloud DP = 2 × 4 = 8
 need  = (8/2) × 4 blocks × (256 + 32 MiB) = 4608 MiB   （预算 12288 MiB）
 ```
 
-sidecar 单 DP 时是 2304 MiB，多 DP 翻倍——仍在上限内。`check_configs.py` 已按 DP 数计算
-（此前按 cloud 实例数算，会在多 DP 下低估一半）。
+sidecar 单 DP 时是 2304 MiB。`check_configs.py` 已按 DP 数计算并在超出时报错。
+
+## 改成其它 DP 数
+
+以「每个 cloud N 个 DP、每副本 TP=M」为例，需要同步改 **6 处**：
+
+| # | 文件 | 改什么 |
+| --- | --- | --- |
+| 1 | `pd_host_topology.yaml` | 每个 cloud 的 `dp:` 写 N 条，`dp_idx` 从 0 连续；每条给**唯一的** `ctrl_port`/`data_port`/`coord_port` |
+| 2 | `pd_proxy.json` | `prefill`/`decode` 各写 N 条，`target_dp` 从 0 到 N-1，URL 指向对应 `coord_port` |
+| 3 | `cloud_p.sh` / `cloud_d.sh` | `--data-parallel-size N`、`--tensor-parallel-size M`、`ASCEND_RT_VISIBLE_DEVICES` 给够 N×M 张卡、`--data-parallel-rpc-port` 两侧必须不同 |
+| 4 | 同上 | `kv_connector_extra_config` 的 `{"dp_size": N, "tp_size": M}`（P、D 两侧都写） |
+| 5 | 同上 | `kv_port` 基址：每侧要留出 **N×M** 个连续端口（握手端口 = 基址 + dp_rank×tp×pp），两侧基址之间留间隔 |
+| 6 | 目录名 | `dp{N}_tp{M}_{边端主机}_{云主机}` |
+
+约束检查：
+
+- **卡数守恒**：edge 1 张 + P(Np×Mp) + D(Nd×Md) ≤ 可用卡；P 与 D 不能共用卡。
+  本机现状：194 只有 NPU 4 可用，195 有 NPU 0-3。
+- **LWD 端口预算**：每个 cloud DP 占 3 个端口（ctrl/data/coord），共 3×(Np+Nd) 个；
+  改完先跑 `python3 check_configs.py`，它会检查 listener 冲突与 DP 内存预算。
+- **edge 的 host buffer**：3×(Np+Nd) 增加后 4608 MiB 会继续涨，上限 12288 MiB；
+  不够就降 `up_buffer_size`/`down_buffer_size`。
 
 ## 风险与回退
 
@@ -89,13 +114,8 @@ sidecar 单 DP 时是 2304 MiB，多 DP 翻倍——仍在上限内。`check_con
 | --- | --- | --- |
 | **每卡显存** | TP 从 2 降到 1，同一份层切片的权重压到单卡 | 报 KV 不足就降 `--max-model-len`（如 32768），或去掉 `--speculative-config` |
 | **MTP 占内存** | draft 头与主模型同卡 | 删 `--speculative-config` 一行 |
-| **DP 端口** | 每个 DP rank 的 ctrl/data/coord 都不同 | `check_configs.py` 会报冲突；拓扑里改 `dp[].*_port` |
+| **DP 端口** | 每个 DP rank 的 ctrl/data/coord 都不同 | `check_configs.py` 会报冲突；改拓扑里 `dp[].*_port` |
 | **想退回单 DP** | — | 直接用 [../sidecar](../sidecar/README.md)（同机同卡，TP=2） |
-
-## 与 sidecar 的取舍
-
-多 DP 的收益是**并发吞吐**：4 个副本（P 2 + D 2）各自独立调度，短请求不会被长请求堵住。
-代价是每副本的 TP 变小、单卡显存更紧，且 LWD 的 host 数据面连接数翻倍（内存与 UCX 句柄都翻倍）。
 
 ## 本目录做过的校验（均实跑）
 
