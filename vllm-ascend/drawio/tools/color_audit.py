@@ -107,6 +107,7 @@ def audit(path: str, verbose: bool = False) -> int:
                  for v in page["verts"].values()
                  if v.w > 300 and v.h > 300 and "opacity=45" in v.style]
         same_as_lane = 0
+        table_cells = 0
         for v in page["verts"].values():
             if v.w <= 0 or not v.label:
                 continue
@@ -129,6 +130,9 @@ def audit(path: str, verbose: bool = False) -> int:
             is_content = (v.style.get("rounded") == "1"
                           and ".py" in v.label
                           and "font-size:11px" not in v.label)
+            is_table_cell = "font-size:11px" in v.label
+            if is_table_cell:
+                table_cells += 1
             fam = role_families(v.label)
             if is_content:
                 scanned += 1
@@ -155,8 +159,9 @@ def audit(path: str, verbose: bool = False) -> int:
         summary = "  ".join(f"{n}×{c}" for n, c in fills.most_common())
         print(f"[{pi:02d}] {page['name'][:22]:<22} {total:>4} {len(page['edges']):>4}  {summary}")
 
-        # 只有"几乎全是中立色、且没有灰阶分层"才判为发白（P09 那种三列灰阶是合法的）
-        if total and not greys and neutralish / total > 0.85 and total > 8:
+        # 只有"几乎全是中立色、且没有灰阶分层、也不是表格页"才判为发白
+        if (total and not greys and neutralish / total > 0.85 and total > 8
+                and table_cells / total < 0.5):
             problems.append(f"[{pi:02d} {page['name']}] {neutralish}/{total} 个方块是中立色、"
                             f"又没有灰阶分层，看图会发白")
         if same_as_lane:

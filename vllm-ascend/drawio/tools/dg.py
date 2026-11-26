@@ -519,8 +519,9 @@ def table(page: Page, x, y, cols, rows, row_h=30, header=True,
     cy = y
     for ci, (title, w) in enumerate(cols):
         cx = x + sum(c[1] for c in cols[:ci])
+        # header=False 只是"不把它当表头样式"，但**不能留白色**：给中立沙色
         page.box(cx, cy, w, row_h, f"<b>{title}</b>", "box_center",
-                 header_role if header else None, decor=False)
+                 header_role if header else "neutral", decor=False)
     cy += row_h
     for ri, row in enumerate(rows):
         for ci, cell in enumerate(row):
