@@ -434,16 +434,23 @@ def validate_topology(path: Path, label: str) -> int:
             f"scene requires full-mesh instance_links, missing {sorted(expected - got)}",
         )
 
-    # host memory budget (vllm_ascend .../lwd_host_channels.py:201-216)
+    # host memory budget (vllm_ascend .../lwd_host_channels.py:201-216, 262-266)
     up = host.get("up_buffer_size", 0) if isinstance(host, dict) else 0
     down = host.get("down_buffer_size", 32) if isinstance(host, dict) else 32
-    channels = 2 * len(cloud_instances)  # one UP+DOWN pair per edge -> cloud DP link
-    need = (channels // 2) * 4 * (up + down)
+    # The EDGE owns one connection per edge -> cloud DP link
+    # (``local_conns = [conn for conn in connections if role == "edge" ...]``),
+    # and links = 2 * connections, so the estimate scales with the number of
+    # cloud DPs -- not with the number of cloud instances.
+    links = 2 * len(all_cloud_dps)
+    need = (links // 2) * 4 * (up + down)
     report.check(
         need <= 12 * 1024,
         f"host memory budget exceeded: {need} MiB > 12288 MiB",
     )
-    report.notes.append(f"host memory estimate: {need} MiB/rank (budget 12288)")
+    report.notes.append(
+        f"host memory estimate: {need} MiB/rank on the edge "
+        f"({len(all_cloud_dps)} cloud DP link(s), budget 12288)"
+    )
 
     return report.done()
 

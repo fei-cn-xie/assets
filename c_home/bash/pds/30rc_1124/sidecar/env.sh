@@ -106,7 +106,9 @@ sys.exit(1)' >/dev/null 2>&1; then
 
 lwd_run() {
   if [[ $LWD_DRY_RUN == 1 ]]; then
-    "$LWD_PYTHON" - "$@" <<'PY'
+    # Clear LD_PRELOAD for the dry-run helper: on a non-Ascend host (or any host
+    # without the Linux jemalloc) the preload above would break the spawn.
+    LD_PRELOAD= "$LWD_PYTHON" - "$@" <<'PY'
 import json
 import os
 import sys

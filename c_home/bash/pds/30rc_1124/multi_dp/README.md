@@ -1,0 +1,108 @@
+# multi_dp：集中式多 DP 的 LWD 边云 PD（194 边端 + 195 双 DP 云）
+
+在 [../sidecar](../sidecar/README.md)（edge + P + D，P/D 各 1 个 TP=2 副本）的基础上改成
+**多 DP**：195 的两对卡各自跑 **2 个 data-parallel 副本**，而不是 1 个 TP=2 副本。
+
+```
+client ──8510──▶ edge (194, NPU 4, TP=1 DP=1)
+                    │  pd_proxy_url
+                    ▼
+              proxy (195:8102)
+                    ├── cloud 0 prefill (195 NPU 0,1)  DP=2 TP=1  → coord 8100 / 8101
+                    └── cloud 1 decode  (195 NPU 2,3)  DP=2 TP=1  → coord 8110 / 8111
+```
+
+## 什么是多DP
+
+- **DP（data parallel）**：把整个模型复制 N 份，每份独立处理不同请求；与 TP（切一层到多卡）正交，
+  总卡数 = DP × TP。DP 提升吞吐（尤其 decode 阶段），不改善单请求延迟。
+- **本栈的落地方式**：每个 cloud 实例在拓扑里有一份 `dp:` 列表，**每个 `dp_idx` 一套
+  `ctrl_port` / `data_port` / `coord_port`**；proxy 用 `pd_proxy.json` 的 `target_dp` 指定打到哪个副本。
+  官方同款示例：`vllm/examples/lwd/pd_host_2p4d.yaml`（P 2 DP、D 4 DP）。
+- **允许 P/D 的 DP 数不同**：`topology.py:411-417` 的"DP 数必须一致"只在 **PD 关闭**时校验；
+  PD 开启时不做此限制。**edge 必须保持 DP=1 / TP=1**（`lwd_control_plane.py:102-106`）。
+
+## 卡与端口
+
+| 角色 | 主机 / 卡 | 并行 | API | kv_port（base） | LWD ctrl / data / coord |
+| --- | --- | --- | --- | --- | --- |
+| edge | 194 / NPU 4 | TP=1 DP=1 | 8510 | — | 不监听 |
+| cloud 0 prefill | 195 / NPU 0,1 | **DP=2 × TP=1** | 8600 | 14570 | 6100/7200/8100、6101/7201/8101 |
+| cloud 1 decode | 195 / NPU 2,3 | **DP=2 × TP=1** | 8601 | 14580 | 6110/7210/8110、6111/7211/8111 |
+| proxy | 195（纯 CPU） | — | 8102 | — | — |
+
+`kv_port` 是**基址**：连接器按 `kv_port + dp_rank × tp × pp` 派生握手端口
+（`mooncake_connector.py:1762-1768, 2199-2200`），所以 P 实际用 14570/14571、D 用 14580/14581。
+两组基址之间留了 10 的间隔，避免同机撞端口。
+
+## 文件
+
+与 sidecar 相同的 8 个文件；本目录只改了两个引擎脚本、拓扑和 proxy 目标表。
+
+| 文件 | 与 sidecar 的关系 |
+| --- | --- |
+| `env.sh` | **逐字相同**（UCX / topology / dry-run） |
+| `edge.sh` | **逐字相同**（194 / NPU 4 / 8510 / TP=1） |
+| `start_proxy.sh` | **逐字相同**（8102） |
+| `check_configs.py` | 相同，但内存估算按 **cloud DP 数**计（见下） |
+| `pd_host_topology.yaml` | 每个 cloud 从 1 个 dp 变成 2 个 dp |
+| `pd_proxy.json` | 从 2 个目标变成 4 个（2 prefill + 2 decode） |
+| `cloud_p.sh` / `cloud_d.sh` | TP 2→1，新增 `--data-parallel-*`，kv_port 改基址 |
+
+## 启动
+
+```bash
+python3 check_configs.py        # 拓扑 + proxy 自检（含 4 个 DP 的端口冲突检查）
+
+# 195：先 P 后 D
+bash cloud_p.sh
+bash cloud_d.sh
+bash start_proxy.sh
+
+# 194：最后起（只有边端会阻塞等链路）
+bash edge.sh
+```
+
+自测（打边端）：
+
+```bash
+curl -s http://76.76.26.194:8510/v1/chat/completions \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"qwen3.6","messages":[{"role":"user","content":"你好"}],"max_tokens":32}'
+```
+
+## 内存账（这笔账在多 DP 下会翻倍）
+
+edge 拥有 **每条 edge→cloud DP 链路**一个连接池（`lwd_host_channels.py:262-266`）：
+
+```
+links = 2 × 4 个 cloud DP = 8
+need  = (8/2) × 4 blocks × (256 + 32 MiB) = 4608 MiB   （预算 12288 MiB）
+```
+
+sidecar 单 DP 时是 2304 MiB，多 DP 翻倍——仍在上限内。`check_configs.py` 已按 DP 数计算
+（此前按 cloud 实例数算，会在多 DP 下低估一半）。
+
+## 风险与回退
+
+| 风险 | 说明 | 回退 |
+| --- | --- | --- |
+| **每卡显存** | TP 从 2 降到 1，同一份层切片的权重压到单卡 | 报 KV 不足就降 `--max-model-len`（如 32768），或去掉 `--speculative-config` |
+| **MTP 占内存** | draft 头与主模型同卡 | 删 `--speculative-config` 一行 |
+| **DP 端口** | 每个 DP rank 的 ctrl/data/coord 都不同 | `check_configs.py` 会报冲突；拓扑里改 `dp[].*_port` |
+| **想退回单 DP** | — | 直接用 [../sidecar](../sidecar/README.md)（同机同卡，TP=2） |
+
+## 与 sidecar 的取舍
+
+多 DP 的收益是**并发吞吐**：4 个副本（P 2 + D 2）各自独立调度，短请求不会被长请求堵住。
+代价是每副本的 TP 变小、单卡显存更紧，且 LWD 的 host 数据面连接数翻倍（内存与 UCX 句柄都翻倍）。
+
+## 本目录做过的校验（均实跑）
+
+| 检查 | 方法 | 结果 |
+| --- | --- | --- |
+| 拓扑 + proxy | `check_configs.py` | PASS；edge 内存估算 4608 MiB（4 条 cloud DP 链路） |
+| 脚本语法 | `bash -n` × 5 | 通过 |
+| 拉起参数 | 四个入口 `--dry-run` | DP=2 / TP=1 / 卡号 / kv 基址 / lwd_config instance_id 全部符合预期 |
+| 与 sidecar 的差异受控 | 逐参数比对 | 仅 TP 2→1、新增两个 `--data-parallel-*`、kv_port 基址、拓扑 DP 数 |
+| 端口唯一性 | `check_configs.py` 的 listener 冲突检查 | 8 个 cloud DP 端口 + 2 个 API 端口互不冲突 |
