@@ -182,10 +182,16 @@ def audit(path: str, verbose: bool = False) -> int:
             chips = [v for v in page["verts"].values()
                      if abs(v.y - (ly - 3)) < 6 and 100 <= v.w <= 260 and v.label]
             got = {(v.style.get("fillColor") or "").lower() for v in chips}
-            want = {c[0].lower() for c in dg.LEGEND_ITEMS_ROLES}
-            missing = want - got
-            if missing:
-                problems.append(f"[{pi:02d} {page['name']}] 图例缺色块: {sorted(missing)}")
+            # 本仓有两套图例：生命周期那套（角色色）与 Transformer 那套（数据/权重/结果…）。
+            # 只要命中任意一套完整色块即算合规。
+            variants = [
+                {c[0].lower() for c in dg.LEGEND_ITEMS_ROLES},
+                {"#dae8fc", "#ffe6cc", "#d5e8d4", "#fff2cc", "#efe9dd", "#f8cecc"},
+            ]
+            if not any(v <= got for v in variants):
+                missing = min(variants, key=lambda s: len(s - got)) - got
+                problems.append(f"[{pi:02d} {page['name']}] 图例缺色块: "
+                                f"{sorted(missing)}")
             if verbose:
                 print(f"      图例色块 {len(chips)} 个:", sorted(got))
 

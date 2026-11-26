@@ -21,6 +21,15 @@ import math
 import os
 import re
 import sys
+
+try:                       # Windows 控制台默认 GBK；幂等，避免 import 链重复包装
+    import io as _io
+    if "utf-8" not in (getattr(sys.stdout, "encoding", "") or "").lower():
+        sys.stdout = _io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8",
+                                      errors="replace")
+except Exception:
+    pass
+
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 

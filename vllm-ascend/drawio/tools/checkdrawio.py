@@ -6,6 +6,15 @@ renders in the desktop app (a missing parent= silently hides nearly every cell).
 from __future__ import annotations
 
 import sys
+
+try:                       # Windows 控制台默认 GBK；幂等，避免 import 链重复包装
+    import io as _io
+    if "utf-8" not in (getattr(sys.stdout, "encoding", "") or "").lower():
+        sys.stdout = _io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8",
+                                      errors="replace")
+except Exception:
+    pass
+
 import xml.etree.ElementTree as ET
 
 REQUIRED = {
