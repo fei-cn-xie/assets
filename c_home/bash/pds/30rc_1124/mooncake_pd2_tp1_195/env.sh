@@ -61,7 +61,7 @@ export PD_DECODE_MASTER_PORT="${PD_DECODE_MASTER_PORT:-29536}"
 export PD_MAX_MODEL_LEN="${PD_MAX_MODEL_LEN:-512}"
 export PD_MAX_NUM_SEQS="${PD_MAX_NUM_SEQS:-32}"
 export PD_MAX_NUM_BATCHED_TOKENS="${PD_MAX_NUM_BATCHED_TOKENS:-8192}"
-export PD_GPU_MEM_UTIL="${PD_GPU_MEM_UTIL:-0.95}"
+export PD_GPU_MEM_UTIL="${PD_GPU_MEM_UTIL:-0.98}"
 # MTP drafts, same switch and same method string as the working edge-cloud DP=2
 # package. Verified before this package existed: with MTP on, a centralized TP=1
 # engine on this host reported only 0.30 GiB of KV for a 32768 context that needs
@@ -78,6 +78,14 @@ export PD_ENABLE_MTP="${PD_ENABLE_MTP:-1}"
 # encoder profiling run frees part of that reservation at the cost of profiling
 # accuracy for image requests; turn it on when KV is short.
 export PD_SKIP_MM_PROFILING="${PD_SKIP_MM_PROFILING:-0}"
+# How many front-end (API server) processes serve this engine. Empty keeps vLLM's
+# default, which is `data_parallel_size` (2 here) and therefore two front-ends
+# that each have to pair with one engine. Set it to 1 to let a single front-end
+# load-balance both DP engines; that removes the front-end <-> engine pairing
+# from startup, which is where "Did not receive response from front-end" and the
+# DP coordinator's "unexpected message while waiting for engines to subscribe"
+# come from. Costs a little LB throughput.
+export PD_API_SERVER_COUNT="${PD_API_SERVER_COUNT:-}"
 
 PD_DRY_RUN=0
 if [[ $# == 1 && $1 == --dry-run ]]; then
@@ -130,6 +138,14 @@ pd_mm_args() {
   PD_MM_ARGS=()
   if [[ $PD_SKIP_MM_PROFILING == 1 ]]; then
     PD_MM_ARGS+=(--skip-mm-profiling)
+  fi
+}
+
+# Optional front-end process count (see PD_API_SERVER_COUNT in the header).
+pd_api_args() {
+  PD_API_ARGS=()
+  if [[ -n ${PD_API_SERVER_COUNT:-} ]]; then
+    PD_API_ARGS+=(--api-server-count "$PD_API_SERVER_COUNT")
   fi
 }
 
