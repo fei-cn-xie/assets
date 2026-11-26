@@ -44,7 +44,8 @@ client ──9060──▶ LB proxy (195, CPU)
 | `prefill.sh` | P 引擎（`kv_producer`） |
 | `decode.sh` | D 引擎（`kv_consumer` + `FULL_DECODE_ONLY`） |
 | `start_proxy.sh` | 调用 vllm-ascend 自带 `examples/disaggregated_prefill_v1/load_balance_proxy_server_example.py`，仓内无 Python 胶水 |
-| `check_configs.py` | 静态自检（见文末） |
+| `check_configs.py` | 静态自检（见文末），拉起**前**跑 |
+| `verify_dp.sh` | 只读自检（见文末），拉起**后**跑：进程数 / 每 rank worker / KV 端口归属 / 端点 / 一次代理请求 |
 
 ## 内存：TP=1 的硬约束与一个实测差异
 
@@ -149,6 +150,15 @@ curl -s http://76.76.26.195:9060/v1/chat/completions \
 谁先连上前端、谁的路由被后来的连接顶掉，取决于进程启动顺序。
 
 ## 如何确认 DP=2 真的生效
+
+拉起后直接跑：
+
+```bash
+bash verify_dp.sh          # 全量
+bash verify_dp.sh --quick  # 跳过最后那次代理请求
+```
+
+它只读、不启停任何进程，失败时会指名哪一项不达标。手工核对的话看下表。
 
 `curl` 能通并不能说明是 DP=2（`DP=1 × TP=2` 也一样能应答），看这些**两者必然不同**的量：
 
