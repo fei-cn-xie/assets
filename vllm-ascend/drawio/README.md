@@ -10,10 +10,13 @@
 | `vLLM生命周期-读图指南.md` | 那 9 页的阅读顺序、三分侧对照表、常数速查、易踩的坑 |
 | `Mooncake原理与实现.drawio` | 10 页 Mooncake 入门图（从 attention 讲到块级 pull 的完整时序） |
 | `Mooncake原理与实现-读图指南.md` | 那 10 页的三条阅读路径、四段交接、常数与六个坑 |
+| `vLLM进程与线程.drawio` | 10 页进程/线程图（进程树、进程数换算、ZMQ 三通道、启动时序、死亡检测、本仓真实进程树） |
+| `vLLM进程与线程-读图指南.md` | 那 10 页的进程数公式、端口表、六个坑 |
 | `README.md`（本文件） | 绘制规范 + 工具用法 + 新图 SOP |
 | `tools/` | 画布引擎、泳道引擎、格式器、三个校验器（结构 / 渲染 / 配色） |
 | `tools/pages/` | 生命周期那 9 页的**页面源码**（`p1.py … p9.py` + `build.py`） |
 | `tools/mooncake/` | Mooncake 那 10 页的**页面源码**（`m1.py … m10.py` + `build.py`） |
+| `tools/proc/` | 进程/线程那 10 页的**页面源码**（`t1.py … t10.py` + `build.py` + `common.py`） |
 
 ---
 
