@@ -35,5 +35,12 @@ lwd_run "$LWD_PYTHON" -m vllm.entrypoints.cli.main serve /home/weight/Qwen3.6-27
   --max-model-len 65536 --max-num-seqs 128 --max-num-batched-tokens 8192 \
   --gpu-memory-utilization 0.90 \
   --async-scheduling \
-  --speculative-config '{"method":"mtp","num_speculative_tokens":3,"enforce_eager":true}' \
   --compilation-config '{"cudagraph_mode":"FULL_DECODE_ONLY"}'
+# NOTE: no --speculative-config here (unlike sidecar/cloud_d.sh). With DP>1 the
+# MTP drafter rebuilds a VllmConfig at data_parallel_size=1 and vllm-ascend's
+# check_kv_extra_config (vllm_ascend/utils.py:1580-1604) then rejects our
+# kv_connector_extra_config.decode.dp_size=2 with
+#   "KV transfer 'decode' config has a conflicting data parallel size.
+#    Expected 1, but got 2."
+# So DP>1 and MTP are mutually exclusive in this build. MTP stays available in
+# ../sidecar (DP=1, TP=2).

@@ -26,6 +26,37 @@ client ──8510──▶ edge (194, NPU 4, TP=1 DP=1)
 - **允许 P/D 的 DP 数不同**：`topology.py:411-417` 的"DP 数必须一致"只在 **PD 关闭**时校验；
   PD 开启时不做此限制。**edge 必须保持 DP=1 / TP=1**（`lwd_control_plane.py:102-106`）。
 
+## 已知限制：DP>1 不能开 MTP（本包首次拉起失败的原因）
+
+首次按本目录拉起时，两个 cloud 都在 `load_model` 阶段挂掉，报：
+
+```
+pydantic_core._pydantic_core.ValidationError: 1 validation error for VllmConfig
+  Value error, KV transfer 'prefill' config has a conflicting data parallel size.
+  Expected 1, but got 2.
+```
+
+调用链与原因（可复核）：
+
+```
+vllm_ascend/spec_decode/llm_base_proposer.py:178  _create_draft_vllm_config()
+  → vllm/v1/spec_decode/llm_base_proposer.py:1292  replace(vllm_config, ...)   # draft 以 DP=1 重建
+    → vllm_ascend/utils.py:1580-1604               check_kv_extra_config()
+        config_dp = kv_connector_extra_config["prefill"]["dp_size"]   # 我们写的是 2
+        vllm_dp   = parallel_config.data_parallel_size                # draft 里是 1
+        → raise "Expected 1, but got 2"
+```
+
+也就是说：`kv_connector_extra_config` 的 `dp_size` 必须等于**当前这份 VllmConfig** 的 DP，
+而 MTP 的 draft 固定按 DP=1 重建，于是 DP>1 与 MTP 在这版代码里**互斥**。
+
+因此本包的两个引擎都**不带 `--speculative-config`**。想要 MTP 就用
+[../sidecar](../sidecar/README.md)（DP=1、TP=2）——那里 extra_config 的 `dp_size` 是 1，校验自然通过。
+
+> 顺带确认：DP 本身没问题。失败前两侧都已经走到
+> `[LWD] cloud control HTTP ready on 0.0.0.0 ports=[8100, 8101] cloud_id=0 dp_size=2`
+> 和 `host data-plane links created ... dp_rank=0/1`，4 个 DP rank 的链路都建好了。
+
 ## 卡与端口（当前值）
 
 | 角色 | 主机 / 卡 | 并行 | API | kv_port（基址） | LWD ctrl / data / coord |
@@ -51,7 +82,7 @@ client ──8510──▶ edge (194, NPU 4, TP=1 DP=1)
 | `check_configs.py` | 相同，但内存估算按 **cloud DP 数**计 |
 | `pd_host_topology.yaml` | 每个 cloud 从 1 个 dp 变成 2 个 dp |
 | `pd_proxy.json` | 从 2 个目标变成 4 个（2 prefill + 2 decode） |
-| `cloud_p.sh` / `cloud_d.sh` | TP 2→1，新增 `--data-parallel-*`，kv_port 改基址 |
+| `cloud_p.sh` / `cloud_d.sh` | TP 2→1，新增 `--data-parallel-*`，kv_port 改基址，**去掉 `--speculative-config`**（见上文限制） |
 
 ## 启动
 
@@ -112,10 +143,10 @@ sidecar 单 DP 时是 2304 MiB。`check_configs.py` 已按 DP 数计算并在超
 
 | 风险 | 说明 | 回退 |
 | --- | --- | --- |
-| **每卡显存** | TP 从 2 降到 1，同一份层切片的权重压到单卡 | 报 KV 不足就降 `--max-model-len`（如 32768），或去掉 `--speculative-config` |
-| **MTP 占内存** | draft 头与主模型同卡 | 删 `--speculative-config` 一行 |
+| **每卡显存** | TP 从 2 降到 1，同一份层切片的权重压到单卡 | 报 KV 不足就降 `--max-model-len`（如 32768） |
+| **没有 MTP** | DP>1 与 MTP 互斥（见上文限制），本包不带 draft | 需要 MTP 就用 [../sidecar](../sidecar/README.md)（DP=1、TP=2） |
 | **DP 端口** | 每个 DP rank 的 ctrl/data/coord 都不同 | `check_configs.py` 会报冲突；改拓扑里 `dp[].*_port` |
-| **想退回单 DP** | — | 直接用 [../sidecar](../sidecar/README.md)（同机同卡，TP=2） |
+| **再往上加 DP** | 每加 2 个 DP，edge 的 host buffer 多 4 条链路（+2304 MiB） | 见上文「改成其它 DP 数」，注意 12288 MiB 上限 |
 
 ## 本目录做过的校验（均实跑）
 

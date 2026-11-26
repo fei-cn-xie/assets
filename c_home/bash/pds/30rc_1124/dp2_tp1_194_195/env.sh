@@ -53,7 +53,12 @@ lwd_runtime_env() {
   export OMP_PROC_BIND=false
   export OMP_NUM_THREADS=1
   export TASK_QUEUE_ENABLE=1
-  export LD_PRELOAD="/usr/lib/aarch64-linux-gnu/libjemalloc.so.2:${LD_PRELOAD:-}"
+  # Only preload jemalloc where it actually exists: these hosts do not ship it,
+  # and an unconditional LD_PRELOAD floods every child process with
+  # "ld.so: object ... cannot be preloaded: ignored" ERROR lines.
+  if [[ -f /usr/lib/aarch64-linux-gnu/libjemalloc.so.2 ]]; then
+    export LD_PRELOAD="/usr/lib/aarch64-linux-gnu/libjemalloc.so.2:${LD_PRELOAD:-}"
+  fi
   export VLLM_LOGGING_LEVEL="${VLLM_LOGGING_LEVEL:-INFO}"
   export VLLM_LWD_LOG_LEVEL="${VLLM_LWD_LOG_LEVEL:-INFO}"
   # The cloud engines need minutes for weights + graph capture before they
