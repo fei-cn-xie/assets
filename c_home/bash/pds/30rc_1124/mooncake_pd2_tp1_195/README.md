@@ -146,6 +146,25 @@ curl -s http://76.76.26.195:9060/v1/chat/completions \
   -d '{"model":"qwen3.6","messages":[{"role":"user","content":"你好"}],"max_tokens":32}'
 ```
 
+## 两侧都是 DP=2 时，KV 怎么对上 rank
+
+这是本包最容易被误判的一点："P 的 rank0 做了 prefill、proxy 又把 decode 发给 D 的 rank1，KV 还对得上吗？"
+
+对得上，依据在 `mooncake_connector.py`：
+
+| 环节 | 代码 | 说明 |
+| --- | --- | --- |
+| 每个 rank 的 `engine_id` 唯一 | `vllm/v1/engine/core.py:1311-1316`，`engine_id += f"_dp{dp_rank}"` | 日志里能看到 `1-<uuid>_dp0` / `_dp1` |
+| 每个 rank 各自广播握手端口 | `mooncake_connector.py:2109-2114` | 生产者里是 `kv_port + dp_rank`（本包 30000 / 30001） |
+| 生产者在回包里带上自己的三元组 | `mooncake_connector.py:127-130`（`remote_host` / `remote_port` / `remote_engine_id`） | 谁做的 prefill，就回填谁自己的地址 |
+| 消费者优先用回包里的值 | `mooncake_connector.py:3979-3990` | 映射表只是修正；查不到时**直接**用回包里的 `host` / `engine_id` |
+
+所以 D 的任意 rank 都能按回包找到**真正做过 prefill 的那个 P rank**，不要求两侧 rank 编号相同。
+
+另外 `kv_connector_extra_config` 里的 `prefill/decode: {dp_size, tp_size}` **不参与路由**：
+`_prefill_dp_size` / `_decode_dp_size` 在 `mooncake_connector.py:2237/2245` 赋值后全文件再无引用，
+它们只用于配置一致性校验（也就是第一处修复 `check_kv_extra_config` 比对的那两个值）。
+
 ## 三处修复与本包的对照
 
 本包在集中式路径上会依次暴露三个问题，`feat/pd-sep-lwd-v0.30.0` 全有，
