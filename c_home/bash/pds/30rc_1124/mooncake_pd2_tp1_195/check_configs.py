@@ -133,6 +133,20 @@ def main(argv: list[str]) -> int:
     if missing:
         return report.done()
 
+    # --- every text file must be LF-only -------------------------------------
+    # A CRLF line leaves a "\r" at the end of the last word, so bash on the host
+    # fails in ways that point nowhere. Git stores LF here (.gitattributes), but
+    # edits made through Windows tooling can leak CRLF into the working copy that
+    # gets copied to the host, so check the bytes instead of trusting git.
+    crlf = sorted(
+        p.name
+        for p in root.iterdir()
+        if p.is_file()
+        and p.suffix in (".sh", ".py", ".md", ".yaml", ".json")
+        and b"\r\n" in p.read_bytes()
+    )
+    report.check(not crlf, f"CRLF line endings (breaks the host copy): {crlf}")
+
     env = parse_env(root)
     prefill = parse_script(root / "prefill.sh", env)
     decode = parse_script(root / "decode.sh", env)
