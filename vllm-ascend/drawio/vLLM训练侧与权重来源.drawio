@@ -1,0 +1,1826 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="drawio" pages="10">
+  <diagram id="pg0" name="① 训练与推理的边界">
+    <mxGraphModel dx="1600" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1576" pageHeight="1066" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="t1" value="① 先划清边界：vLLM 不做训练，但它和训练共享三样东西" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=17;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="20" width="1500" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t2" value="一句话：vLLM 是&lt;b&gt;推理引擎&lt;/b&gt;——它没有反向传播、没有优化器、没有损失函数；但它的&lt;b&gt;模型定义、权重文件格式、配置约定&lt;/b&gt;与训练侧是同一套。搞清这一点，才不会在仓里白找训练代码。" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="36" y="48" width="1500" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="t3" value="&lt;b&gt;第一步：一条完整的「造模型」流水线（vLLM 只站在最右端）&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="118" width="1300" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n4" value="&lt;b&gt;数据&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px;color:#666666&quot;&gt;清洗 / 去重 / 配比&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="150" width="274" height="86" as="geometry"/>
+        </mxCell>
+        <mxCell id="n5" value="&lt;b&gt;训练&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px;color:#666666&quot;&gt;前向 + 损失 + 反向 + 更新&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="320" y="150" width="274" height="86" as="geometry"/>
+        </mxCell>
+        <mxCell id="e6" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="311" y="193" as="sourcePoint"/>
+            <mxPoint x="319" y="193" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n7" value="&lt;b&gt;产出&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px;color:#666666&quot;&gt;checkpoint（权重 + 优化器状态）&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="604" y="150" width="274" height="86" as="geometry"/>
+        </mxCell>
+        <mxCell id="e8" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="595" y="193" as="sourcePoint"/>
+            <mxPoint x="603" y="193" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n9" value="&lt;b&gt;转换&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px;color:#666666&quot;&gt;合并分片 / 格式转换 / 量化&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="888" y="150" width="274" height="86" as="geometry"/>
+        </mxCell>
+        <mxCell id="e10" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="879" y="193" as="sourcePoint"/>
+            <mxPoint x="887" y="193" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n11" value="&lt;b&gt;部署&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px;color:#666666&quot;&gt;vLLM 加载并服务&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="1172" y="150" width="274" height="86" as="geometry"/>
+        </mxCell>
+        <mxCell id="e12" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1163" y="193" as="sourcePoint"/>
+            <mxPoint x="1171" y="193" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t13" value="&lt;font style=&quot;font-size:9px;color:#666666&quot;&gt;本仓两份材料的分工：① 训练侧（本套）只在“产出 → 转换”这一段；② 其余八套讲最右边的“部署”以及它与前面各段的接口。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="36" y="246" width="1424" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="t14" value="&lt;b&gt;第二步：训练与推理共享的三样东西（这才是本套的意义）&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="258" width="1300" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n15" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="36" y="290" width="460" height="186" as="geometry"/>
+        </mxCell>
+        <mxCell id="t16" value="&lt;b&gt;① 模型结构定义&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="46" y="298" width="440" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t17" value="&lt;font style=&quot;font-size:10px&quot;&gt;同一个 `deepseek_mtp` / `qwen` 类既描述了「训练时怎么算」，&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;也描述了「推理时怎么算」——只是推理不挂 backward。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;所以读 vLLM 的 models/ 目录，本质上是在读训练代码的 forward 部分。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="46" y="324" width="440" height="144" as="geometry"/>
+        </mxCell>
+        <mxCell id="n18" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="518" y="290" width="460" height="186" as="geometry"/>
+        </mxCell>
+        <mxCell id="t19" value="&lt;b&gt;② 权重文件格式&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="528" y="298" width="440" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t20" value="&lt;font style=&quot;font-size:10px&quot;&gt;训练输出 safetensors 分片 + index.json；&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;推理按同一份 index 只读权重，忽略优化器/训练状态文件。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;名字、形状、分片约定必须完全一致，否则加载报形状不匹配。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="528" y="324" width="440" height="144" as="geometry"/>
+        </mxCell>
+        <mxCell id="n21" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="290" width="460" height="186" as="geometry"/>
+        </mxCell>
+        <mxCell id="t22" value="&lt;b&gt;③ 配置约定&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1010" y="298" width="440" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t23" value="&lt;font style=&quot;font-size:10px&quot;&gt;`config.json` 里的层数、头数、隐藏维度既决定训练参数量，&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;也决定推理的显存与并行切分。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;还有像 `num_nextn_predict_layers` 这种「训练期定义、推理期复用」的字段。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1010" y="324" width="440" height="144" as="geometry"/>
+        </mxCell>
+        <mxCell id="n24" value="&lt;b&gt;第三步：在 vLLM 仓里找不到的四样东西（省下你的搜索时间）&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;① &lt;b&gt;反向传播&lt;/b&gt;（全仓 0 处 `loss.backward`）；② &lt;b&gt;优化器&lt;/b&gt;（0 处 `AdamW`/梯度清零）；③ &lt;b&gt;数据加载&lt;/b&gt;（包内 0 处 `DataLoader`）；④ &lt;b&gt;训练循环&lt;/b&gt;（0 处 `model.train()`，只有 `model.eval()`）。&lt;br&gt;但它&lt;b&gt;确实有一块与训练打交道的代码&lt;/b&gt;：一套跑在&lt;b&gt;训练进程侧&lt;/b&gt;的「权重同步客户端」（把新权重推给正在服务的推理引擎），这是为强化学习准备的——详见第 ⑩ 页。&lt;br&gt;&lt;font color=&quot;#c0392b&quot;&gt;它多出来的是训练侧没有的东西：&lt;b&gt;调度器、KV cache、批量管理与图捕获&lt;/b&gt;——因为只有推理才需要「持续服务很多长短不一的请求」。&lt;/font&gt;&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="36" y="516" width="1424" height="128" as="geometry"/>
+        </mxCell>
+        <mxCell id="n25" value="&lt;font style=&quot;font-size:10px&quot;&gt;本页交接：边界划清了。下一步（②）把训练那一格展开——一次训练 step 到底在算什么，以及它和推理的那一步差在哪。&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="36" y="664" width="1424" height="46" as="geometry"/>
+        </mxCell>
+        <mxCell id="n26" value="&lt;b&gt;代码锚点（想自己去翻的时候用）&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot; color=&quot;#666666&quot;&gt;vLLM 的自我定位（serving）：vllm/README.md:1&lt;br&gt;模型定义被推理复用：vllm/model_executor/models/（每个模型一个 forward）&lt;br&gt;权重加载只吃权重、忽略训练状态：vllm/model_executor/model_loader/weight_utils.py:1002、:1253-1271&lt;br&gt;训练期定义但推理期不用的字段示例：vllm/transformers_utils/configs/hy_v4.py:53-54（mtp_loss_factor 注释写明 unused at inference）&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="740" width="1424" height="104" as="geometry"/>
+        </mxCell>
+        <mxCell id="n27" value="&lt;b&gt;一句话记住这一页：&lt;/b&gt;vLLM 不做训练，但它与训练共享&lt;b&gt;模型结构、权重格式、配置&lt;/b&gt;；所以「理解训练」的价值不是去改 vLLM，而是&lt;b&gt;理解那些权重数字是怎么来的、哪些字段只在训练期有意义&lt;/b&gt;。" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="876" width="1424" height="58" as="geometry"/>
+        </mxCell>
+        <mxCell id="t28" value="&lt;b&gt;图例&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="968" width="104" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="n29" value="客户端" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#eceff1;strokeColor=#607d8b;" vertex="1" parent="1">
+          <mxGeometry x="148" y="965" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n30" value="边端 edge" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="276" y="965" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n31" value="云 P (prefill)" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="404" y="965" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n32" value="云 D (decode)" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="532" y="965" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n33" value="PD Proxy" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#b0e3e6;strokeColor=#0e8088;" vertex="1" parent="1">
+          <mxGeometry x="660" y="965" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n34" value="中立/通用" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="788" y="965" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n35" value="失败/取消" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="916" y="965" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="e36" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#9673a6;fillColor=#9673a6;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="148" y="1014" as="sourcePoint"/>
+            <mxPoint x="204" y="1014" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t37" value="控制面 ZMQ" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="210" y="1002" width="190" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="e38" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#d6b656;fillColor=#d6b656;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="398" y="1014" as="sourcePoint"/>
+            <mxPoint x="454" y="1014" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t39" value="数据面 UCX·Mooncake" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="460" y="1002" width="190" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="e40" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="648" y="1014" as="sourcePoint"/>
+            <mxPoint x="704" y="1014" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t41" value="HTTP" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="710" y="1002" width="190" height="24" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="pg1" name="② 训练 step 数据流">
+    <mxGraphModel dx="1600" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1576" pageHeight="1066" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="t1" value="② 一次训练 step：九步数据流，其中只有四步会出现在推理里" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=17;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="20" width="1500" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t2" value="一句话：训练一步 = &lt;b&gt;切 token → 前向 → 算损失 → 反向 → 更新&lt;/b&gt;；推理只保留「切 token → 前向 → 采样」，把中间三步全砍掉——这就是为什么推理能省下大半显存。" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="36" y="48" width="1500" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="t3" value="&lt;b&gt;第一步：九步（蓝＝训练独有，绿＝推理也有）&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="116" width="1300" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n4" value="&lt;b&gt;①&lt;/b&gt; 取一条文本&lt;br&gt;&lt;font style=&quot;font-size:9px;color:#666666&quot;&gt;数据集采样 → 一段字符串&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="148" width="156" height="104" as="geometry"/>
+        </mxCell>
+        <mxCell id="n5" value="&lt;b&gt;②&lt;/b&gt; 分词&lt;br&gt;&lt;font style=&quot;font-size:9px;color:#666666&quot;&gt;字符串 → token id 序列&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="198" y="148" width="156" height="104" as="geometry"/>
+        </mxCell>
+        <mxCell id="e6" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="193" y="200" as="sourcePoint"/>
+            <mxPoint x="197" y="200" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n7" value="&lt;b&gt;③&lt;/b&gt; 拼成 batch&lt;br&gt;&lt;font style=&quot;font-size:9px;color:#666666&quot;&gt;多条序列补齐或打包（二维/一维）&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="360" y="148" width="156" height="104" as="geometry"/>
+        </mxCell>
+        <mxCell id="e8" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="355" y="200" as="sourcePoint"/>
+            <mxPoint x="359" y="200" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n9" value="&lt;b&gt;④&lt;/b&gt; 前向 forward&lt;br&gt;&lt;font style=&quot;font-size:9px;color:#666666&quot;&gt;逐层算 → 每个位置的 logits&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="522" y="148" width="156" height="104" as="geometry"/>
+        </mxCell>
+        <mxCell id="e10" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="517" y="200" as="sourcePoint"/>
+            <mxPoint x="521" y="200" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n11" value="&lt;b&gt;⑤&lt;/b&gt; 算损失 loss&lt;br&gt;&lt;font style=&quot;font-size:9px;color:#666666&quot;&gt;与「下一个词」比对 → 一个标量&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="684" y="148" width="156" height="104" as="geometry"/>
+        </mxCell>
+        <mxCell id="e12" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="679" y="200" as="sourcePoint"/>
+            <mxPoint x="683" y="200" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n13" value="&lt;b&gt;⑥&lt;/b&gt; 反向 backward&lt;br&gt;&lt;font style=&quot;font-size:9px;color:#666666&quot;&gt;从 loss 回传 → 每个参数的梯度&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="846" y="148" width="156" height="104" as="geometry"/>
+        </mxCell>
+        <mxCell id="e14" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="841" y="200" as="sourcePoint"/>
+            <mxPoint x="845" y="200" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n15" value="&lt;b&gt;⑦&lt;/b&gt; 更新参数&lt;br&gt;&lt;font style=&quot;font-size:9px;color:#666666&quot;&gt;优化器按梯度走一小步&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="1008" y="148" width="156" height="104" as="geometry"/>
+        </mxCell>
+        <mxCell id="e16" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1003" y="200" as="sourcePoint"/>
+            <mxPoint x="1007" y="200" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n17" value="&lt;b&gt;⑧&lt;/b&gt; 清梯度&lt;br&gt;&lt;font style=&quot;font-size:9px;color:#666666&quot;&gt;梯度清零，进入下一步&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="1170" y="148" width="156" height="104" as="geometry"/>
+        </mxCell>
+        <mxCell id="e18" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1165" y="200" as="sourcePoint"/>
+            <mxPoint x="1169" y="200" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n19" value="&lt;b&gt;⑨&lt;/b&gt; 周期存档&lt;br&gt;&lt;font style=&quot;font-size:9px;color:#666666&quot;&gt;checkpoint：权重 + 优化器状态&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="1332" y="148" width="156" height="104" as="geometry"/>
+        </mxCell>
+        <mxCell id="e20" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1327" y="200" as="sourcePoint"/>
+            <mxPoint x="1331" y="200" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t21" value="&lt;b&gt;第二步：推理把 ④ 之后换成什么（砍掉 ⑤~⑧，加上采样）&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="260" width="1300" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n22" value="&lt;font style=&quot;font-size:10px&quot;&gt;推理：① 文本 → ② 分词 → ③ 组批 → ④ &lt;b&gt;前向&lt;/b&gt; → &lt;b&gt;⑤′ 取最后一个位置的 logits → 采样一个 token&lt;/b&gt; → 把它接回输入，重复。&lt;br&gt;区别的关键：&lt;b&gt;训练要「每个位置」的 logits&lt;/b&gt;（因为要跟每个位置的正确下一个词比对），而&lt;b&gt;推理只要「最后一个位置」的 logits&lt;/b&gt;（因为只需要下一个词）。&lt;br&gt;&lt;font color=&quot;#c0392b&quot;&gt;注意 ⑤′ 之后没有损失、没有梯度、没有更新——权重从加载那一刻起就不变了（唯一的例外是图捕获时的格式重排）。&lt;/font&gt;&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="292" width="1424" height="116" as="geometry"/>
+        </mxCell>
+        <mxCell id="t23" value="&lt;b&gt;第三步：三处「名字一样、语义不一样」的地方（最容易混）&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="416" width="1300" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n24" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="36" y="448" width="460" height="176" as="geometry"/>
+        </mxCell>
+        <mxCell id="t25" value="&lt;b&gt;batch 的含义&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="46" y="456" width="440" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t26" value="&lt;font style=&quot;font-size:10px&quot;&gt;训练：为了「梯度更稳、算力更满」把样本堆起来；&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;推理：为了「吞吐」把不同请求拼一起，但会牺牲单请求延迟。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;→ 训练 batch 越大越好；推理 batch 是个权衡（入门套 ⑥）。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="46" y="482" width="440" height="134" as="geometry"/>
+        </mxCell>
+        <mxCell id="n27" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="518" y="448" width="460" height="176" as="geometry"/>
+        </mxCell>
+        <mxCell id="t28" value="&lt;b&gt;序列长度的处理&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="528" y="456" width="440" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t29" value="&lt;font style=&quot;font-size:10px&quot;&gt;训练：整条样本一次算完（长度固定后 padding）；&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;推理：先算 prompt（一次），再逐 token 续写 —— 这就是 prefill/decode 之分。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;→ 同一个 forward，被切成两种形态调用（入门套 ④）。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="528" y="482" width="440" height="134" as="geometry"/>
+        </mxCell>
+        <mxCell id="n30" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="448" width="460" height="176" as="geometry"/>
+        </mxCell>
+        <mxCell id="t31" value="&lt;b&gt;精度&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1010" y="456" width="440" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t32" value="&lt;font style=&quot;font-size:10px&quot;&gt;训练：前向用低精度、但主权重与梯度累加常保持高精度（数值稳定）；&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;推理：整份权重就是低精度（甚至量化），因为不需要数值稳定性。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;→ 这是「量化」在推理侧能成立的前提（见 ⑧）。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1010" y="482" width="440" height="134" as="geometry"/>
+        </mxCell>
+        <mxCell id="n33" value="&lt;font style=&quot;font-size:10px&quot;&gt;本页交接：九步里最关键的一步是 ⑤ 算损失——它定义「模型在学什么」。下一步（③）把损失与 logits 讲清：为什么它就是一个词表上的概率分布。&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="36" y="664" width="1424" height="46" as="geometry"/>
+        </mxCell>
+        <mxCell id="n34" value="&lt;b&gt;代码锚点（想自己去翻的时候用）&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot; color=&quot;#666666&quot;&gt;推理侧的 logits 计算与采样：vllm/v1/sample/sampler.py:21（Sampler）、:73（forward）&lt;br&gt;词表维度的分布：vllm/model_executor/layers/logits_processor.py（按 vocab 维算）&lt;br&gt;「只取最后一个位置」的体现：gpu_model_runner 里 logits_indices 的构造（vllm/v1/worker/gpu_model_runner.py:4478-4499 附近）&lt;br&gt;训练侧的五步（损失/反向/更新/清梯度/存档）在 vLLM 仓内&lt;b&gt;不存在&lt;/b&gt;：见 ① 页的说明&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="740" width="1424" height="104" as="geometry"/>
+        </mxCell>
+        <mxCell id="n35" value="&lt;b&gt;一句话记住这一页：&lt;/b&gt;训练一步九步、推理一步四步；差别集中在「要不要对每个位置算损失、要不要保留中间激活」——&lt;b&gt;这两件事决定了显存里有没有梯度与激活这两块。&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="876" width="1424" height="58" as="geometry"/>
+        </mxCell>
+        <mxCell id="t36" value="&lt;b&gt;图例&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="968" width="104" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="n37" value="客户端" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#eceff1;strokeColor=#607d8b;" vertex="1" parent="1">
+          <mxGeometry x="148" y="965" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n38" value="边端 edge" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="276" y="965" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n39" value="云 P (prefill)" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="404" y="965" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n40" value="云 D (decode)" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="532" y="965" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n41" value="PD Proxy" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#b0e3e6;strokeColor=#0e8088;" vertex="1" parent="1">
+          <mxGeometry x="660" y="965" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n42" value="中立/通用" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="788" y="965" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n43" value="失败/取消" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="916" y="965" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n44" value="训练独有" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="1044" y="965" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="e45" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#9673a6;fillColor=#9673a6;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="148" y="1014" as="sourcePoint"/>
+            <mxPoint x="204" y="1014" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t46" value="控制面 ZMQ" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="210" y="1002" width="190" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="e47" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#d6b656;fillColor=#d6b656;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="398" y="1014" as="sourcePoint"/>
+            <mxPoint x="454" y="1014" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t48" value="数据面 UCX·Mooncake" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="460" y="1002" width="190" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="e49" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="648" y="1014" as="sourcePoint"/>
+            <mxPoint x="704" y="1014" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t50" value="HTTP" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="710" y="1002" width="190" height="24" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="pg2" name="③ 损失与 logits">
+    <mxGraphModel dx="1600" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1576" pageHeight="1310" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="t1" value="③ 损失与 logits：模型输出其实是一个「词表上的分布」" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=17;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="20" width="1500" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t2" value="一句话：一次前向的产物是 &lt;b&gt;[token 数, 词表大小]&lt;/b&gt; 的分数矩阵；推理拿它&lt;b&gt;挑一个&lt;/b&gt;（采样），训练拿它&lt;b&gt;打分&lt;/b&gt;（−log p(正确词)，即交叉熵）。同一个量，两种用法。" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="36" y="48" width="1500" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="t3" value="&lt;b&gt;第一步：一条链（前四步仓内都能查到，最后一步是训练侧用法）&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="118" width="1300" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n4" value="&lt;b&gt;hidden&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;每层输出的隐藏向量&lt;br&gt;[token 数, hidden]&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="36" y="150" width="270" height="96" as="geometry"/>
+        </mxCell>
+        <mxCell id="n5" value="&lt;b&gt;lm_head&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;乘到词表维度&lt;br&gt;[token 数, 词表大小]&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="317" y="150" width="270" height="96" as="geometry"/>
+        </mxCell>
+        <mxCell id="e6" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="308" y="198" as="sourcePoint"/>
+            <mxPoint x="316" y="198" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n7" value="&lt;b&gt;log_softmax&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;取对数概率&lt;br&gt;仍是 [token 数, 词表大小]&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="598" y="150" width="270" height="96" as="geometry"/>
+        </mxCell>
+        <mxCell id="e8" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="589" y="198" as="sourcePoint"/>
+            <mxPoint x="597" y="198" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n9" value="&lt;b&gt;推理：挑一个&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;argmax / 按概率采样&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="879" y="150" width="270" height="96" as="geometry"/>
+        </mxCell>
+        <mxCell id="e10" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="870" y="198" as="sourcePoint"/>
+            <mxPoint x="878" y="198" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n11" value="&lt;b&gt;训练：−log p(y)&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;取正确词那一列取负 → 一个标量&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="1160" y="150" width="270" height="96" as="geometry"/>
+        </mxCell>
+        <mxCell id="e12" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1151" y="198" as="sourcePoint"/>
+            <mxPoint x="1159" y="198" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t13" value="&lt;font style=&quot;font-size:9px;color:#666666&quot;&gt;前四步（含 log_softmax）在仓内有实现；最右一格是训练侧独有的用法，仓内没有它的代码——它只出现在训练框架里。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="36" y="256" width="1424" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="t14" value="&lt;b&gt;第二步：为什么叫「分布」（三个必须理解的细节）&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="266" width="1300" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n15" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="298" width="460" height="180" as="geometry"/>
+        </mxCell>
+        <mxCell id="t16" value="&lt;b&gt;① 词表有多大&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="46" y="306" width="440" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t17" value="&lt;font style=&quot;font-size:10px&quot;&gt;每一行都是「下一个词是词表里第 i 个词」的分数。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;词表通常几万到十几万 → 这个矩阵很宽。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;所以 lm_head 是全模型里「输出维度最大」的那一层。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="46" y="332" width="440" height="138" as="geometry"/>
+        </mxCell>
+        <mxCell id="n18" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="518" y="298" width="460" height="180" as="geometry"/>
+        </mxCell>
+        <mxCell id="t19" value="&lt;b&gt;② 为什么要 log_softmax 而不是 softmax&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="528" y="306" width="440" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t20" value="&lt;font style=&quot;font-size:10px&quot;&gt;概率连乘会下溢，取对数后变成相加，数值稳定；&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;而且 log 概率单调 → 排序不变（仓内注释明说这一点）。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;仓内 softmax/log_softmax 一律用 fp32 算，避免精度问题。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="528" y="332" width="440" height="138" as="geometry"/>
+        </mxCell>
+        <mxCell id="n21" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="298" width="460" height="180" as="geometry"/>
+        </mxCell>
+        <mxCell id="t22" value="&lt;b&gt;③ 训练要「每个位置」，推理只要「最后一个」&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1010" y="306" width="440" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t23" value="&lt;font style=&quot;font-size:10px&quot;&gt;训练：每个位置都有一个「正确的下一个词」，所以每个位置都算损失；&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;推理：只关心接下来那一个词，所以只取最后一个位置的分布。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;→ 这就是「推理比训练省一大截」的第一层原因。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1010" y="332" width="440" height="138" as="geometry"/>
+        </mxCell>
+        <mxCell id="n24" value="&lt;b&gt;第三步：交叉熵到底在算什么（一句话 + 一个直觉）&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;交叉熵 = &lt;b&gt;−log p(正确词)&lt;/b&gt;：模型给正确词的概率越高，损失越小；给得越低，损失越大。&lt;br&gt;直觉：它衡量的不是「答案对不对」，而是「模型有多确信正确答案」——所以哪怕 argmax 对了，只要概率很低，损失依然大，梯度依然会推着它变得更确信。&lt;br&gt;&lt;font color=&quot;#c0392b&quot;&gt;这一步在 vLLM 仓里&lt;b&gt;不存在&lt;/b&gt;：vLLM 只把 log 概率算出来（用于返回 logprobs），不拿它跟标签比。&lt;/font&gt;&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="518" width="1424" height="116" as="geometry"/>
+        </mxCell>
+        <mxCell id="t25" value="&lt;b&gt;第四步：推理会在「分布」上再做四件事（训练侧不做或做法不同）&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="642" width="1300" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n26" value="&lt;b&gt;加工&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="36" y="674" width="300" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n27" value="&lt;b&gt;怎么做&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="336" y="674" width="560" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n28" value="&lt;b&gt;目的&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="896" y="674" width="564" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n29" value="&lt;font style=&quot;font-size:11px&quot;&gt;温度 temperature&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="710" width="300" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n30" value="&lt;font style=&quot;font-size:11px&quot;&gt;把 logits 除以 T 再 softmax&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="336" y="710" width="560" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n31" value="&lt;font style=&quot;font-size:11px&quot;&gt;T→0 变贪心，T 大更随机&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="896" y="710" width="564" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n32" value="&lt;font style=&quot;font-size:11px&quot;&gt;top-k / top-p&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="746" width="300" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n33" value="&lt;font style=&quot;font-size:11px&quot;&gt;只保留前 k 个 / 累计概率到 p 的词&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="336" y="746" width="560" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n34" value="&lt;font style=&quot;font-size:11px&quot;&gt;裁掉长尾，避免抽到离谱词&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="896" y="746" width="564" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n35" value="&lt;font style=&quot;font-size:11px&quot;&gt;罚分（重复/存在/频率）&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="782" width="300" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n36" value="&lt;font style=&quot;font-size:11px&quot;&gt;对已出现过的词降分&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="336" y="782" width="560" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n37" value="&lt;font style=&quot;font-size:11px&quot;&gt;抑制复读&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="896" y="782" width="564" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n38" value="&lt;font style=&quot;font-size:11px&quot;&gt;logprobs 输出&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="818" width="300" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n39" value="&lt;font style=&quot;font-size:11px&quot;&gt;把 log 概率返回给调用方&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="336" y="818" width="560" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n40" value="&lt;font style=&quot;font-size:11px&quot;&gt;用于打分、置信度、RL 训练信号&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="896" y="818" width="564" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n41" value="&lt;font style=&quot;font-size:10px&quot;&gt;本页交接：logits 这条链解释了「训练的损失从哪来」。下一步（④）算显存账：训练为什么要多存三份东西，推理为什么不用。&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="36" y="890" width="1424" height="46" as="geometry"/>
+        </mxCell>
+        <mxCell id="n42" value="&lt;b&gt;代码锚点（想自己去翻的时候用）&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot; color=&quot;#666666&quot;&gt;logits 的产生：vllm/model_executor/layers/logits_processor.py:108；fp32 输出 :163-170&lt;br&gt;softmax 求概率：vllm/v1/sample/ops/topk_topp_sampler.py:168&lt;br&gt;log_softmax（logprobs）：vllm/v1/sample/sampler.py:306-307；fp32 注释 :96-97；单调性注释 :213-214&lt;br&gt;形状文档：vllm/docs/design/logits_processors.md:13（（num_requests) × (vocab_size)）&lt;br&gt;「只算采样位」的切片：vllm/v1/worker/gpu/model_runner.py:915&lt;br&gt;仓内明说没有反向：vllm/third_party/flash_linear_attention/ops/layernorm_guard.py:514-516&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="966" width="1424" height="120" as="geometry"/>
+        </mxCell>
+        <mxCell id="n43" value="&lt;b&gt;一句话记住这一页：&lt;/b&gt;模型输出是「词表上的分数」；推理&lt;b&gt;挑一个&lt;/b&gt;、训练&lt;b&gt;用正确答案给它打分&lt;/b&gt;。理解这一点，才能理解为什么训练要每个位置的分布、推理只要最后一个。" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="1120" width="1424" height="58" as="geometry"/>
+        </mxCell>
+        <mxCell id="t44" value="&lt;b&gt;图例&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="1212" width="104" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="n45" value="客户端" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#eceff1;strokeColor=#607d8b;" vertex="1" parent="1">
+          <mxGeometry x="148" y="1209" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n46" value="边端 edge" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="276" y="1209" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n47" value="云 P (prefill)" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="404" y="1209" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n48" value="云 D (decode)" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="532" y="1209" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n49" value="PD Proxy" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#b0e3e6;strokeColor=#0e8088;" vertex="1" parent="1">
+          <mxGeometry x="660" y="1209" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n50" value="中立/通用" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="788" y="1209" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n51" value="失败/取消" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="916" y="1209" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n52" value="训练侧用法（仓内无实现）" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="1044" y="1209" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="e53" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#9673a6;fillColor=#9673a6;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="148" y="1258" as="sourcePoint"/>
+            <mxPoint x="204" y="1258" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t54" value="控制面 ZMQ" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="210" y="1246" width="190" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="e55" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#d6b656;fillColor=#d6b656;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="398" y="1258" as="sourcePoint"/>
+            <mxPoint x="454" y="1258" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t56" value="数据面 UCX·Mooncake" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="460" y="1246" width="190" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="e57" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="648" y="1258" as="sourcePoint"/>
+            <mxPoint x="704" y="1258" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t58" value="HTTP" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="710" y="1246" width="190" height="24" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="pg3" name="④ 显存账对照">
+    <mxGraphModel dx="1600" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1576" pageHeight="1386" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="t1" value="④ 显存账：训练要存四份东西，推理只存三份（且其中一份是「峰值」）" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=17;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="20" width="1500" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t2" value="一句话：训练显存 = &lt;b&gt;权重 + 梯度 + 优化器状态 + 激活&lt;/b&gt;；推理显存 = &lt;b&gt;权重 + KV cache + 激活峰值&lt;/b&gt;。前者「梯度、优化器」两份在推理里根本不存在——这就是同样一张卡推理能扛更多并发的根本原因。" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="36" y="48" width="1500" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="t3" value="&lt;b&gt;第一步：六项对照（右列带锚点＝本仓可查；标「通用知识」＝仓内无依据）&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="116" width="1300" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n4" value="&lt;b&gt;项&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="36" y="148" width="150" height="42" as="geometry"/>
+        </mxCell>
+        <mxCell id="n5" value="&lt;b&gt;训练&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="186" y="148" width="520" height="42" as="geometry"/>
+        </mxCell>
+        <mxCell id="n6" value="&lt;b&gt;推理&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="706" y="148" width="460" height="42" as="geometry"/>
+        </mxCell>
+        <mxCell id="n7" value="&lt;b&gt;结论&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="1166" y="148" width="294" height="42" as="geometry"/>
+        </mxCell>
+        <mxCell id="n8" value="&lt;font style=&quot;font-size:11px&quot;&gt;权重&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="190" width="150" height="42" as="geometry"/>
+        </mxCell>
+        <mxCell id="n9" value="&lt;font style=&quot;font-size:11px&quot;&gt;1× 参数量（通用知识）&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="186" y="190" width="520" height="42" as="geometry"/>
+        </mxCell>
+        <mxCell id="n10" value="&lt;font style=&quot;font-size:11px&quot;&gt;1× 参数量（仓内日志明确统计）&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="706" y="190" width="460" height="42" as="geometry"/>
+        </mxCell>
+        <mxCell id="n11" value="&lt;font style=&quot;font-size:11px&quot;&gt;两边都有&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="1166" y="190" width="294" height="42" as="geometry"/>
+        </mxCell>
+        <mxCell id="n12" value="&lt;font style=&quot;font-size:11px&quot;&gt;梯度&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="232" width="150" height="42" as="geometry"/>
+        </mxCell>
+        <mxCell id="n13" value="&lt;font style=&quot;font-size:11px&quot;&gt;≈1× 参数量（通用知识）&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="186" y="232" width="520" height="42" as="geometry"/>
+        </mxCell>
+        <mxCell id="n14" value="&lt;font style=&quot;font-size:11px&quot;&gt;&lt;b&gt;没有&lt;/b&gt;&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="706" y="232" width="460" height="42" as="geometry"/>
+        </mxCell>
+        <mxCell id="n15" value="&lt;font style=&quot;font-size:11px&quot;&gt;推理不反向&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="1166" y="232" width="294" height="42" as="geometry"/>
+        </mxCell>
+        <mxCell id="n16" value="&lt;font style=&quot;font-size:11px&quot;&gt;优化器状态&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="274" width="150" height="42" as="geometry"/>
+        </mxCell>
+        <mxCell id="n17" value="&lt;font style=&quot;font-size:11px&quot;&gt;Adam 一阶+二阶 ≈2×，混合精度再加 1× fp32 主权重（通用知识）&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="186" y="274" width="520" height="42" as="geometry"/>
+        </mxCell>
+        <mxCell id="n18" value="&lt;font style=&quot;font-size:11px&quot;&gt;&lt;b&gt;没有&lt;/b&gt;&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="706" y="274" width="460" height="42" as="geometry"/>
+        </mxCell>
+        <mxCell id="n19" value="&lt;font style=&quot;font-size:11px&quot;&gt;推理不更新&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="1166" y="274" width="294" height="42" as="geometry"/>
+        </mxCell>
+        <mxCell id="n20" value="&lt;font style=&quot;font-size:11px&quot;&gt;激活&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="316" width="150" height="42" as="geometry"/>
+        </mxCell>
+        <mxCell id="n21" value="&lt;font style=&quot;font-size:11px&quot;&gt;要留到反向用，∝ 层数×batch×序列（通用知识）&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="186" y="316" width="520" height="42" as="geometry"/>
+        </mxCell>
+        <mxCell id="n22" value="&lt;font style=&quot;font-size:11px&quot;&gt;&lt;b&gt;只要峰值&lt;/b&gt;，算完即释放&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="706" y="316" width="460" height="42" as="geometry"/>
+        </mxCell>
+        <mxCell id="n23" value="&lt;font style=&quot;font-size:11px&quot;&gt;推理不留账本&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="1166" y="316" width="294" height="42" as="geometry"/>
+        </mxCell>
+        <mxCell id="n24" value="&lt;font style=&quot;font-size:11px&quot;&gt;KV cache&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="358" width="150" height="42" as="geometry"/>
+        </mxCell>
+        <mxCell id="n25" value="&lt;font style=&quot;font-size:11px&quot;&gt;不存在（整段并行算，不缓存）（通用知识）&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="186" y="358" width="520" height="42" as="geometry"/>
+        </mxCell>
+        <mxCell id="n26" value="&lt;font style=&quot;font-size:11px&quot;&gt;推理独有，随 token 线性增长&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="706" y="358" width="460" height="42" as="geometry"/>
+        </mxCell>
+        <mxCell id="n27" value="&lt;font style=&quot;font-size:11px&quot;&gt;推理独有&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="1166" y="358" width="294" height="42" as="geometry"/>
+        </mxCell>
+        <mxCell id="n28" value="&lt;font style=&quot;font-size:11px&quot;&gt;经验比例&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="400" width="150" height="42" as="geometry"/>
+        </mxCell>
+        <mxCell id="n29" value="&lt;font style=&quot;font-size:11px&quot;&gt;混合精度 Adam 常按 权重:梯度:优化器 ≈ 1:1:2（通用知识）&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="186" y="400" width="520" height="42" as="geometry"/>
+        </mxCell>
+        <mxCell id="n30" value="&lt;font style=&quot;font-size:11px&quot;&gt;权重 + 激活峰值 + KV（仓内会计口径）&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="706" y="400" width="460" height="42" as="geometry"/>
+        </mxCell>
+        <mxCell id="n31" value="&lt;font style=&quot;font-size:11px&quot;&gt;差一个量级&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="1166" y="400" width="294" height="42" as="geometry"/>
+        </mxCell>
+        <mxCell id="t32" value="&lt;b&gt;第二步：推理侧的会计口径（这是仓内真的在跑的一段代码）&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="450" width="1300" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n33" value="&lt;font style=&quot;font-size:11px&quot;&gt;&lt;b&gt;非 KV 显存 = 权重 + 非 torch 占用 + 激活峰值 + 图显存&lt;/b&gt;&lt;br&gt;&lt;b&gt;KV 可用 = 显存上限 − 非 KV 显存 − 一小块冗余&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;日志会把这四项分开打印（权重、峰值激活、图显存各多少 GiB），所以「为什么 KV 只剩这么点」是&lt;b&gt;可以直接查&lt;/b&gt;的，不用猜。&lt;/font&gt;&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="482" width="1424" height="108" as="geometry"/>
+        </mxCell>
+        <mxCell id="t34" value="&lt;b&gt;第三步：由这张表能推出的三个实践结论&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="598" width="1300" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n35" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="36" y="630" width="460" height="168" as="geometry"/>
+        </mxCell>
+        <mxCell id="t36" value="&lt;b&gt;① 同样一张卡，推理能扛更多并发&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="46" y="638" width="440" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t37" value="&lt;font style=&quot;font-size:10px&quot;&gt;训练要花 3~4 倍参数量的显存在梯度与优化器上；&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;推理把这两份全省下来 → 全部可以给 KV。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;这就是「部署 7B 模型单卡能跑几十并发」的算术基础。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="46" y="664" width="440" height="126" as="geometry"/>
+        </mxCell>
+        <mxCell id="n38" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="518" y="630" width="460" height="168" as="geometry"/>
+        </mxCell>
+        <mxCell id="t39" value="&lt;b&gt;② 训练用「重算」换显存，推理用「缓存」换算力&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="528" y="638" width="440" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t40" value="&lt;font style=&quot;font-size:10px&quot;&gt;训练显存紧张 → 重算激活（checkpointing）、切分到多卡；&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;推理算力闲着 → 把历史 K/V 缓存下来（KV cache），&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;拿显存换算力——两者方向相反，因为瓶颈不同。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="528" y="664" width="440" height="126" as="geometry"/>
+        </mxCell>
+        <mxCell id="n41" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="630" width="460" height="168" as="geometry"/>
+        </mxCell>
+        <mxCell id="t42" value="&lt;b&gt;③ 推理多了「激活峰值」这个必须量的东西&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1010" y="638" width="440" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t43" value="&lt;font style=&quot;font-size:10px&quot;&gt;训练不需要精确知道激活峰值（反正都要存）；&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;推理必须先空跑一遍量出峰值，才能算出「还剩多少给 KV」。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;→ 这就是启动时那次 profile_run 存在的唯一理由。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1010" y="664" width="440" height="126" as="geometry"/>
+        </mxCell>
+        <mxCell id="n44" value="&lt;b&gt;一句话把训练与推理的显存哲学分开&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;训练：&lt;b&gt;显存换正确性&lt;/b&gt;——存下中间结果，才能算梯度、才能更新。&lt;br&gt;推理：&lt;b&gt;显存换并发&lt;/b&gt;——不存梯度，改成存 KV，让更多请求同时在跑。&lt;br&gt;于是同一份权重，在两种场景下的「最优显存布局」完全相反。&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="36" y="838" width="1424" height="96" as="geometry"/>
+        </mxCell>
+        <mxCell id="n45" value="&lt;font style=&quot;font-size:10px&quot;&gt;本页交接：四项里最容易被低估的是「激活」。下一步（⑤）专门讲它——包括一个从 288 MB 涨到 6 GB 的真实算术。&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="36" y="974" width="1424" height="46" as="geometry"/>
+        </mxCell>
+        <mxCell id="n46" value="&lt;b&gt;代码锚点（想自己去翻的时候用）&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot; color=&quot;#666666&quot;&gt;推理的会计口径（非 KV = 权重+非torch+激活峰值+图）：vllm/v1/worker/gpu_worker.py:850-854；日志文案 :873-877&lt;br&gt;加权算例（权重 2 GiB + 激活峰值 2 GiB + 非 torch 1 GiB）：vllm/utils/mem_utils.py:242-273&lt;br&gt;推理只用推理模式（不建梯度图）：vllm/v1/worker/gpu/model_runner.py:773 等 @torch.inference_mode()&lt;br&gt;「vLLM 是推理专用、没有反向」的原文：vllm/third_party/flash_linear_attention/ops/layernorm_guard.py:514-516&lt;br&gt;训练侧四项系数与 1:1:2 比例：通用知识（仓内无依据）&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="1050" width="1424" height="112" as="geometry"/>
+        </mxCell>
+        <mxCell id="n47" value="&lt;b&gt;一句话记住这一页：&lt;/b&gt;训练显存 = 权重 + 梯度 + 优化器 + 激活账本；推理显存 = 权重 + KV + 激活峰值。&lt;b&gt;少掉的是「为了更新参数而付的钱」，多出来的是「为了服务并发而付的钱」。&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="1196" width="1424" height="58" as="geometry"/>
+        </mxCell>
+        <mxCell id="t48" value="&lt;b&gt;图例&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="1288" width="104" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="n49" value="客户端" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#eceff1;strokeColor=#607d8b;" vertex="1" parent="1">
+          <mxGeometry x="148" y="1285" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n50" value="边端 edge" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="276" y="1285" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n51" value="云 P (prefill)" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="404" y="1285" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n52" value="云 D (decode)" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="532" y="1285" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n53" value="PD Proxy" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#b0e3e6;strokeColor=#0e8088;" vertex="1" parent="1">
+          <mxGeometry x="660" y="1285" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n54" value="中立/通用" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="788" y="1285" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n55" value="失败/取消" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="916" y="1285" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n56" value="推理独有 / 可利用" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="1044" y="1285" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="e57" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#9673a6;fillColor=#9673a6;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="148" y="1334" as="sourcePoint"/>
+            <mxPoint x="204" y="1334" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t58" value="控制面 ZMQ" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="210" y="1322" width="190" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="e59" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#d6b656;fillColor=#d6b656;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="398" y="1334" as="sourcePoint"/>
+            <mxPoint x="454" y="1334" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t60" value="数据面 UCX·Mooncake" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="460" y="1322" width="190" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="e61" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="648" y="1334" as="sourcePoint"/>
+            <mxPoint x="704" y="1334" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t62" value="HTTP" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="710" y="1322" width="190" height="24" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="pg4" name="⑤ 激活与 workspace">
+    <mxGraphModel dx="1600" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1576" pageHeight="1286" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="t1" value="⑤ 激活：训练要留「账本」，推理只要「峰值」" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=17;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="20" width="1500" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t2" value="一句话：每一层的中间结果（激活）在训练时要&lt;b&gt;留到反向他用&lt;/b&gt;，在推理时&lt;b&gt;算完立刻可以扔&lt;/b&gt;——所以推理只关心「同时活着的那一批有多大」，这个量必须实测（profile），而它随 token 数线性膨胀。" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="36" y="48" width="1500" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="t3" value="&lt;b&gt;第一步：同一层、同一个中间结果，两种命运&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="118" width="1300" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n4" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="36" y="150" width="700" height="168" as="geometry"/>
+        </mxCell>
+        <mxCell id="t5" value="&lt;b&gt;训练：留下来（账本）&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="46" y="158" width="680" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t6" value="&lt;font style=&quot;font-size:10px&quot;&gt;反向传播要用「这个算子的输入」去算梯度，&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;所以 autograd 默认把前向的中间结果全部驻留。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;层数 × batch × 序列长度 × 隐藏维度 → 很容易成为显存第一大户。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;缓解手段：重算（checkpointing）、FlashAttention 式的重算注意力。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="46" y="184" width="680" height="126" as="geometry"/>
+        </mxCell>
+        <mxCell id="n7" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="796" y="150" width="664" height="168" as="geometry"/>
+        </mxCell>
+        <mxCell id="t8" value="&lt;b&gt;推理：算完就扔（峰值）&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="806" y="158" width="644" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t9" value="&lt;font style=&quot;font-size:10px&quot;&gt;没有反向 → 中间结果用完立刻可释放；&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;所以只需要知道「某一时刻最多同时有多少」= 峰值。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;这个峰值是&lt;b&gt;实测&lt;/b&gt;出来的：启动时用最大 batch 空跑一遍。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;然后才能算「还剩多少显存给 KV」。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="806" y="184" width="644" height="126" as="geometry"/>
+        </mxCell>
+        <mxCell id="t10" value="&lt;b&gt;第二步：为什么峰值不能忽略（一个从 288 MB 涨到 6 GB 的真实算术）&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="326" width="1300" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n11" value="&lt;font style=&quot;font-size:10px&quot;&gt;昇腾 attention 的 chunked-prefill workspace 是「按 token 上限 × 头维度」分配的。仓内注释给了两个数：&lt;br&gt;· 按 576 的头维度、fp16 算 → 约 &lt;b&gt;288 MB&lt;/b&gt;；&lt;br&gt;· 换成 192 的 QK 头维度 × 128 个头 → 同一套公式就变成 &lt;b&gt;约 6 GB&lt;/b&gt;。&lt;br&gt;&lt;font color=&quot;#c0392b&quot;&gt;同一份代码、同一个 token 上限，只因为头配置不同就差 20 倍——所以「激活峰值」必须实测，不能按经验拍。&lt;/font&gt;仓内另有一处注释直接写「workspace 显存随这个 token 上限线性增长」。&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="36" y="358" width="1424" height="128" as="geometry"/>
+        </mxCell>
+        <mxCell id="t12" value="&lt;b&gt;第三步：由「峰值」推出的三个实践结论&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="494" width="1300" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n13" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="36" y="526" width="460" height="156" as="geometry"/>
+        </mxCell>
+        <mxCell id="t14" value="&lt;b&gt;① profile_run 存在的唯一理由&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="46" y="534" width="440" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t15" value="&lt;font style=&quot;font-size:10px&quot;&gt;启动时用「最大 batch」空跑一遍前向，&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;记录这一刻的显存峰值，再从可用显存里扣掉。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;没有这一步，KV 预算就只能猜。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="46" y="560" width="440" height="114" as="geometry"/>
+        </mxCell>
+        <mxCell id="n16" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="518" y="526" width="460" height="156" as="geometry"/>
+        </mxCell>
+        <mxCell id="t17" value="&lt;b&gt;② 为什么调大 batched tokens 会挤掉 KV&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="528" y="534" width="440" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t18" value="&lt;font style=&quot;font-size:10px&quot;&gt;一步能装的 token 越多，workspace / 激活峰值越大，&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;扣掉之后留给 KV 的就越少。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;所以「吞吐」与「并发」并不总能同时调高。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="528" y="560" width="440" height="114" as="geometry"/>
+        </mxCell>
+        <mxCell id="n19" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="526" width="460" height="156" as="geometry"/>
+        </mxCell>
+        <mxCell id="t20" value="&lt;b&gt;③ 为什么 MoE 还要两块 scratch&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1010" y="534" width="440" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t21" value="&lt;font style=&quot;font-size:10px&quot;&gt;MoE 前向需要一块放 GEMM 输出、一块放激活函数的中间结果，&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;形状按「token 数 × max(N, K)」分配。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;这也算在峰值里，且随 token 数线性涨。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1010" y="560" width="440" height="114" as="geometry"/>
+        </mxCell>
+        <mxCell id="n22" value="&lt;b&gt;一句话把两边分开&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;训练：&lt;b&gt;激活 = 账本&lt;/b&gt;，为了算梯度必须留着，显存不够就重算或切分。&lt;br&gt;推理：&lt;b&gt;激活 = 峰值&lt;/b&gt;，只要知道最大值并留出余量，剩下的显存全给 KV cache。&lt;br&gt;所以「推理为什么能开很多并发」的答案之一就藏在这句话里。&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="36" y="722" width="1424" height="96" as="geometry"/>
+        </mxCell>
+        <mxCell id="n23" value="&lt;font style=&quot;font-size:10px&quot;&gt;本页交接：激活讲完，显存四项就齐了。下一步（⑥）讲精度——为什么推理能整份用低精度，而训练必须留一份高精度。&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="36" y="858" width="1424" height="46" as="geometry"/>
+        </mxCell>
+        <mxCell id="n24" value="&lt;b&gt;代码锚点（想自己去翻的时候用）&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot; color=&quot;#666666&quot;&gt;推理只量峰值：vllm/v1/worker/gpu_worker.py:850-854（non_kv = 权重+非torch+激活峰值+图）；算例 vllm/utils/mem_utils.py:242-273&lt;br&gt;workspace 算术（288 MB → 6 GB）：vllm-ascend/vllm_ascend/attention/utils.py:256-281（注释 :261-273）&lt;br&gt;workspace 随 token 上限线性增长：vllm-ascend/vllm_ascend/ascend_config.py:590-597&lt;br&gt;MoE 两块 scratch：vllm/model_executor/layers/fused_moe/modular_kernel.py:960-963&lt;br&gt;显存不够先牺牲 workspace 的实例：vllm-ascend/vllm_ascend/_310p/worker_310p.py:130、:150（日志 halved for workspace）&lt;br&gt;训练侧「留到反向他用」：通用知识（仓内仅有 activation checkpointing 的说明性文档串，phi4mm_audio.py:114-124）&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="934" width="1424" height="128" as="geometry"/>
+        </mxCell>
+        <mxCell id="n25" value="&lt;b&gt;一句话记住这一页：&lt;/b&gt;推理只关心激活的&lt;b&gt;峰值&lt;/b&gt;，且这个峰值随 token 上限线性涨；它先被扣掉、剩下的才是 KV；&lt;b&gt;所以「调大吞吐参数」和「调高并发」经常是互相拆台的。&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="1096" width="1424" height="58" as="geometry"/>
+        </mxCell>
+        <mxCell id="t26" value="&lt;b&gt;图例&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="1188" width="104" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="n27" value="客户端" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#eceff1;strokeColor=#607d8b;" vertex="1" parent="1">
+          <mxGeometry x="148" y="1185" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n28" value="边端 edge" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="276" y="1185" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n29" value="云 P (prefill)" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="404" y="1185" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n30" value="云 D (decode)" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="532" y="1185" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n31" value="PD Proxy" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#b0e3e6;strokeColor=#0e8088;" vertex="1" parent="1">
+          <mxGeometry x="660" y="1185" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n32" value="中立/通用" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="788" y="1185" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n33" value="失败/取消" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="916" y="1185" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n34" value="推理可释放的中间结果" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="1044" y="1185" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="e35" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#9673a6;fillColor=#9673a6;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="148" y="1234" as="sourcePoint"/>
+            <mxPoint x="204" y="1234" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t36" value="控制面 ZMQ" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="210" y="1222" width="190" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="e37" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#d6b656;fillColor=#d6b656;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="398" y="1234" as="sourcePoint"/>
+            <mxPoint x="454" y="1234" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t38" value="数据面 UCX·Mooncake" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="460" y="1222" width="190" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="e39" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="648" y="1234" as="sourcePoint"/>
+            <mxPoint x="704" y="1234" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t40" value="HTTP" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="710" y="1222" width="190" height="24" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="pg5" name="⑥ 精度">
+    <mxGraphModel dx="1600" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1576" pageHeight="1384" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="t1" value="⑥ 精度：推理为什么能整份用 bf16，而训练必须留一份高精度" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=17;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="20" width="1500" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t2" value="一句话：训练要更新参数，所以需要&lt;b&gt;高精度的主权重&lt;/b&gt;来累积微小变化；推理只读不写，整份用 bf16 就够——只有 logits 这一步被特意提到 fp32，因为&lt;b&gt;它要和训练侧算出的概率对齐&lt;/b&gt;。" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="36" y="48" width="1500" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="t3" value="&lt;b&gt;第一步：三种精度的取舍（训练 vs 推理）&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="118" width="1300" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n4" value="&lt;b&gt;精度&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="36" y="150" width="130" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="n5" value="&lt;b&gt;特点&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="166" y="150" width="420" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="n6" value="&lt;b&gt;谁在用&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="586" y="150" width="420" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="n7" value="&lt;b&gt;注意&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="1006" y="150" width="454" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="n8" value="&lt;font style=&quot;font-size:11px&quot;&gt;fp32&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="190" width="130" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="n9" value="&lt;font style=&quot;font-size:11px&quot;&gt;4 字节，范围和精度都够&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="166" y="190" width="420" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="n10" value="&lt;font style=&quot;font-size:11px&quot;&gt;主权重、优化器状态、logits&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="586" y="190" width="420" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="n11" value="&lt;font style=&quot;font-size:11px&quot;&gt;太占显存与带宽，不用于主体计算&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="1006" y="190" width="454" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="n12" value="&lt;font style=&quot;font-size:11px&quot;&gt;bf16&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="230" width="130" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="n13" value="&lt;font style=&quot;font-size:11px&quot;&gt;2 字节，范围大、尾数少&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="166" y="230" width="420" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="n14" value="&lt;font style=&quot;font-size:11px&quot;&gt;训练与推理的默认计算精度&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="586" y="230" width="420" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="n15" value="&lt;font style=&quot;font-size:11px&quot;&gt;精度略低但很少溢出&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="1006" y="230" width="454" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="n16" value="&lt;font style=&quot;font-size:11px&quot;&gt;fp16&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="270" width="130" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="n17" value="&lt;font style=&quot;font-size:11px&quot;&gt;2 字节，尾数比 bf16 多、范围小&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="166" y="270" width="420" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="n18" value="&lt;font style=&quot;font-size:11px&quot;&gt;老模型 / 部分推理场景&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="586" y="270" width="420" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="n19" value="&lt;font style=&quot;font-size:11px&quot;&gt;&lt;b&gt;容易溢出&lt;/b&gt;，某些模型仓内直接建议别用&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="1006" y="270" width="454" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="n20" value="&lt;font style=&quot;font-size:11px&quot;&gt;int8 / fp8&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="310" width="130" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="n21" value="&lt;font style=&quot;font-size:11px&quot;&gt;1 字节&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="166" y="310" width="420" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="n22" value="&lt;font style=&quot;font-size:11px&quot;&gt;量化推理（见 ⑦）&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="586" y="310" width="420" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="n23" value="&lt;font style=&quot;font-size:11px&quot;&gt;需要量化产物，不能直接训练&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="1006" y="310" width="454" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="t24" value="&lt;b&gt;第二步：仓内 dtype 的四条规则（都是自动的，不需要你操心）&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="358" width="1300" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n25" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="390" width="700" height="168" as="geometry"/>
+        </mxCell>
+        <mxCell id="t26" value="&lt;b&gt;① auto 的含义&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="46" y="398" width="680" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t27" value="&lt;font style=&quot;font-size:10px&quot;&gt;看到 fp32/fp16 的模型 → 用 fp16；看到 bf16 的模型 → 用 bf16。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;也就是说「权重文件里是什么精度，我就用什么精度跑」。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="46" y="424" width="680" height="126" as="geometry"/>
+        </mxCell>
+        <mxCell id="n28" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="796" y="390" width="664" height="168" as="geometry"/>
+        </mxCell>
+        <mxCell id="t29" value="&lt;b&gt;② 哪些转换允许、哪些只警告&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="806" y="398" width="644" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t30" value="&lt;font style=&quot;font-size:10px&quot;&gt;升精度（fp32 上采）允许并打 info；&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;降精度到 fp16/bf16 也允许；&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;&lt;b&gt;fp16 ↔ bf16 互转只给 warning&lt;/b&gt;——因为两者都「合法」但可能改变数值行为。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="806" y="424" width="644" height="126" as="geometry"/>
+        </mxCell>
+        <mxCell id="n31" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="36" y="598" width="700" height="148" as="geometry"/>
+        </mxCell>
+        <mxCell id="t32" value="&lt;b&gt;③ 有些模型被写死「别用 fp16」&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="46" y="606" width="680" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t33" value="&lt;font style=&quot;font-size:10px&quot;&gt;仓内有一张名单（gemma2 / gemma3 / glm4 等），&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;注释直接写「数值不稳定，请用 bf16 或 fp32」。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;原因：fp16 的动态范围小，这些模型的激活容易溢出。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="46" y="632" width="680" height="106" as="geometry"/>
+        </mxCell>
+        <mxCell id="n34" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="796" y="598" width="664" height="148" as="geometry"/>
+        </mxCell>
+        <mxCell id="t35" value="&lt;b&gt;④ KV cache 有它自己的精度旋钮&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="806" y="606" width="644" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t36" value="&lt;font style=&quot;font-size:10px&quot;&gt;KV cache 可以用更低精度存（例如 fp8），与权重精度&lt;b&gt;分开配置&lt;/b&gt;。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;这是推理独有的优化：KV 占显存大头，压它收益最大。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;（量化细节见 ⑦；本仓只有一个包显式用了 indexer 侧的 int8）&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="806" y="632" width="644" height="106" as="geometry"/>
+        </mxCell>
+        <mxCell id="n37" value="&lt;b&gt;第三步：那个「专门为训练-推理一致性存在的 fp32 头」（本仓注释原话）&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;lm_head 默认跟着主体精度；但仓内提供了把&lt;b&gt;输出头单独提到 fp32&lt;/b&gt; 的开关，注释写明：&lt;font style=&quot;font-size:9px&quot;&gt;an fp32 head is required for RL training-inference consistency&lt;/font&gt;。&lt;br&gt;为什么：强化学习用推理引擎算 log 概率作为训练信号，如果推理侧的概率与训练侧算出来的不一致，训练就会被带偏 → 所以把这一步算到 fp32 并保持两侧一致。&lt;br&gt;&lt;font color=&quot;#c0392b&quot;&gt;这是本套图里「训练与推理必须数值对齐」的唯一硬证据。&lt;/font&gt;&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="36" y="786" width="1424" height="130" as="geometry"/>
+        </mxCell>
+        <mxCell id="n38" value="&lt;font style=&quot;font-size:10px&quot;&gt;本页交接：精度讲完。下一步（⑦）进入量化——它是「整份用低精度」这条路的极端版本，也是本仓唯一一个有真实部署配置的精度话题。&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="36" y="956" width="1424" height="46" as="geometry"/>
+        </mxCell>
+        <mxCell id="n39" value="&lt;b&gt;代码锚点（想自己去翻的时候用）&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot; color=&quot;#666666&quot;&gt;dtype 配置与 auto 语义：vllm/config/model.py:170-179&lt;br&gt;字符串→dtype 映射：vllm/config/model.py:2238-2244；合法取值 :100&lt;br&gt;转换规则（升/降/互转只警告）：vllm/config/model.py:2355-2364&lt;br&gt;fp16 不稳定模型名单：vllm/config/model.py:2251-2257（_FLOAT16_NOT_SUPPORTED_MODELS）&lt;br&gt;fp32 头与训练-推理一致性（原文）：vllm/model_executor/layers/logits_processor.py:92-96；实现 :163-170&lt;br&gt;KV cache 精度（推理独有）：vllm/config/cache.py:111-120、取值域 :39-58&lt;br&gt;训练侧主权重 / loss scaling：通用知识（仓内无实现）&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="1032" width="1424" height="128" as="geometry"/>
+        </mxCell>
+        <mxCell id="n40" value="&lt;b&gt;一句话记住这一页：&lt;/b&gt;训练要留高精度主权重是为了「能累积微小更新」，推理整份低精度是因为「只读不写」；&lt;b&gt;唯一被特意提回 fp32 的是输出头——因为要跟训练侧的概率对齐。&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="1194" width="1424" height="58" as="geometry"/>
+        </mxCell>
+        <mxCell id="t41" value="&lt;b&gt;图例&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="1286" width="104" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="n42" value="客户端" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#eceff1;strokeColor=#607d8b;" vertex="1" parent="1">
+          <mxGeometry x="148" y="1283" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n43" value="边端 edge" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="276" y="1283" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n44" value="云 P (prefill)" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="404" y="1283" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n45" value="云 D (decode)" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="532" y="1283" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n46" value="PD Proxy" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#b0e3e6;strokeColor=#0e8088;" vertex="1" parent="1">
+          <mxGeometry x="660" y="1283" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n47" value="中立/通用" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="788" y="1283" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n48" value="失败/取消" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="916" y="1283" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="e49" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#9673a6;fillColor=#9673a6;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="148" y="1332" as="sourcePoint"/>
+            <mxPoint x="204" y="1332" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t50" value="控制面 ZMQ" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="210" y="1320" width="190" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="e51" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#d6b656;fillColor=#d6b656;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="398" y="1332" as="sourcePoint"/>
+            <mxPoint x="454" y="1332" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t52" value="数据面 UCX·Mooncake" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="460" y="1320" width="190" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="e53" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="648" y="1332" as="sourcePoint"/>
+            <mxPoint x="704" y="1332" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t54" value="HTTP" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="710" y="1320" width="190" height="24" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="pg6" name="⑦ 量化">
+    <mxGraphModel dx="1600" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1576" pageHeight="1536" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="t1" value="⑦ 量化：从「2 字节一个数」到「1 字节 + 一把尺子」" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=17;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="20" width="1500" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t2" value="一句话：量化 = &lt;b&gt;把每个数换成更少的位 + 一个尺度（scale）&lt;/b&gt;；粒度越细越准、但尺子越多。本仓全部是&lt;b&gt;训练后量化（PTQ）&lt;/b&gt;的产物——仓库只负责「按描述文件正确加载」，不做量化本身。" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="36" y="48" width="1500" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="t3" value="&lt;b&gt;第一步：四种量化粒度（仓内有严格判据，不是随口叫的）&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="116" width="1300" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n4" value="&lt;b&gt;粒度&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="36" y="148" width="220" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n5" value="&lt;b&gt;尺度按什么分&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="256" y="148" width="420" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n6" value="&lt;b&gt;scale 个数&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="676" y="148" width="340" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n7" value="&lt;b&gt;特点&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="1016" y="148" width="444" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n8" value="&lt;font style=&quot;font-size:11px&quot;&gt;per-tensor&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="184" width="220" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n9" value="&lt;font style=&quot;font-size:11px&quot;&gt;整个张量一个尺度&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="256" y="184" width="420" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n10" value="&lt;font style=&quot;font-size:11px&quot;&gt;&lt;b&gt;1 个&lt;/b&gt;&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="676" y="184" width="340" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n11" value="&lt;font style=&quot;font-size:11px&quot;&gt;最省额外开销，最不准&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="1016" y="184" width="444" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n12" value="&lt;font style=&quot;font-size:11px&quot;&gt;per-channel&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="220" width="220" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n13" value="&lt;font style=&quot;font-size:11px&quot;&gt;每个输出通道一个&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="256" y="220" width="420" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n14" value="&lt;font style=&quot;font-size:11px&quot;&gt;输出通道数&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="676" y="220" width="340" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n15" value="&lt;font style=&quot;font-size:11px&quot;&gt;权重常用（仓内 w8a8 的权重）&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="1016" y="220" width="444" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n16" value="&lt;font style=&quot;font-size:11px&quot;&gt;per-token&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="256" width="220" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n17" value="&lt;font style=&quot;font-size:11px&quot;&gt;每个 token 一个&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="256" y="256" width="420" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n18" value="&lt;font style=&quot;font-size:11px&quot;&gt;token 数&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="676" y="256" width="340" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n19" value="&lt;font style=&quot;font-size:11px&quot;&gt;激活常用（动态量化）&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="1016" y="256" width="444" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n20" value="&lt;font style=&quot;font-size:11px&quot;&gt;per-group&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="292" width="220" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n21" value="&lt;font style=&quot;font-size:11px&quot;&gt;每 N 个元素一组&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="256" y="292" width="420" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n22" value="&lt;font style=&quot;font-size:11px&quot;&gt;元素数 ÷ 组大小&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="676" y="292" width="340" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n23" value="&lt;font style=&quot;font-size:11px&quot;&gt;最准；scale 元数据约增 3%&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="1016" y="292" width="444" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="t24" value="&lt;b&gt;第二步：昇腾侧的实际方案（每个的名字就说明了粒度组合）&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="334" width="1300" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n25" value="&lt;b&gt;方案&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="36" y="366" width="260" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n26" value="&lt;b&gt;粒度组合&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="296" y="366" width="620" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n27" value="&lt;b&gt;适用&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="916" y="366" width="544" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n28" value="&lt;font style=&quot;font-size:11px&quot;&gt;W8A8（静态）&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="402" width="260" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n29" value="&lt;font style=&quot;font-size:11px&quot;&gt;权重 per-channel int8；激活 &lt;b&gt;静态&lt;/b&gt; per-tensor&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="296" y="402" width="620" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n30" value="&lt;font style=&quot;font-size:11px&quot;&gt;精度优先，需要校准数据&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="916" y="402" width="544" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n31" value="&lt;font style=&quot;font-size:11px&quot;&gt;W8A8_DYNAMIC&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="438" width="260" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n32" value="&lt;font style=&quot;font-size:11px&quot;&gt;权重 per-channel int8；激活 &lt;b&gt;逐 token 动态&lt;/b&gt;&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="296" y="438" width="620" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n33" value="&lt;font style=&quot;font-size:11px&quot;&gt;最常用（本仓 w8a8 主干）&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="916" y="438" width="544" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n34" value="&lt;font style=&quot;font-size:11px&quot;&gt;W8A8_MXFP8&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="474" width="260" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n35" value="&lt;font style=&quot;font-size:11px&quot;&gt;fp8 + &lt;b&gt;per-group&lt;/b&gt; 尺度（组大小默认 32）&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="296" y="474" width="620" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n36" value="&lt;font style=&quot;font-size:11px&quot;&gt;更省、更依赖硬件支持&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="916" y="474" width="544" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n37" value="&lt;font style=&quot;font-size:11px&quot;&gt;W4A16 / W4A8&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="510" width="260" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n38" value="&lt;font style=&quot;font-size:11px&quot;&gt;权重压到 4 bit，激活保留 bf16 / int8&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="296" y="510" width="620" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n39" value="&lt;font style=&quot;font-size:11px&quot;&gt;权重更小，适合带宽瓶颈&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="916" y="510" width="544" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="t40" value="&lt;b&gt;第三步：加载一个量化 checkpoint 时会发生的四件事&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="552" width="1300" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n41" value="&lt;font style=&quot;font-size:10px&quot;&gt;① &lt;b&gt;读描述文件&lt;/b&gt;：模型目录里有一份「每层用哪个方案」的清单，加载器按它逐层选实现（找不到就&lt;b&gt;直接报错&lt;/b&gt;，并说明「你加了这个参数但目录不是量化产物」）。&lt;br&gt;② &lt;b&gt;声明额外张量&lt;/b&gt;：除了权重，还要为 scale / offset / bias 分配参数；其中一部分&lt;b&gt;不从文件读、而是加载后算出来&lt;/b&gt;（仓内有一份「算出来」的名字名单）。&lt;br&gt;③ &lt;b&gt;格式重排&lt;/b&gt;：昇腾的矩阵算子只吃 NZ（分形）布局，所以要把权重就地重排（见 ⑧ 的耗时）。&lt;br&gt;④ &lt;b&gt;决定是否反量化&lt;/b&gt;：默认&lt;b&gt;保持低精度&lt;/b&gt;，反量化在算子内部完成；只有原生 fp8 产物在某些硬件上会被摊成 bf16（代价：显存约翻倍）。&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="584" width="1424" height="132" as="geometry"/>
+        </mxCell>
+        <mxCell id="n42" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="36" y="756" width="700" height="152" as="geometry"/>
+        </mxCell>
+        <mxCell id="t43" value="&lt;b&gt;为什么量化在推理侧特别划算&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="46" y="764" width="680" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t44" value="&lt;font style=&quot;font-size:10px&quot;&gt;decode 是带宽瓶颈：每步都要把全部权重从显存读一遍（入门套 ⑤）。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;位宽减半 → 要搬的字节减半 → 单步时间近似减半。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;省的不只是容量，更是&lt;b&gt;每步的搬运量&lt;/b&gt;——这才是量化的主收益。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="46" y="790" width="680" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="n45" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="796" y="756" width="664" height="152" as="geometry"/>
+        </mxCell>
+        <mxCell id="t46" value="&lt;b&gt;为什么训练侧不能直接这么干&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="806" y="764" width="644" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t47" value="&lt;font style=&quot;font-size:10px&quot;&gt;训练要更新参数：梯度是「微小的增量」，低精度会把增量抹掉；&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;所以训练必须留高精度主权重（这是 QAT 存在的理由之一）。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;→ 量化基本是「训练完之后」的动作，所以叫训练后量化（PTQ）。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="806" y="790" width="644" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="n48" value="&lt;b&gt;本仓实测：十个部署包里只有一个包用量化&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;· 两个脚本（P 侧与 D 侧）带 &lt;font style=&quot;font-size:9px&quot;&gt;--quantization ascend&lt;/font&gt;，模型目录名里直接写着 w8a8；&lt;br&gt;· 只有 D/P 的那个包显式给了 &lt;font style=&quot;font-size:9px&quot;&gt;indexer_kv_dtype: int8&lt;/font&gt;；&lt;br&gt;· &lt;b&gt;没有任何包设置 &lt;font style=&quot;font-size:9px&quot;&gt;--kv-cache-dtype&lt;/font&gt;&lt;/b&gt;→ 其余包的 KV cache 仍是模型精度（bf16）。&lt;font color=&quot;#c0392b&quot;&gt;也就是说：那个包省的是「索引器侧的小 K cache」，主 KV 容量没变。&lt;/font&gt;&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="36" y="948" width="1424" height="108" as="geometry"/>
+        </mxCell>
+        <mxCell id="n49" value="&lt;font style=&quot;font-size:10px&quot;&gt;本页交接：量化只是「权重文件形态」的一种。下一步（⑧）回到权重本身——顺便把训练产出的其他文件（优化器状态等）为什么被丢弃讲清。&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="36" y="1096" width="1424" height="46" as="geometry"/>
+        </mxCell>
+        <mxCell id="t50" value="&lt;font style=&quot;font-size:9px;color:#666666&quot;&gt;注：本页「训练侧不能直接低精度更新」与 PTQ/QAT 的划分属通用知识；仓内没有任何 QAT（伪量化）实现，只有 PTQ 产物的加载。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="36" y="1148" width="1424" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="n51" value="&lt;b&gt;代码锚点（想自己去翻的时候用）&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot; color=&quot;#666666&quot;&gt;粒度判据：vllm/model_executor/layers/quantization/utils/quant_utils.py:111-137（per-tensor :122 / per-token :125 / per-channel :128 / per-group :131）&lt;br&gt;昇腾方案注册：(quant_type, layer_type) → class：vllm-ascend/vllm_ascend/quantization/methods/registry.py:21-52&lt;br&gt;W8A8 静态与动态的粒度原文：w8a8/w8a8_static.py:34-39、w8a8/w8a8_dynamic.py:61-66；MXFP8 :55-61（per-group，组大小 32）&lt;br&gt;额外张量声明：methods/.../method_adapters.py:100-191；「算出来而非读文件」名单 :197-207&lt;br&gt;描述文件与分派：configs/modelslim_config.py:109（文件名）、:911-918（读取）、:660-771（get_quant_method）&lt;br&gt;本仓实测：assets/c_home/bash/pds/fix_1120/prefill.sh:113-115、decode.sh:113-115&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="1188" width="1424" height="124" as="geometry"/>
+        </mxCell>
+        <mxCell id="n52" value="&lt;b&gt;一句话记住这一页：&lt;/b&gt;量化 = 更少的位 + 一把尺子；粒度决定「尺子多不多」，本仓只负责按描述文件正确加载 PTQ 产物。&lt;b&gt;它省的主要不是容量，而是 decode 每一步要搬的字节数。&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="1346" width="1424" height="58" as="geometry"/>
+        </mxCell>
+        <mxCell id="t53" value="&lt;b&gt;图例&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="1438" width="104" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="n54" value="客户端" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#eceff1;strokeColor=#607d8b;" vertex="1" parent="1">
+          <mxGeometry x="148" y="1435" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n55" value="边端 edge" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="276" y="1435" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n56" value="云 P (prefill)" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="404" y="1435" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n57" value="云 D (decode)" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="532" y="1435" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n58" value="PD Proxy" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#b0e3e6;strokeColor=#0e8088;" vertex="1" parent="1">
+          <mxGeometry x="660" y="1435" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n59" value="中立/通用" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="788" y="1435" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n60" value="失败/取消" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="916" y="1435" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n61" value="量化产物/数据面" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="1044" y="1435" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="e62" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#9673a6;fillColor=#9673a6;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="148" y="1484" as="sourcePoint"/>
+            <mxPoint x="204" y="1484" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t63" value="控制面 ZMQ" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="210" y="1472" width="190" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="e64" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#d6b656;fillColor=#d6b656;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="398" y="1484" as="sourcePoint"/>
+            <mxPoint x="454" y="1484" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t65" value="数据面 UCX·Mooncake" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="460" y="1472" width="190" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="e66" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="648" y="1484" as="sourcePoint"/>
+            <mxPoint x="704" y="1484" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t67" value="HTTP" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="710" y="1472" width="190" height="24" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="pg7" name="⑧ MTP 训练与推理">
+    <mxGraphModel dx="1600" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1576" pageHeight="1278" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="t1" value="⑧ MTP 的头：训练期学「往后看几步」，推理期当「便宜的起草者」" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=17;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="20" width="1500" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t2" value="一句话：MTP 头在训练时被一个&lt;b&gt;额外的预测损失&lt;/b&gt;训练出来；训练完之后，它的用途变成&lt;b&gt;推理时的 draft&lt;/b&gt;。所以「MTP」既是训练概念，也是推理概念——本页把两半接起来。" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="36" y="48" width="1500" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="t3" value="&lt;b&gt;第一步：MTP 层的结构（这些&lt;b&gt;全都能在仓里查到&lt;/b&gt;）&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="118" width="1300" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n4" value="&lt;font style=&quot;font-size:10px&quot;&gt;&lt;b&gt;输入&lt;/b&gt;：① 上一层（或上一个深度）的 hidden states；② 下一个位置的 token embedding&lt;br&gt;&lt;b&gt;处理&lt;/b&gt;：两份各自过一层归一化 → 拼接（维度翻倍）→ 一个线性层压回 hidden 维度&lt;br&gt;&lt;b&gt;输出&lt;/b&gt;：走&lt;b&gt;共享的 lm_head&lt;/b&gt;（与主模型同一个输出头）得到词表分布&lt;br&gt;&lt;font color=&quot;#c0392b&quot;&gt;关键点：它&lt;b&gt;不复制&lt;/b&gt; embedding 与 lm_head，而是复用主模型的——所以额外参数很少（这是「MTP 省显存」的根本原因）。&lt;/font&gt;&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="36" y="150" width="1424" height="128" as="geometry"/>
+        </mxCell>
+        <mxCell id="t5" value="&lt;b&gt;第二步：同一个头，训练与推理两个用途&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="286" width="1300" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n6" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="36" y="318" width="700" height="190" as="geometry"/>
+        </mxCell>
+        <mxCell id="t7" value="&lt;b&gt;训练期：多 token 预测（多一个损失）&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="46" y="326" width="680" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t8" value="&lt;font style=&quot;font-size:10px&quot;&gt;主模型照常预测下一个词（第 1 个）；MTP 头被训练去预测「再往后一个」（第 2 个）。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;所以它的损失是「用它算的 log 概率，对正确答案取负」，再乘一个权重加到总损失上。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;这个权重字段就在 config 里，注释明写：&lt;b&gt;训练期用、推理期不用&lt;/b&gt;。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;&lt;font color=&quot;#c0392b&quot;&gt;（具体的目标函数形式与常见权重取值属通用知识；仓内只证明「存在这样一个权重字段」，不实现这个损失。）&lt;/font&gt;&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="46" y="352" width="680" height="148" as="geometry"/>
+        </mxCell>
+        <mxCell id="n9" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="796" y="318" width="664" height="190" as="geometry"/>
+        </mxCell>
+        <mxCell id="t10" value="&lt;b&gt;推理期：当 draft（投机解码的起草者）&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="806" y="326" width="644" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t11" value="&lt;font style=&quot;font-size:10px&quot;&gt;权重冻结后，MTP 头就变成一个「便宜的下一步预测器」：&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;吃主模型的 hidden，猜出接下来 K 个 token；主模型再一次前向验证。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;此时它&lt;b&gt;不再产生损失&lt;/b&gt;，只产生候选。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;→ 这就是 MTP 套 ⑧ 讲的「draft 走 eager、target 走图」。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="806" y="352" width="644" height="148" as="geometry"/>
+        </mxCell>
+        <mxCell id="t12" value="&lt;b&gt;第三步：一个很实用的细节——MTP 头在权重文件里长什么样&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="516" width="1300" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n13" value="&lt;font style=&quot;font-size:10px&quot;&gt;· 有的 checkpoint 把它写成独立的 &lt;b&gt;mtp.{i}.*&lt;/b&gt; 前缀；有的写成 &lt;b&gt;model.layers.{总层数+i}.*&lt;/b&gt;（假装它是主干之后的第几层）。&lt;br&gt;· 加载器因此要做两件事：&lt;b&gt;①&lt;/b&gt; 把 `mtp.` 重映射到「主干层号之后」；&lt;b&gt;②&lt;/b&gt; 让&lt;b&gt;主模型&lt;/b&gt;在加载时主动&lt;b&gt;跳过&lt;/b&gt;这些层（否则会报「意外的权重」）。&lt;br&gt;· 仓内把「映射到 None 就表示丢弃这个键」作为通用机制——所以主模型对 `mtp.` 的处理就是一句「前缀→None」。&lt;br&gt;&lt;font color=&quot;#c0392b&quot;&gt;这也解释了为什么有些模型目录里「多出来一堆 mtp 权重」却能正常加载。&lt;/font&gt;&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="548" width="1424" height="118" as="geometry"/>
+        </mxCell>
+        <mxCell id="n14" value="&lt;b&gt;为什么「训练期的损失权重」在推理侧完全用不到&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;那个权重只决定「训练时 MTP 的误差对总梯度的贡献有多大」，而推理时不更新任何参数 → 与它无关。它在 config 里被保留下来，只是因为 config.json 是&lt;b&gt;一份跨阶段共享的文件&lt;/b&gt;：训练写进去，推理读进来但忽略。&lt;font color=&quot;#c0392b&quot;&gt;这也是「训练期字段被带进推理配置」的典型例子。&lt;/font&gt;&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="36" y="706" width="1424" height="96" as="geometry"/>
+        </mxCell>
+        <mxCell id="n15" value="&lt;font style=&quot;font-size:10px&quot;&gt;本页交接：MTP 的两半接上了。下一步（⑨）回到加载器视角——看它如何在同一个目录里只挑它要的文件。&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="36" y="842" width="1424" height="46" as="geometry"/>
+        </mxCell>
+        <mxCell id="n16" value="&lt;b&gt;代码锚点（想自己去翻的时候用）&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot; color=&quot;#666666&quot;&gt;MTP 层结构（enorm/hnorm/eh_proj/共享 lm_head）：vllm/model_executor/models/deepseek_mtp.py:80-124、:136-147&lt;br&gt;「训练期字段、推理不用」原文：vllm/transformers_utils/configs/hy_v4.py:53-54；默认值 :130-131&lt;br&gt;另一处同类字段（MoE 的辅助损失开关）：vllm/transformers_utils/configs/hy_v3.py:84-87&lt;br&gt;checkpoint 键名重映射 mtp.{i}.* → model.layers.{N+i}.*：vllm/models/deepseek_v4/nvidia/mtp.py:392-398；识别与跳过 vllm/model_executor/models/utils.py:543-568、:571-587&lt;br&gt;主模型对 mtp. 前缀的丢弃：vllm/model_executor/models/qwen3_next.py:810 等（WeightsMapper(orig_to_new_prefix={'mtp.': None})）&lt;br&gt;WeightsMapper 的「映射成 None 即忽略」机制：vllm/model_executor/models/utils.py:46-57&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="918" width="1424" height="136" as="geometry"/>
+        </mxCell>
+        <mxCell id="n17" value="&lt;b&gt;一句话记住这一页：&lt;/b&gt;MTP 头 = 训练期多学一个「往后看」的目标、推理期当便宜的起草者；它的损失权重只影响训练，而它的权重在文件里可能写成 `mtp.*` 或「主干之后的层」——&lt;b&gt;加载器靠「映射成 None 就丢弃」把两半分开。&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="1088" width="1424" height="58" as="geometry"/>
+        </mxCell>
+        <mxCell id="t18" value="&lt;b&gt;图例&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="1180" width="104" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="n19" value="客户端" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#eceff1;strokeColor=#607d8b;" vertex="1" parent="1">
+          <mxGeometry x="148" y="1177" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n20" value="边端 edge" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="276" y="1177" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n21" value="云 P (prefill)" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="404" y="1177" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n22" value="云 D (decode)" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="532" y="1177" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n23" value="PD Proxy" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#b0e3e6;strokeColor=#0e8088;" vertex="1" parent="1">
+          <mxGeometry x="660" y="1177" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n24" value="中立/通用" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="788" y="1177" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n25" value="失败/取消" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="916" y="1177" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n26" value="训练期语义（多为通用知识）" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="1044" y="1177" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="e27" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#9673a6;fillColor=#9673a6;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="148" y="1226" as="sourcePoint"/>
+            <mxPoint x="204" y="1226" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t28" value="控制面 ZMQ" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="210" y="1214" width="190" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="e29" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#d6b656;fillColor=#d6b656;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="398" y="1226" as="sourcePoint"/>
+            <mxPoint x="454" y="1226" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t30" value="数据面 UCX·Mooncake" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="460" y="1214" width="190" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="e31" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="648" y="1226" as="sourcePoint"/>
+            <mxPoint x="704" y="1226" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t32" value="HTTP" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="710" y="1214" width="190" height="24" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="pg8" name="⑨ 加载器挑文件">
+    <mxGraphModel dx="1600" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1576" pageHeight="1332" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="t1" value="⑨ 训练目录 → 推理加载：五个文件被明确丢弃" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=17;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="20" width="1500" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t2" value="一句话：训练产出的目录里通常有&lt;b&gt;权重 + 优化器状态 + 调度器状态 + 缩放器状态 + 训练参数&lt;/b&gt;；推理只吃权重，其余五个在加载时被&lt;b&gt;按文件名直接过滤掉&lt;/b&gt;——这一条在仓里写得很清楚。" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="36" y="48" width="1500" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="t3" value="&lt;b&gt;第一步：一个训练产出的目录（左：推理要的；右：推理丢的）&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="116" width="1300" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n4" value="&lt;b&gt;推理要的&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;· &lt;b&gt;model-*.safetensors&lt;/b&gt;（分片权重）&lt;br&gt;· &lt;b&gt;*.safetensors.index.json&lt;/b&gt;（哪个张量在哪个分片）&lt;br&gt;· &lt;b&gt;config.json&lt;/b&gt;（结构参数）&lt;br&gt;· &lt;b&gt;tokenizer 相关文件&lt;/b&gt;（分词器与模板）&lt;br&gt;· （若量化）&lt;b&gt;量化描述文件&lt;/b&gt;：每层用哪个量化方案&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="36" y="148" width="690" height="208" as="geometry"/>
+        </mxCell>
+        <mxCell id="n5" value="&lt;b&gt;推理明确丢弃的五个&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;· &lt;b&gt;optimizer.bin / optimizer.pt&lt;/b&gt;（Adam 动量与方差）&lt;br&gt;· &lt;b&gt;scheduler.pt&lt;/b&gt;（学习率调度状态）&lt;br&gt;· &lt;b&gt;scaler.pt&lt;/b&gt;（fp16 梯度缩放器状态）&lt;br&gt;· &lt;b&gt;training_args.bin&lt;/b&gt;（训练参数快照）&lt;br&gt;&lt;font color=&quot;#c0392b&quot;&gt;仓内有一份&lt;b&gt;黑名单函数&lt;/b&gt;，就按这五个文件名过滤——这是「推理不关心训练状态」最直接的代码证据。&lt;/font&gt;&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="766" y="148" width="694" height="208" as="geometry"/>
+        </mxCell>
+        <mxCell id="t6" value="&lt;b&gt;第二步：加载器只挑权重时的六步&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="364" width="1300" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n7" value="&lt;b&gt;① 过滤文件&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px;color:#666666&quot;&gt;黑名单剔掉五个训练文件&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="36" y="396" width="224" height="88" as="geometry"/>
+        </mxCell>
+        <mxCell id="n8" value="&lt;b&gt;② 按扩展名白名单&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px;color:#666666&quot;&gt;只取 safetensors / bin&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="272" y="396" width="224" height="88" as="geometry"/>
+        </mxCell>
+        <mxCell id="e9" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="262" y="440" as="sourcePoint"/>
+            <mxPoint x="270" y="440" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n10" value="&lt;b&gt;③ 校验分片完整&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px;color:#666666&quot;&gt;索引里列的文件必须都在&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="508" y="396" width="224" height="88" as="geometry"/>
+        </mxCell>
+        <mxCell id="e11" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="498" y="440" as="sourcePoint"/>
+            <mxPoint x="506" y="440" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n12" value="&lt;b&gt;④ 逐张量读盘&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px;color:#666666&quot;&gt;读成 CPU 张量，不占设备显存&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="744" y="396" width="224" height="88" as="geometry"/>
+        </mxCell>
+        <mxCell id="e13" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="734" y="440" as="sourcePoint"/>
+            <mxPoint x="742" y="440" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n14" value="&lt;b&gt;⑤ 名字映射&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px;color:#666666&quot;&gt;改名 / 合并（q,k,v → qkv）/ 丢弃（None）&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="980" y="396" width="224" height="88" as="geometry"/>
+        </mxCell>
+        <mxCell id="e15" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="970" y="440" as="sourcePoint"/>
+            <mxPoint x="978" y="440" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n16" value="&lt;b&gt;⑥ 写进参数&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px;color:#666666&quot;&gt;按 TP 切片后 copy_ 到设备&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="1216" y="396" width="224" height="88" as="geometry"/>
+        </mxCell>
+        <mxCell id="e17" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1206" y="440" as="sourcePoint"/>
+            <mxPoint x="1214" y="440" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t18" value="&lt;b&gt;第三步：第 ⑤ 步里的三种操作（第三种是本套反复出现的关键机制）&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="492" width="1300" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n19" value="&lt;b&gt;操作&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="36" y="524" width="160" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n20" value="&lt;b&gt;什么时候用&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="196" y="524" width="500" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n21" value="&lt;b&gt;怎么实现&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="696" y="524" width="420" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n22" value="&lt;b&gt;备注&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="1116" y="524" width="344" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n23" value="&lt;font style=&quot;font-size:11px&quot;&gt;改名&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="560" width="160" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n24" value="&lt;font style=&quot;font-size:11px&quot;&gt;文件里的名字与代码里的名字不同（例如加前缀）&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="196" y="560" width="500" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n25" value="&lt;font style=&quot;font-size:11px&quot;&gt;一张「旧名 → 新名」的映射表&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="696" y="560" width="420" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n26" value="&lt;font style=&quot;font-size:11px&quot;&gt;普通过滤&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="1116" y="560" width="344" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n27" value="&lt;font style=&quot;font-size:11px&quot;&gt;合并&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="596" width="160" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n28" value="&lt;font style=&quot;font-size:11px&quot;&gt;文件里 q/k/v 三个权重，代码里是一个融合层&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="196" y="596" width="500" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n29" value="&lt;font style=&quot;font-size:11px&quot;&gt;把三份拼成一份&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="696" y="596" width="420" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n30" value="&lt;font style=&quot;font-size:11px&quot;&gt;形状变化&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="1116" y="596" width="344" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n31" value="&lt;font style=&quot;font-size:11px&quot;&gt;&lt;b&gt;丢弃&lt;/b&gt;&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="632" width="160" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n32" value="&lt;font style=&quot;font-size:11px&quot;&gt;映射成「空」（None）&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="196" y="632" width="500" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n33" value="&lt;font style=&quot;font-size:11px&quot;&gt;&lt;b&gt;这个键直接不加载&lt;/b&gt;&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="696" y="632" width="420" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n34" value="&lt;font style=&quot;font-size:11px&quot;&gt;MTP 层、训练遗留张量都靠它&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="1116" y="632" width="344" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n35" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="36" y="704" width="700" height="160" as="geometry"/>
+        </mxCell>
+        <mxCell id="t36" value="&lt;b&gt;① 训练框架遗留的张量也会被丢掉&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="46" y="712" width="680" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t37" value="&lt;font style=&quot;font-size:10px&quot;&gt;有些早期训练框架（或某些量化工具）会在权重文件里多写几个旋转位置编码的缓存张量，&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;推理根本不用它们 → 仓内用同一套「映射成 None」的机制丢弃。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;否则会报「意外的键」。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="46" y="738" width="680" height="118" as="geometry"/>
+        </mxCell>
+        <mxCell id="n38" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="796" y="704" width="664" height="160" as="geometry"/>
+        </mxCell>
+        <mxCell id="t39" value="&lt;b&gt;② 训练中期就能热更新权重&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="806" y="712" width="644" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t40" value="&lt;font style=&quot;font-size:10px&quot;&gt;仓内支持「按层热加载」：不重启引擎，把新权重逐层换进去；&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;并且特意保持张量地址不变——因为图捕获记录的是地址，换地址会让图失效。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;→ 这是给强化学习训练循环用的（见 ⑩）。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="806" y="738" width="644" height="118" as="geometry"/>
+        </mxCell>
+        <mxCell id="n41" value="&lt;font style=&quot;font-size:10px&quot;&gt;本页交接：加载器告诉我们「推理只吃权重」。反过来问：训练真的一直在改权重，那推理怎么跟上？下一步（⑩）就是这个接口。&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="36" y="904" width="1424" height="46" as="geometry"/>
+        </mxCell>
+        <mxCell id="n42" value="&lt;b&gt;代码锚点（想自己去翻的时候用）&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot; color=&quot;#666666&quot;&gt;五个被丢弃的文件（黑名单函数原文）：vllm/model_executor/model_loader/weight_utils.py:639-655；调用点 default_loader.py:254&lt;br&gt;扩展名白名单（allow_patterns）：vllm/model_executor/model_loader/default_loader.py:184-208&lt;br&gt;索引与分片校验：vllm/model_executor/model_loader/weight_utils.py:625-635&lt;br&gt;名字映射与「映射成 None 即丢弃」：vllm/model_executor/models/utils.py:46-57；训练遗留张量的丢弃 :215-224&lt;br&gt;逐张量加载与 TP 切片：weight_utils.py:1253-1271（default_weight_loader）&lt;br&gt;按层热加载：vllm/model_executor/model_loader/reload/layerwise.py:84；保地址的原因 vllm/model_executor/utils.py:94-99（图捕获需要地址不变）&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="980" width="1424" height="128" as="geometry"/>
+        </mxCell>
+        <mxCell id="n43" value="&lt;b&gt;一句话记住这一页：&lt;/b&gt;加载器只挑权重：五个训练状态文件按文件名丢弃、多余的键按「映射成空」丢弃、分片按索引校验；&lt;b&gt;它唯一在意的兼容性是「名字对得上、形状对得上、地址能稳定」。&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="1142" width="1424" height="58" as="geometry"/>
+        </mxCell>
+        <mxCell id="t44" value="&lt;b&gt;图例&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="1234" width="104" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="n45" value="客户端" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#eceff1;strokeColor=#607d8b;" vertex="1" parent="1">
+          <mxGeometry x="148" y="1231" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n46" value="边端 edge" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="276" y="1231" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n47" value="云 P (prefill)" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="404" y="1231" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n48" value="云 D (decode)" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="532" y="1231" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n49" value="PD Proxy" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#b0e3e6;strokeColor=#0e8088;" vertex="1" parent="1">
+          <mxGeometry x="660" y="1231" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n50" value="中立/通用" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="788" y="1231" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n51" value="失败/取消" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="916" y="1231" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n52" value="被丢弃的训练状态" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="1044" y="1231" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="e53" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#9673a6;fillColor=#9673a6;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="148" y="1280" as="sourcePoint"/>
+            <mxPoint x="204" y="1280" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t54" value="控制面 ZMQ" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="210" y="1268" width="190" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="e55" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#d6b656;fillColor=#d6b656;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="398" y="1280" as="sourcePoint"/>
+            <mxPoint x="454" y="1280" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t56" value="数据面 UCX·Mooncake" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="460" y="1268" width="190" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="e57" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="648" y="1280" as="sourcePoint"/>
+            <mxPoint x="704" y="1280" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t58" value="HTTP" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="710" y="1268" width="190" height="24" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="pg9" name="⑩ RL 后端接口">
+    <mxGraphModel dx="1600" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1576" pageHeight="1528" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="t1" value="⑩ 真实接口：训练框架把 vLLM 当成「会改权重的推理后端」" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=17;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="20" width="1500" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t2" value="一句话：强化学习需要「&lt;b&gt;用当前策略采样 → 训练 → 更新策略 → 再采样&lt;/b&gt;」，而采样这一步就是推理。于是 vLLM 提供了&lt;b&gt;权重同步、暂停/继续、逐层热更新、休眠让卡&lt;/b&gt;这些为训练准备的能力——这是训练与推理唯一真实的耦合面。" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="36" y="48" width="1500" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="t3" value="&lt;b&gt;第一步：RL 训练的一个回合（vLLM 在「采样」这一格）&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="116" width="1300" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n4" value="&lt;b&gt;① 采样&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px;color:#666666&quot;&gt;用当前权重跑推理，生成回答并记录概率&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="36" y="148" width="274" height="92" as="geometry"/>
+        </mxCell>
+        <mxCell id="n5" value="&lt;b&gt;② 打分&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px;color:#666666&quot;&gt;奖励模型 / 规则给每个回答打分&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="321" y="148" width="274" height="92" as="geometry"/>
+        </mxCell>
+        <mxCell id="e6" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="312" y="194" as="sourcePoint"/>
+            <mxPoint x="320" y="194" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n7" value="&lt;b&gt;③ 训练&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px;color:#666666&quot;&gt;按优势算策略梯度，更新权重&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="606" y="148" width="274" height="92" as="geometry"/>
+        </mxCell>
+        <mxCell id="e8" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="597" y="194" as="sourcePoint"/>
+            <mxPoint x="605" y="194" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n9" value="&lt;b&gt;④ 同步&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px;color:#666666&quot;&gt;把新权重推给正在服务的推理引擎&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="891" y="148" width="274" height="92" as="geometry"/>
+        </mxCell>
+        <mxCell id="e10" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="882" y="194" as="sourcePoint"/>
+            <mxPoint x="890" y="194" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n11" value="&lt;b&gt;⑤ 回到 ①&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px;color:#666666&quot;&gt;下一回合用新权重继续采样&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="1176" y="148" width="274" height="92" as="geometry"/>
+        </mxCell>
+        <mxCell id="e12" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1167" y="194" as="sourcePoint"/>
+            <mxPoint x="1175" y="194" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t13" value="&lt;b&gt;第二步：为此 vLLM 提供了四件东西（都在仓里能查到）&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="248" width="1300" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n14" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="36" y="280" width="460" height="196" as="geometry"/>
+        </mxCell>
+        <mxCell id="t15" value="&lt;b&gt;① 权重同步通道&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="46" y="288" width="440" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t16" value="&lt;font style=&quot;font-size:10px&quot;&gt;训练进程侧有一个「发送端」引擎，推理侧有一个「接收端」；&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;中间可以走 NCCL、共享内存、分片传输等多种后端。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;还配了一组 HTTP 控制路由（暂停采样 / 初始化 / 开始更新 / 结束）。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="46" y="314" width="440" height="154" as="geometry"/>
+        </mxCell>
+        <mxCell id="n17" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="518" y="280" width="460" height="196" as="geometry"/>
+        </mxCell>
+        <mxCell id="t18" value="&lt;b&gt;② 暂停 / 继续&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="528" y="288" width="440" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t19" value="&lt;font style=&quot;font-size:10px&quot;&gt;更新权重时不能让引擎正在生成 → 先暂停（把在跑的请求收尾），&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;更新完再继续。这样训练与推理可以共用同一批卡。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="528" y="314" width="440" height="154" as="geometry"/>
+        </mxCell>
+        <mxCell id="n20" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="280" width="460" height="196" as="geometry"/>
+        </mxCell>
+        <mxCell id="t21" value="&lt;b&gt;③ 逐层热更新&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1010" y="288" width="440" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t22" value="&lt;font style=&quot;font-size:10px&quot;&gt;更细的做法：按层加载新权重，不重启引擎。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;并且&lt;b&gt;保持张量地址不变&lt;/b&gt;——否则已捕获的图会失效（图捕获 ④ 的约束二）。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;代价：更新期间该层算出的结果可能新旧混用，所以必须暂停。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1010" y="314" width="440" height="154" as="geometry"/>
+        </mxCell>
+        <mxCell id="t23" value="&lt;b&gt;第三步：两个很容易被忽略、但对 RL 很关键的能力&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="484" width="1300" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n24" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="36" y="516" width="700" height="170" as="geometry"/>
+        </mxCell>
+        <mxCell id="t25" value="&lt;b&gt;休眠（让出显存给训练）&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="46" y="524" width="680" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t26" value="&lt;font style=&quot;font-size:10px&quot;&gt;训练要占大量显存（梯度+优化器），与推理抢卡；&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;所以推理引擎支持「睡下去」把显存还回去，训练完再「醒来」。&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;可以只回权重（保留 KV 结构）或全放。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="46" y="550" width="680" height="128" as="geometry"/>
+        </mxCell>
+        <mxCell id="n27" value="" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="796" y="516" width="664" height="170" as="geometry"/>
+        </mxCell>
+        <mxCell id="t28" value="&lt;b&gt;采样掩码 / 路由复现（一致性）&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="806" y="524" width="644" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="t29" value="&lt;font style=&quot;font-size:10px&quot;&gt;RL 要保证「推理时算的概率」与「训练时假设的概率」一致：&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;① 把 top-k/top-p 实际保留下来的词集合返回给训练侧；&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;② 把 MoE 的路由选择也返回；&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;③ 输出头用 fp32 算（⑥ 页那条）——三者都是为同一件事。&lt;/font&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="806" y="550" width="644" height="128" as="geometry"/>
+        </mxCell>
+        <mxCell id="t30" value="&lt;b&gt;第四步：这条链上「谁负责什么」（避免把它们当成同一个东西）&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="694" width="1300" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="n31" value="&lt;b&gt;角色&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="36" y="726" width="520" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n32" value="&lt;b&gt;职责&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="556" y="726" width="520" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n33" value="&lt;b&gt;在哪&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="1076" y="726" width="384" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n34" value="&lt;font style=&quot;font-size:11px&quot;&gt;训练框架（verl / TRL / OpenRLHF …）&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="762" width="520" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n35" value="&lt;font style=&quot;font-size:11px&quot;&gt;算策略梯度、决定权重怎么变&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="556" y="762" width="520" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n36" value="&lt;font style=&quot;font-size:11px&quot;&gt;仓外&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="1076" y="762" width="384" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n37" value="&lt;font style=&quot;font-size:11px&quot;&gt;训练进程侧的同步客户端&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="798" width="520" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n38" value="&lt;font style=&quot;font-size:11px&quot;&gt;把新权重推过去、发暂停/更新指令&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="556" y="798" width="520" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n39" value="&lt;font style=&quot;font-size:11px&quot;&gt;&lt;b&gt;仓内&lt;/b&gt;（不在训练循环里）&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="1076" y="798" width="384" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n40" value="&lt;font style=&quot;font-size:11px&quot;&gt;vLLM 引擎&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="834" width="520" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n41" value="&lt;font style=&quot;font-size:11px&quot;&gt;用当前权重采样、返回概率与统计&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="556" y="834" width="520" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n42" value="&lt;font style=&quot;font-size:11px&quot;&gt;&lt;b&gt;仓内&lt;/b&gt;&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="1076" y="834" width="384" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n43" value="&lt;font style=&quot;font-size:11px&quot;&gt;训练脚本&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="870" width="520" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n44" value="&lt;font style=&quot;font-size:11px&quot;&gt;决定 K、温度、批次等采样参数&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="556" y="870" width="520" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n45" value="&lt;font style=&quot;font-size:11px&quot;&gt;仓外&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="1076" y="870" width="384" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n46" value="&lt;b&gt;三句话总结本套&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;① &lt;b&gt;训练&lt;/b&gt;：靠梯度改权重，显存花在梯度/优化器/激活上，产出 checkpoint。&lt;br&gt;② &lt;b&gt;推理&lt;/b&gt;：只读权重，显存花在 KV 上，靠调度/图/量化/投机把每个 token 变便宜。&lt;br&gt;③ &lt;b&gt;两者的接口只有三处&lt;/b&gt;：权重文件（含量化描述）、配置字段（训练期字段被忽略）、以及 RL 场景下的运行时权重同步。&lt;font color=&quot;#c0392b&quot;&gt;除此之外它们几乎不重叠——这就是为什么读 vLLM 时找不到训练代码，却处处能看到「为训练准备」的开关。&lt;/font&gt;&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="940" width="1424" height="96" as="geometry"/>
+        </mxCell>
+        <mxCell id="n47" value="&lt;font style=&quot;font-size:10px&quot;&gt;本页交接：训练侧到此闭合。回到 `学习地图.md`，这一套应插在「Transformer 与模型文件结构」之后、「入门」之前读——它解释的是「权重从哪来」，而入门套解释的是「系统为什么这么设计」。&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="36" y="1076" width="1424" height="46" as="geometry"/>
+        </mxCell>
+        <mxCell id="n48" value="&lt;b&gt;代码锚点（想自己去翻的时候用）&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot; color=&quot;#666666&quot;&gt;权重同步配置（文档串明写 RL training）：vllm/config/weight_transfer.py:8-15&lt;br&gt;训练侧引擎「跑在训练进程里」：vllm/distributed/weight_transfer/base.py:554-583&lt;br&gt;推理侧引擎与初始化时机：同文件 :465-479、:528-535&lt;br&gt;四种同步后端注册表：vllm/distributed/weight_transfer/factory.py:244-266&lt;br&gt;RLHF HTTP 控制路由（暂停/初始化/开始/结束/更新）：vllm/entrypoints/serve/dev/rlhf/api_router.py:29、:157、:175、:187、:205&lt;br&gt;「给 RL 训练用」的推理开关：vllm/config/model.py:1965-1978（head_dtype fp32，原文 required for RL training-inference consistency）、:250-253（return_sampling_mask / routed_experts）&lt;br&gt;休眠/唤醒：vllm/docs/features/sleep_mode.md:3、:60-64&lt;br&gt;仓内 verl 的痕迹：vllm/distributed/parallel_state.py:2075-2077（注释提到 verl integration）&lt;br&gt;训练生态清单：vllm/docs/training/rlhf.md:5-17&lt;/font&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="1152" width="1424" height="152" as="geometry"/>
+        </mxCell>
+        <mxCell id="n49" value="&lt;b&gt;一句话记住这一页：&lt;/b&gt;训练与推理的运行时接口只在 RL 场景显形——「采样用 vLLM，训练完把权重同步回来」；&lt;b&gt;那套同步/暂停/热更新/休眠的代码就在 vLLM 仓里，但它本身仍然不是训练框架。&lt;/b&gt;" style="rounded=1;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=5;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="36" y="1338" width="1424" height="58" as="geometry"/>
+        </mxCell>
+        <mxCell id="t50" value="&lt;b&gt;图例&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="36" y="1430" width="104" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="n51" value="客户端" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#eceff1;strokeColor=#607d8b;" vertex="1" parent="1">
+          <mxGeometry x="148" y="1427" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n52" value="边端 edge" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="276" y="1427" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n53" value="云 P (prefill)" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="404" y="1427" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n54" value="云 D (decode)" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="532" y="1427" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n55" value="PD Proxy" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#b0e3e6;strokeColor=#0e8088;" vertex="1" parent="1">
+          <mxGeometry x="660" y="1427" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n56" value="中立/通用" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#efe9dd;strokeColor=#a1887f;" vertex="1" parent="1">
+          <mxGeometry x="788" y="1427" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n57" value="失败/取消" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="916" y="1427" width="120" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n58" value="运行时同步/权重更新" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="1044" y="1427" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="e59" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#9673a6;fillColor=#9673a6;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="148" y="1476" as="sourcePoint"/>
+            <mxPoint x="204" y="1476" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t60" value="控制面 ZMQ" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="210" y="1464" width="190" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="e61" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#d6b656;fillColor=#d6b656;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="398" y="1476" as="sourcePoint"/>
+            <mxPoint x="454" y="1476" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t62" value="数据面 UCX·Mooncake" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="460" y="1464" width="190" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="e63" value="" style="endArrow=block;html=1;rounded=0;fontSize=10;strokeWidth=2;strokeColor=#666666;fillColor=#666666;fontColor=#333333;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="648" y="1476" as="sourcePoint"/>
+            <mxPoint x="704" y="1476" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="t64" value="HTTP" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="710" y="1464" width="190" height="24" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
