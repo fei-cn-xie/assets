@@ -68,7 +68,7 @@ UCX 不在 vllm-workspace 里）。脚本启动时会把它加到 `LD_LIBRARY_PA
 
 | 主机 | 数据网卡 | RoCE 设备 | 依据 |
 | --- | --- | --- | --- |
-| 17（a2） | `enp189s0f0` | `rocep67s0f0:1,enp67s0f0np0` | 沿用 194/195 已验证的调优；**若 17 的设备名不同需覆盖** |
+| 17（a2） | `enp189s0f0` | `rocep67s0f0:1,enp67s0f0np0` | 与 194/195 同代际同命名，已确认沿用 |
 | 231（a3） | `enp196s0f0` | **`rocep196s0f0:1,enp196s0f0`** | 主机上 `ls /sys/class/infiniband` 得到 `rocep162s0f0 rocep162s0f1 rocep196s0f0 rocep196s0f1`，数据网卡同号为 `enp196s0f0` |
 
 两个默认值都写在 `env.sh` 的 `lwd_host_env()` 里，可用 `LWD_UCX_NET_DEVICES_17` /
@@ -80,14 +80,9 @@ UCX 不在 vllm-workspace 里）。脚本启动时会把它加到 `LD_LIBRARY_PA
 export LWD_UCX_TCP_ONLY=1
 ```
 
-**在 17 上先自查一次**，确认设备名与 194 相同：
-
-```bash
-ls /sys/class/infiniband          # 期望看到 rocep67s0f0
-ip -o link | grep -o '^[0-9]*: [^:]*' | grep enp
-```
-
-若不同，覆盖 `LWD_UCX_NET_DEVICES_17=<ib>:1,<netdev>`，并同步改 `env.sh` 的默认值。
+两台主机的默认值都写在 `env.sh` 的 `lwd_host_env()` 里，`check_configs.py` 会断言这两个字符串，
+漂移会直接 FAIL。若将来换了机器，用 `LWD_UCX_NET_DEVICES_17` / `LWD_UCX_NET_DEVICES_231` 覆盖，
+并同步改 `env.sh` 的默认值。
 
 ## 文件
 

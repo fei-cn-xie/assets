@@ -414,6 +414,11 @@ def main(argv: list[str]) -> int:
     # --- UCX transports ------------------------------------------------------
     env_sh = (root / "env.sh").read_text(encoding="utf-8")
     report.check(
+        "rocep67s0f0:1,enp67s0f0np0" in env_sh,
+        "the 17 default must be rocep67s0f0:1,enp67s0f0np0 — the a2 pairing "
+        "confirmed on 194/195 and reused here (enp189s0f0 is 17's data NIC)",
+    )
+    report.check(
         "rocep196s0f0:1,enp196s0f0" in env_sh,
         "the 231 default must be rocep196s0f0:1,enp196s0f0 — the RoCE device that "
         "pairs with NIC enp196s0f0 (host 231 IB devices: rocep162s0f0/f1, "
