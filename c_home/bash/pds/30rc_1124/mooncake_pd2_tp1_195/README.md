@@ -108,7 +108,7 @@ LWD_MODULE_OWNERSHIP = {
 | --- | --- | --- |
 | `PD_ENABLE_MTP` | 1 | 关掉可回收 draft 权重（边云包同款开关） |
 | `PD_SKIP_MM_PROFILING` | 0 | 置 1 时加 `--skip-mm-profiling`：不做视觉编码器的 profiling 预留，省显存但图像请求的预留会退化 |
-| `PD_MAX_MODEL_LEN` | 32768 | 每 token ≈96.6 KiB，32768 需 3.02 GiB |
+| `PD_MAX_MODEL_LEN` | 512 | 当前冒烟值；每 token ≈96.6 KiB，32768 需 3.02 GiB，正式服务按需调大 |
 | `PD_API_SERVER_COUNT` | 空（= DP 数 2） | 置 1 时只起一个前端托管两个 DP 引擎；排查启动握手时可用来排除多前端因素 |
 
 边云包没有后两个的必要：云端不装视觉塔，draft 也是它唯一要担心的部分。
