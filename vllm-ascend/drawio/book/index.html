@@ -38,7 +38,7 @@ pre { background:var(--soft); padding:10px 12px; border-radius:6px;
 .card .d { color:var(--dim); font-size:13px; }
 .tag { display:inline-block; font-size:12px; color:var(--dim);
        border:1px solid var(--line); border-radius:99px; padding:1px 9px; margin-left:6px; }
-</style></head><body><nav class="top"> <a href="index.html">总目录</a> <a href="../学习地图.md">学习地图.md</a></nav><h1>vLLM 与 vLLM-Ascend 图解全集</h1><p class="lead">十站、116 页。顺序不可换：每一站都用到前一站的结论。全套的阅读顺序、页间接口与自测题见 <a href="../学习地图.md">学习地图.md</a>。</p><div class="cards"><a class="card" href="Transformer与模型文件结构.html"><div class="k">站1<span class="tag">21 页</span></div><div class="t">模型本身怎么算 · 21 页</div><div class="d">一次 forward 里每一步在算什么矩阵；权重文件长什么样</div></a>
+</style></head><body><nav class="top"> <a href="index.html">总目录</a> <a href="../学习地图.md">学习地图.md</a></nav><h1>vLLM 与 vLLM-Ascend 图解全集</h1><p class="lead">十站、126 页。顺序不可换：每一站都用到前一站的结论。全套的阅读顺序、页间接口与自测题见 <a href="../学习地图.md">学习地图.md</a>。</p><div class="cards"><a class="card" href="Transformer与模型文件结构.html"><div class="k">站1<span class="tag">21 页</span></div><div class="t">模型本身怎么算 · 21 页</div><div class="d">一次 forward 里每一步在算什么矩阵；权重文件长什么样</div></a>
 <a class="card" href="vLLM训练侧与权重来源.html"><div class="k">站0<span class="tag">10 页</span></div><div class="t">权重从哪来 · 10 页</div><div class="d">训练九步、显存四件套、量化、MTP 两义、加载器挑文件、RL 后端</div></a>
 <a class="card" href="vLLM入门-从训练到推理系统.html"><div class="k">站2<span class="tag">10 页</span></div><div class="t">系统为什么这么设计 · 10 页</div><div class="d">为什么 decode 卡带宽、为什么要 batching、显存账、四种并行</div></a>
 <a class="card" href="vLLM生命周期-端到端.html"><div class="k">站3<span class="tag">9 页</span></div><div class="t">一次部署的一生 · 9 页</div><div class="d">启动、模型加载、KV cache、单请求、PD 交接、Step 循环</div></a>
@@ -46,5 +46,6 @@ pre { background:var(--soft); padding:10px 12px; border-radius:6px;
 <a class="card" href="Mooncake原理与实现.html"><div class="k">站5<span class="tag">10 页</span></div><div class="t">KV 怎么跨机搬 · 10 页</div><div class="d">传输引擎三步曲、块级 pull、回执、失败兜底</div></a>
 <a class="card" href="vLLM图捕获.html"><div class="k">站6<span class="tag">10 页</span></div><div class="t">怎么把提交开销压掉 · 10 页</div><div class="d">捕获与回放、三个硬约束、四种模式、桶与 dispatch、昇腾 ACL Graph</div></a>
 <a class="card" href="vLLM的MTP与投机解码.html"><div class="k">站7<span class="tag">10 页</span></div><div class="t">怎么让一次前向多产出几个 token · 10 页</div><div class="d">draft 四种来源、拒绝采样、KV 回退、三条约束、LWD 适配</div></a>
+<a class="card" href="vLLM的MoE与专家并行.html"><div class="k">站10<span class="tag">10 页</span></div><div class="t">混合专家怎么算 · 10 页</div><div class="d">门卫与 top-k、重排与分组矩阵乘、共享专家、EP 三种通信、EPLB、wave 协调</div></a>
 <a class="card" href="vLLM组合配置与参数联动.html"><div class="k">站8<span class="tag">10 页</span></div><div class="t">同时打开时会怎样 · 10 页</div><div class="d">K×桶、显存三链、调度推导链、PD 硬约束、两个 eager、五套配方</div></a>
 <a class="card" href="vLLM故障案例与排查.html"><div class="k">站9<span class="tag">10 页</span></div><div class="t">坏的时候长什么样 · 10 页</div><div class="d">排障四步法 + 8 个真实复盘 + 十条误导线索</div></a></div><h2>怎么读</h2><p class="lead">① 先读本站的「一句话结论」再细看图；② 需要核对代码时展开「代码锚点」，按 文件:行号 grep；③ 图与 <code>.drawio</code> 同源（本册由生成器从 .drawio 直接渲染），改图后重跑 <code>python tools/makebook.py</code> 即可刷新。</p></body></html>
