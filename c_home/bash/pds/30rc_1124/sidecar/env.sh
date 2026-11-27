@@ -59,8 +59,13 @@ lwd_runtime_env() {
   if [[ -f /usr/lib/aarch64-linux-gnu/libjemalloc.so.2 ]]; then
     export LD_PRELOAD="/usr/lib/aarch64-linux-gnu/libjemalloc.so.2:${LD_PRELOAD:-}"
   fi
-  export VLLM_LOGGING_LEVEL="${VLLM_LOGGING_LEVEL:-INFO}"
-  export VLLM_LWD_LOG_LEVEL="${VLLM_LWD_LOG_LEVEL:-INFO}"
+  # ERROR for benchmark runs: logging is on the hot path of every step, and the
+  # per-step INFO lines dominate the log volume under load. Override with
+  # VLLM_LOGGING_LEVEL=INFO / VLLM_LWD_LOG_LEVEL=INFO when bringing the
+  # deployment up -- at ERROR the LWD link/handshake progress (WARNING) and the
+  # KV/Mamba cache lines (INFO) disappear, so a stalled start looks like a hang.
+  export VLLM_LOGGING_LEVEL="${VLLM_LOGGING_LEVEL:-ERROR}"
+  export VLLM_LWD_LOG_LEVEL="${VLLM_LWD_LOG_LEVEL:-ERROR}"
   # The cloud engines need minutes for weights + graph capture before they
   # answer the edge; v30_rc raises the engine-ready budget to 1800s.
   export VLLM_ENGINE_READY_TIMEOUT_S="${VLLM_ENGINE_READY_TIMEOUT_S:-1800}"

@@ -57,6 +57,17 @@ D `ctrl_port 6101` / `data_port 7201` / `coord_port 8101`；Mooncake `kv_port 14
 | `start_proxy.sh` | PD proxy（沿用 v30_rc 的命名） |
 | `check_configs.py` | 拓扑/proxy 自检（纯标准库，按 feat 规则逐条校验） |
 
+## 日志级别（基准测试用 ERROR）
+
+`env.sh` 把 `VLLM_LOGGING_LEVEL` 与 `VLLM_LWD_LOG_LEVEL` 都默认设为 **ERROR**：
+日志在每一步的路径上，INFO 在压测时会主导日志量。
+
+代价是拉起阶段的可见性：LWD 链路/握手进展是 **WARNING** 级、KV 与 Mamba cache 统计是 **INFO** 级，
+ERROR 下这些都看不到，启动卡住会表现为"静默无输出"。所以：
+
+- **基准测试**：用默认 ERROR
+- **首轮拉起 / 排查**：`VLLM_LOGGING_LEVEL=INFO VLLM_LWD_LOG_LEVEL=INFO bash cloud_p.sh`
+
 ## 4. 部署与启动
 
 把整个目录拷到两台机器的同一路径（例如 `/bash_dir/assets/c_home/bash/pds/30rc_1124/1513`），
@@ -98,8 +109,6 @@ curl -s http://76.76.26.194:8510/v1/chat/completions \
 ## 6. 排障要点（都是前几轮实际踩过的）
 
 1. **边端启动会静默等链路**：单条 `wait_ready` 超时 `605s`，逐条串行，最坏约 40 分钟；
-   等待期的进展日志是 WARNING 级。脚本已把 `VLLM_LOGGING_LEVEL` / `VLLM_LWD_LOG_LEVEL`
-   默认设为 `INFO`（与 v30_rc 一致），不要改成 ERROR 起首轮。
 2. **缺 libucp 会伪装成网络问题**：`libucp.so.0 not found` 会让连接线程每 0.2→5s 重试，
    最后只报 `[LWD][handshake] host link not ready`。脚本启动前会预检，缺库直接 `exit 3`。
    本环境 libucp 由 `/vllm-workspace/ucx/lib` 提供（v30_rc 的写法）；换路径用

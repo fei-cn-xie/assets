@@ -10,6 +10,11 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=env.sh
 source "$SCRIPT_DIR/env.sh"
 
+# The LWD proxy takes no --log-level (its CLI is --config/--host/--port), so the
+# only way to quieten it like the engines is the environment.
+export VLLM_LOGGING_LEVEL="${VLLM_LOGGING_LEVEL:-ERROR}"
+export VLLM_LWD_LOG_LEVEL="${VLLM_LWD_LOG_LEVEL:-ERROR}"
+
 lwd_run "$LWD_PYTHON" -m vllm.v1.lwd_control.pd.proxy \
   --config "$SCRIPT_DIR/pd_proxy.json" \
   --host 0.0.0.0 \
