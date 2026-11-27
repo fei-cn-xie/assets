@@ -25,7 +25,7 @@ lwd_run "$LWD_PYTHON" -m vllm.entrypoints.cli.main serve /home/weight/Qwen3.6-27
   --kv-transfer-config '{"kv_connector":"MooncakeConnectorV1","kv_role":"kv_consumer","kv_rank":1,"kv_port":14580,"kv_connector_extra_config":{"prefill":{"dp_size":1,"tp_size":2},"decode":{"dp_size":1,"tp_size":2}}}' \
   --trust-remote-code --served-model-name qwen3.6 \
   --max-model-len 65536 --max-num-seqs 128 --max-num-batched-tokens 8192 \
-  --gpu-memory-utilization 0.90 \
+  --gpu-memory-utilization 0.95 \
   --async-scheduling \
   --speculative-config '{"method":"mtp","num_speculative_tokens":3,"enforce_eager":true}' \
-  --compilation-config '{"cudagraph_mode":"FULL_DECODE_ONLY"}'
+  --compilation-config '{"cudagraph_mode":"FULL_DECODE_ONLY","cudagraph_capture_sizes":[4,8,12,16,20,24,28,32,36,40,44,48,52,56,60,64,68,72,76,80,84,88,92,96,100]}'

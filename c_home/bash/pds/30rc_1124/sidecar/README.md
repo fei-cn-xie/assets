@@ -53,7 +53,7 @@ D `ctrl_port 6101` / `data_port 7201` / `coord_port 8101`；Mooncake `kv_port 14
 | `pd_proxy.json` | proxy 目标表，与 v30_rc 那份语义完全一致 |
 | `edge.sh` | 边端，`python3 -m vllm.entrypoints.cli.main serve` |
 | `cloud_p.sh` | 云端 P，Mooncake producer |
-| `cloud_d.sh` | 云端 D，Mooncake consumer + `FULL_DECODE_ONLY` |
+| `cloud_d.sh` | 云端 D：Mooncake consumer + `FULL_DECODE_ONLY` + 显式 `cudagraph_capture_sizes`（4…100，与集中式包一致） |
 | `start_proxy.sh` | PD proxy（沿用 v30_rc 的命名） |
 | `check_configs.py` | 拓扑/proxy 自检（纯标准库，按 feat 规则逐条校验） |
 

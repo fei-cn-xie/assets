@@ -26,6 +26,6 @@ lwd_run "$LWD_PYTHON" -m vllm.entrypoints.cli.main serve /home/weight/Qwen3.6-27
   --enforce-eager \
   --trust-remote-code --served-model-name qwen3.6 \
   --max-model-len 65536 --max-num-seqs 128 --max-num-batched-tokens 8192 \
-  --gpu-memory-utilization 0.90 \
+  --gpu-memory-utilization 0.95 \
   --async-scheduling \
   --speculative-config '{"method":"mtp","num_speculative_tokens":3,"enforce_eager":true}'

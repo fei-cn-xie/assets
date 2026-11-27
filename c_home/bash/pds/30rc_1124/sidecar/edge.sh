@@ -30,5 +30,5 @@ lwd_run "$LWD_PYTHON" -m vllm.entrypoints.cli.main serve /weight/Qwen3.6-27B/ \
   --enforce-eager \
   --trust-remote-code --served-model-name qwen3.6 \
   --max-model-len 65536 --max-num-seqs 128 --max-num-batched-tokens 8192 \
-  --gpu-memory-utilization 0.90 \
+  --gpu-memory-utilization 0.95 \
   --async-scheduling
