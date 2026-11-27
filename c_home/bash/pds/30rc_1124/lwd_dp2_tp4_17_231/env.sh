@@ -131,17 +131,19 @@ lwd_host_env() {
       export GLOO_SOCKET_IFNAME="$LWD_CLOUD_NIC"
       export TP_SOCKET_IFNAME="$LWD_CLOUD_NIC"
       export HCCL_SOCKET_IFNAME="$LWD_CLOUD_NIC"
-      # 231 is an a3 host: its RoCE device names are NOT the a2 ones, so they
-      # must be supplied rather than guessed. Until they are, fall back to plain
-      # tcp over the data NIC (works, but slower — do not compare bandwidth).
-      if [[ -n ${LWD_UCX_NET_DEVICES_231:-} ]]; then
-        export UCX_NET_DEVICES="$LWD_UCX_NET_DEVICES_231"
-      else
+      # 231 is an a3 host whose IB devices are
+      #   rocep162s0f0 rocep162s0f1 rocep196s0f0 rocep196s0f1
+      # (from `ls /sys/class/infiniband`). The data NIC is enp196s0f0, whose
+      # matching RoCE device is rocep196s0f0 — the same-numbered pair the a2 hosts
+      # use (enp67s0f0np0 <-> rocep67s0f0). Port 1 and gid index 5 match the tuning
+      # validated on 194/195.
+      if [[ ${LWD_UCX_TCP_ONLY:-0} == 1 ]]; then
+        # Escape hatch: no RoCE on this host, run the data plane over the NIC.
         export UCX_NET_DEVICES="$LWD_CLOUD_NIC"
         export LWD_UCX_TCP_FALLBACK=1
-        printf '[lwd][warn] LWD_UCX_NET_DEVICES_231 is unset: falling back to UCX_TLS=tcp\n' >&2
-        printf '[lwd][warn]   export LWD_UCX_NET_DEVICES_231=rocepXXs0f0:1,enpXXs0f0np0\n' >&2
-        printf '[lwd][warn]   (find it with: ibdev2netdev ; ls /sys/class/infiniband)\n' >&2
+        printf '[lwd][warn] LWD_UCX_TCP_ONLY=1: cloud side uses UCX_TLS=tcp (bandwidth is not comparable)\n' >&2
+      else
+        export UCX_NET_DEVICES="${LWD_UCX_NET_DEVICES_231:-rocep196s0f0:1,enp196s0f0}"
       fi
       ;;
     *)

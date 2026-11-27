@@ -412,14 +412,22 @@ def main(argv: list[str]) -> int:
     )
 
     # --- UCX transports ------------------------------------------------------
+    env_sh = (root / "env.sh").read_text(encoding="utf-8")
+    report.check(
+        "rocep196s0f0:1,enp196s0f0" in env_sh,
+        "the 231 default must be rocep196s0f0:1,enp196s0f0 — the RoCE device that "
+        "pairs with NIC enp196s0f0 (host 231 IB devices: rocep162s0f0/f1, "
+        "rocep196s0f0/f1)",
+    )
+    report.check(
+        "LWD_UCX_TCP_ONLY" in env_sh,
+        "keep the LWD_UCX_TCP_ONLY escape hatch for hosts without RoCE",
+    )
     if env.get("LWD_UCX_NET_DEVICES_231"):
-        report.notes.append("UCX: 231 will use RoCE device "
+        report.notes.append("UCX: 231 will use explicit "
                             f"{env.get('LWD_UCX_NET_DEVICES_231')}")
     else:
-        report.notes.append(
-            "UCX: LWD_UCX_NET_DEVICES_231 unset -> cloud side falls back to "
-            "UCX_TLS=tcp; fill it in before comparing bandwidth"
-        )
+        report.notes.append("UCX: 231 will use rocep196s0f0:1,enp196s0f0 (RoCE)")
     return report.done()
 
 

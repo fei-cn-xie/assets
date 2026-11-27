@@ -64,29 +64,30 @@ UCX 不在 vllm-workspace 里）。脚本启动时会把它加到 `LD_LIBRARY_PA
 
 需要换路径时覆盖即可：`export LWD_UCX_LIB_DIR=/other/ucx/lib`。
 
-## ⚠️ 待补：231（a3）的 RoCE 设备名
+## UCX 走 RoCE：两台主机的设备名
 
-UCX 走 RoCE 需要**每台主机自己的 IB 设备名**。17 是 a2，沿用 194/195 验证过的
-`rocep67s0f0:1,enp67s0f0np0`；**231 是 a3，设备名不同，必须先确认再补上**，否则：
+| 主机 | 数据网卡 | RoCE 设备 | 依据 |
+| --- | --- | --- | --- |
+| 17（a2） | `enp189s0f0` | `rocep67s0f0:1,enp67s0f0np0` | 沿用 194/195 已验证的调优；**若 17 的设备名不同需覆盖** |
+| 231（a3） | `enp196s0f0` | **`rocep196s0f0:1,enp196s0f0`** | 主机上 `ls /sys/class/infiniband` 得到 `rocep162s0f0 rocep162s0f1 rocep196s0f0 rocep196s0f1`，数据网卡同号为 `enp196s0f0` |
 
-```
-[lwd][warn] LWD_UCX_NET_DEVICES_231 is unset: falling back to UCX_TLS=tcp
-```
+两个默认值都写在 `env.sh` 的 `lwd_host_env()` 里，可用 `LWD_UCX_NET_DEVICES_17` /
+`LWD_UCX_NET_DEVICES_231` 覆盖；`UCX_IB_GID_INDEX` 默认 5（与 194/195 一致，RoCE v2）。
 
-回退到 TCP 能跑通，但**带宽和延迟不可比**——做性能对比前务必补齐：
+如果某台主机确实没有 RoCE，用逃生口走 TCP（能跑，但带宽不可比）：
 
 ```bash
-# 在 231 上查设备名与对应网卡
-ibdev2netdev
-ls /sys/class/infiniband
-
-# 然后在两个 cloud 脚本的运行环境里导出（建议写进 /etc/profile.d 或直接前置）
-export LWD_UCX_NET_DEVICES_231=rocepXXs0f0:1,enpXXs0f0np0
-# 如 gid index 不是 5，一并覆盖
-export UCX_IB_GID_INDEX=5
+export LWD_UCX_TCP_ONLY=1
 ```
 
-补齐后 `check_configs.py` 的 note 会显示 `UCX: 231 will use RoCE device ...`。
+**在 17 上先自查一次**，确认设备名与 194 相同：
+
+```bash
+ls /sys/class/infiniband          # 期望看到 rocep67s0f0
+ip -o link | grep -o '^[0-9]*: [^:]*' | grep enp
+```
+
+若不同，覆盖 `LWD_UCX_NET_DEVICES_17=<ib>:1,<netdev>`，并同步改 `env.sh` 的默认值。
 
 ## 文件
 
