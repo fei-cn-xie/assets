@@ -1,0 +1,103 @@
+# LWD edge/cloud PD topology — 2 DP x 4 TP on both cloud instances.
+#
+# Shape (17 cards total):
+#   edge   76.76.26.17  NPU 0     TP=1 DP=1              -> API 8510
+#   cloud 0 (prefill) 76.76.26.231 NPU 0-7   DP=2 TP=4   -> 2 prefill replicas
+#   cloud 1 (decode)  76.76.26.231 NPU 8-15  DP=2 TP=4   -> 2 decode replicas
+#   proxy  76.76.26.231:8102 (CPU only)
+#
+# Tensor parallelism is NOT declared here: it comes from --tensor-parallel-size in
+# the launchers, exactly like the 2 DP x 1 TP package next door. What the topology
+# does declare is one entry per cloud DP, because each DP runs its own engine
+# process and therefore needs its own control/data/coordination ports.
+#
+# Requires the fix/lwd-multidp-dense-pd branches on both hosts: for a dense model
+# each DP rank process collapses data_parallel_size/rank to 1, which used to
+# (a) fail the KV extra-config DP check when the engine core re-validates its
+# config after the DP handshake, (b) put every producer rank on the same KV
+# handshake port, and (c) give every DP rank the same ZMQ identity, so one engine
+# never received its init message.
+#
+# Topology rules used here (vllm/config/lwd/topology.py):
+#   * with pd.enabled the instances need NOT share a DP count (:411-417)
+#   * the edge never listens: no ctrl_port / data_port / coord_port
+#   * every cloud DP needs ctrl_port and data_port (:401-407, :487-494)
+#   * every cloud DP with coordination enabled needs coord_port (:415-418)
+#   * exactly one prefill and one decode cloud ({stage_role} ==
+#     {"prefill","decode"}, :444-445)
+#
+# Both hosts must run this exact file: LwdTopology hashes it and every process
+# logs "[LWD][config] ... digest=<16 hex>"; differing digests mean stale copies.
+deployment:
+  mode: 0
+  scene: lwd_cluster
+  edges_num: 1
+  clouds_num: 2
+  data_plane_comm: host
+  data_plane_host:
+    # Host budget gate counts one pool pair per edge -> cloud DP link:
+    # (2 prefill + 2 decode) DPs => 4 links => 4 * 4 * (256 + 32) = 4608 MiB,
+    # under the 12288 MiB budget
+    # (vllm_ascend/.../lwd_host_channels.py:201-216, 262-266).
+    # TP does not enter this count: the link is per DP, not per card.
+    up_buffer_size: 256
+    down_buffer_size: 32
+    # sidecar = one transport daemon per host, spawned by the first engine
+    # process. Both hosts must use the same value; in_process also works.
+    deployment: sidecar
+  pd:
+    enabled: true
+    max_inflight_windows: 4
+    request_ttl_s: 1800.0
+feature_ctrl:
+  enable_early_recv: true
+edges:
+  - id: 0
+    dp:
+      - dp_idx: 0
+        addr: 76.76.26.17
+    coordination:
+      enabled: true
+      pd_proxy_url: http://76.76.26.231:8102/v1/chat/completions
+      tenant_key_file: /vllm-workspace/lwd_tenant.key
+      consumer_id: edge-0
+clouds:
+  - id: 0
+    stage_role: prefill
+    dp:
+      # TP=4 per replica: DP rank 0 owns NPU 0-3, rank 1 owns NPU 4-7. The
+      # producer binds one KV handshake port per (dp, tp) pair: 14570-14577.
+      - dp_idx: 0
+        addr: 76.76.26.231
+        ctrl_port: 6100
+        data_port: 7200
+        coord_port: 8100
+      - dp_idx: 1
+        addr: 76.76.26.231
+        ctrl_port: 6101
+        data_port: 7201
+        coord_port: 8101
+    coordination:
+      enabled: true
+  - id: 1
+    stage_role: decode
+    dp:
+      # Same shape on the decode side: DP rank 0 owns NPU 8-11, rank 1 NPU 12-15.
+      # The consumer connects out, so its kv_port base only has to stay clear of
+      # the producer's.
+      - dp_idx: 0
+        addr: 76.76.26.231
+        ctrl_port: 6110
+        data_port: 7210
+        coord_port: 8110
+      - dp_idx: 1
+        addr: 76.76.26.231
+        ctrl_port: 6111
+        data_port: 7211
+        coord_port: 8111
+    coordination:
+      enabled: true
+# lwd_cluster requires a full mesh: the single edge reaches both clouds.
+instance_links:
+  - {edge: 0, cloud: 0}
+  - {edge: 0, cloud: 1}
