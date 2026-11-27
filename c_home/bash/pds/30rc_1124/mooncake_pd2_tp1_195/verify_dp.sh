@@ -93,13 +93,36 @@ else
 fi
 
 echo "== 4. API endpoints =="
-for endpoint in "${PD_HOST}:${PD_PREFILL_PORT}" "${PD_HOST}:${PD_DECODE_PORT}" "${PD_HOST}:${PD_PROXY_PORT}"; do
-  if curl -sf -m 5 "http://${endpoint}/health" >/dev/null 2>&1; then
-    ok "http://${endpoint}/health"
+# Paths differ per role, so do not probe "/health" everywhere:
+#  * vLLM engines answer /v1/models (the load_balance_proxy itself probes exactly
+#    this endpoint before adding an instance);
+#  * the proxy example only registers /healthcheck, not /health, so probing
+#    /health there would report a healthy proxy as dead.
+probe() { # host port path...
+  local host=$1 port=$2
+  shift 2
+  local path
+  for path in "$@"; do
+    if curl -sf -m 5 "http://${host}:${port}${path}" >/dev/null 2>&1; then
+      printf '%s' "$path"
+      return 0
+    fi
+  done
+  return 1
+}
+
+for endpoint in "${PD_PREFILL_PORT}" "${PD_DECODE_PORT}"; do
+  if hit=$(probe "$PD_HOST" "$endpoint" /v1/models); then
+    ok "engine ${endpoint} answers ${hit}"
   else
-    bad "http://${endpoint}/health did not answer"
+    bad "engine ${endpoint} did not answer /v1/models"
   fi
 done
+if hit=$(probe "$PD_HOST" "$PD_PROXY_PORT" /healthcheck /v1/models); then
+  ok "proxy ${PD_PROXY_PORT} answers ${hit}"
+else
+  bad "proxy ${PD_PROXY_PORT} did not answer /healthcheck or /v1/models"
+fi
 
 if [[ $QUICK -eq 0 ]]; then
   echo "== 5. one request through the proxy =="
