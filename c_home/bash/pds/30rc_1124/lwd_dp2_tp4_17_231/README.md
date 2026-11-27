@@ -48,6 +48,22 @@ edge 8510 (17 NPU 0, TP=1 DP=1) ──LWD host 数据面(UCX)──▶ 两个 cl
 端口与集中式包（9060/9160/9161/29545/29546/29610/29611 与 KV 30000-30007/30100-30107）
 完全错开，两套脚本可以同时留在这些机器上。
 
+## UCX 安装位置（两台主机相同）
+
+```
+/home/extra/ucx/lib        # libucp.so / libuct.so ... 在此
+```
+
+`env.sh` 里 `LWD_UCX_LIB_DIR` 的默认值就是这个路径（**不**从 `CODEBASE_DIR` 推导——
+UCX 不在 vllm-workspace 里）。脚本启动时会把它加到 `LD_LIBRARY_PATH`，并在拉起前确认
+`libucp.so*` 存在；缺失时会在**几秒内**直接报错退出，而不是等到 LWD 握手 605s 超时：
+
+```
+[lwd][preflight] ERROR: libucp not found under /home/extra/ucx/lib
+```
+
+需要换路径时覆盖即可：`export LWD_UCX_LIB_DIR=/other/ucx/lib`。
+
 ## ⚠️ 待补：231（a3）的 RoCE 设备名
 
 UCX 走 RoCE 需要**每台主机自己的 IB 设备名**。17 是 a2，沿用 194/195 验证过的

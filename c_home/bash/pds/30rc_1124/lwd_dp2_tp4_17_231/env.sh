@@ -41,6 +41,11 @@ export LWD_EDGE_NIC="${LWD_EDGE_NIC:-enp189s0f0}"
 export LWD_CLOUD_HOST="${LWD_CLOUD_HOST:-76.76.26.231}"
 export LWD_CLOUD_NIC="${LWD_CLOUD_NIC:-enp196s0f0}"
 export LWD_MODEL="${LWD_MODEL:-/home/weight/Qwen3.6-27B/}"
+# UCX tree, identical on both hosts and deliberately NOT derived from
+# CODEBASE_DIR: it lives at /home/extra/ucx, outside the vllm-workspace checkout.
+# lwd_require_ucx_runtime() prepends $LWD_UCX_LIB_DIR/lib to LD_LIBRARY_PATH and
+# refuses to start when libucp is missing there.
+export LWD_UCX_LIB_DIR="${LWD_UCX_LIB_DIR:-/home/extra/ucx/lib}"
 
 # --- parallelism -----------------------------------------------------------
 export LWD_DP_SIZE="${LWD_DP_SIZE:-2}"
@@ -164,7 +169,6 @@ lwd_host_env() {
 # thread and the engine only dies at the 605s handshake timeout with a
 # misleading "[LWD][handshake] host link not ready" message.
 lwd_require_ucx_runtime() {
-  export LWD_UCX_LIB_DIR="${LWD_UCX_LIB_DIR:-$CODEBASE_DIR/ucx/lib}"
   if [[ -d $LWD_UCX_LIB_DIR ]]; then
     export LD_LIBRARY_PATH="$LWD_UCX_LIB_DIR${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
   fi

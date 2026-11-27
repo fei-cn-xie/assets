@@ -402,6 +402,15 @@ def main(argv: list[str]) -> int:
     else:
         report.notes.append(f"parity check skipped: {sibling} not present next to this package")
 
+    # --- UCX runtime ---------------------------------------------------------
+    # UCX is installed outside the vllm-workspace checkout on both hosts; deriving
+    # the path from CODEBASE_DIR used to point at a tree that does not exist.
+    report.check(
+        env.get("LWD_UCX_LIB_DIR") == "/home/extra/ucx/lib",
+        f"LWD_UCX_LIB_DIR must default to /home/extra/ucx/lib on both hosts "
+        f"(got {env.get('LWD_UCX_LIB_DIR')!r})",
+    )
+
     # --- UCX transports ------------------------------------------------------
     if env.get("LWD_UCX_NET_DEVICES_231"):
         report.notes.append("UCX: 231 will use RoCE device "
