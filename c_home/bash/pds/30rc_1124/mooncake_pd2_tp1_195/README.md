@@ -142,6 +142,8 @@ curl -s http://76.76.26.195:9060/v1/chat/completions \
 | 2 | `ZMQError: Address already in use (…:30000)`，或握手后同样的 `Expected 1, but got 2` | 生产者各 rank 共用同一个 KV 端口 | 端口改用 `data_parallel_index` |
 | 3 | 某一个 DP rank 5 分钟拿不到 init（`Did not receive response from front-end process within 5 minutes`），随后 `DP Coordinator received unexpected message while waiting for engines to subscribe` | 非 LWD 的 dense DP 路径没把 `dp_rank` 作为 `engine_index` 传下去，两个 rank 的 ZMQ 身份都是 `\x00\x00`；ROUTER 对同一身份只保留最后一条连接 | `core.py:1399` 传 `engine_index=dp_rank` |
 
+第 3 条**已在 195 上验证修复**（2026-11-27）：两个 `EngineCore_DP0` / `EngineCore_DP1` 都输出了 `All engine subscriptions received by DP coordinator`，服务正常拉起。
+
 第 3 个问题**只影响非 LWD 的 DP>1 部署**：边云包正常，是因为 LWD 分支本来就传了
 `engine_index=dp_rank`（`core.py:1379`），而 MoE 的 `DPEngineCoreProc` 会自己按
 `data_parallel_rank` 取值——只有 dense 的非 LWD 路径既没传、又把 rank 折叠成了 0。

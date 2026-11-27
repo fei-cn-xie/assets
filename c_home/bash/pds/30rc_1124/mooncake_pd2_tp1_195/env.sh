@@ -79,12 +79,13 @@ export PD_ENABLE_MTP="${PD_ENABLE_MTP:-1}"
 # accuracy for image requests; turn it on when KV is short.
 export PD_SKIP_MM_PROFILING="${PD_SKIP_MM_PROFILING:-0}"
 # How many front-end (API server) processes serve this engine. Empty keeps vLLM's
-# default, which is `data_parallel_size` (2 here) and therefore two front-ends
-# that each have to pair with one engine. Set it to 1 to let a single front-end
-# load-balance both DP engines; that removes the front-end <-> engine pairing
-# from startup, which is where "Did not receive response from front-end" and the
-# DP coordinator's "unexpected message while waiting for engines to subscribe"
-# come from. Costs a little LB throughput.
+# default, which is `data_parallel_size` (2 here, two front-ends). Kept as a
+# diagnostic knob only: a single front-end was tried while chasing
+#   "Did not receive response from front-end process within 5 minutes"
+# and the coordinator's "unexpected message while waiting for engines to
+# subscribe", and it changed nothing -- the cause was every dense DP rank
+# sharing one engine identity (see the README table), not the number of
+# front-ends. Do not expect this knob to fix a startup handshake.
 export PD_API_SERVER_COUNT="${PD_API_SERVER_COUNT:-}"
 
 PD_DRY_RUN=0
