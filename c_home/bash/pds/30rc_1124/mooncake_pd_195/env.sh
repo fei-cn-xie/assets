@@ -60,9 +60,11 @@ pd_runtime_env() {
   export TASK_QUEUE_ENABLE=1
   export HCCL_BUFFSIZE=1024
   export VLLM_WORKER_MULTIPROC_METHOD=spawn
-  # The reference runs at ERROR; INFO keeps the failure visible when a bench
-  # request dies, which is what you want while bringing the deployment up.
-  export VLLM_LOGGING_LEVEL="${VLLM_LOGGING_LEVEL:-INFO}"
+  # ERROR for benchmark runs (same level the reference script used): logging sits
+  # on the per-step path, and the INFO lines dominate the log volume under load.
+  # For a bring-up run export VLLM_LOGGING_LEVEL=INFO to keep the KV handshake and
+  # cache-sizing lines visible.
+  export VLLM_LOGGING_LEVEL="${VLLM_LOGGING_LEVEL:-ERROR}"
 }
 
 # Warn when a port of this deployment is already taken (a stale engine, or a

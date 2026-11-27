@@ -31,4 +31,5 @@ pd_run "$PD_PYTHON" "$PROXY" \
   --prefiller-hosts "$PD_HOST" \
   --prefiller-ports "$PD_PREFILL_PORT" \
   --decoder-hosts "$PD_HOST" \
-  --decoder-ports "$PD_DECODE_PORT"
+  --decoder-ports "$PD_DECODE_PORT" \
+  --log-level ERROR
