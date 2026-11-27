@@ -54,6 +54,17 @@ else
 fi
 
 echo "== 3. KV handshake ports belong to different DP ranks =="
+# `ss -H` (no header) only exists in newer iproute2; fall back to stripping the
+# header, otherwise an unsupported flag would look like "nothing listens".
+ss_port() {
+  local out
+  out=$(ss -ltnpH "sport = :$1" 2>/dev/null)
+  if [[ -z $out ]]; then
+    out=$(ss -ltnp "sport = :$1" 2>/dev/null | tail -n +2)
+  fi
+  printf '%s' "$out"
+}
+
 if ! command -v ss >/dev/null 2>&1; then
   note "ss not available, port checks skipped"
 else
@@ -61,7 +72,7 @@ else
   # must own two adjacent ports on two distinct PIDs.
   declare -A owner=()
   for port in "$PD_PREFILL_KV_PORT" $(((PD_PREFILL_KV_PORT) + 1)); do
-    line=$(ss -ltnpH "sport = :${port}" 2>/dev/null | head -n 1)
+    line=$(ss_port "$port" | head -n 1)
     if [[ -n $line ]]; then
       pid=$(grep -o 'pid=[0-9]*' <<<"$line" | head -n 1)
       owner[$port]=$pid
@@ -74,7 +85,7 @@ else
   if [[ ${#owner[@]} -eq 2 && ${owner[$PD_PREFILL_KV_PORT]} == "${owner[$(((PD_PREFILL_KV_PORT) + 1))]}" ]]; then
     bad "both KV ports belong to the same PID: that is one rank, not two"
   fi
-  if [[ -n $(ss -ltnH "sport = :${PD_DECODE_KV_PORT}" 2>/dev/null) ]]; then
+  if [[ -n $(ss_port "$PD_DECODE_KV_PORT") ]]; then
     bad "decode binds ${PD_DECODE_KV_PORT}: it is the consumer and must only connect"
   else
     ok "decode does not bind ${PD_DECODE_KV_PORT} (consumer connects only)"
