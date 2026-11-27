@@ -50,9 +50,10 @@ client ──9060──▶ LB proxy (195, CPU)
 ## 内存：TP=1 的硬约束与一个实测差异
 
 TP=1 意味着每个副本把完整 64 层模型装进一张卡（50.2 GB ≈ 46.8 GiB）。
-卡总内存 60.96 GiB，`PD_GPU_MEM_UTIL=0.95` → 预算 57.91 GiB，扣掉权重只剩 11.1 GiB。
+卡总内存 60.96 GiB，启动时实际空闲 60.57 GiB；当前默认 `PD_GPU_MEM_UTIL=0.98`
+→ 预算 59.74 GiB，扣掉权重与激活后剩 2.13 GiB 给 KV。
 
-同机实测（util 0.95、`max_model_len 32768`）：
+同机实测（util 0.95、`max_model_len 32768`、MTP 开）：
 
 | 场景 | Available KV |
 | --- | --- |
@@ -88,6 +89,17 @@ LWD_MODULE_OWNERSHIP = {
 集中式没有角色切分：**每个 DP 副本都要装视觉塔 + 语言模型 + MTP draft**，而且它的 profiling 还要跑一遍
 编码器（`MultimodalConfig.skip_mm_profiling` 默认 False，`arg_utils.py:622/1427`）。这就是 6.76 GiB 与 0.25 GiB 的差距来源。
 
+最新一次实拉（util 0.98、`max_model_len 512`、MTP 开）的 worker 输出：
+
+```
+Desired GPU memory utilization is (0.98, 59.74 GiB). Actual usage: 54.25 GiB for weights,
+3.27 GiB for peak activation, 0.09 GiB for non-torch memory, 0.58 GiB for NPU graph memory.
+Current KV cache memory: 2.13 GiB   ->   NPU KV cache size: 1,152 tokens (512 上下文下 2.25x 并发)
+```
+
+即：这个包在 util 0.98 下真正能用的 KV 池是 **2.13 GiB**，而 32768 上下文需要 3.02 GiB ——
+所以默认给的是 512（冒烟值），要放大必须同时腾出显存（关 MTP / 关视觉 profiling / 提 util / 改 TP=2）。
+
 单 token KV ≈ 96.6 KiB（3.02 GiB / 32768），据此估算：可用 KV 1 GiB ≈ 10.8k tokens。
 
 模型含 GDN(Mamba) 层，每个 decode 序列占一个 Mamba block；`PD_MAX_NUM_SEQS=32` 是实测可用值
@@ -109,6 +121,9 @@ LWD_MODULE_OWNERSHIP = {
 | `PD_ENABLE_MTP` | 1 | 关掉可回收 draft 权重（边云包同款开关） |
 | `PD_SKIP_MM_PROFILING` | 0 | 置 1 时加 `--skip-mm-profiling`：不做视觉编码器的 profiling 预留，省显存但图像请求的预留会退化 |
 | `PD_MAX_MODEL_LEN` | 512 | 当前冒烟值；每 token ≈96.6 KiB，32768 需 3.02 GiB，正式服务按需调大 |
+| `PD_MAX_NUM_SEQS` | 32 | 受 Mamba block 数限制，先看日志里的 `Available Mamba cache blocks` |
+| `PD_MAX_NUM_BATCHED_TOKENS` | 8192 | 单步批窗口，两侧必须一致（校验器会拦） |
+| `PD_GPU_MEM_UTIL` | 0.98 | 每 +0.01 ≈ +0.61 GiB KV；0.99 以上没给运行时留余量 |
 | `PD_API_SERVER_COUNT` | 空（= DP 数 2） | 置 1 时只起一个前端托管两个 DP 引擎；排查启动握手时可用来排除多前端因素 |
 
 边云包没有后两个的必要：云端不装视觉塔，draft 也是它唯一要担心的部分。
