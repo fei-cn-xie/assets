@@ -46,8 +46,16 @@ SIBLING_KNOBS = {
     "LWD_MAX_NUM_BATCHED_TOKENS": "PD_MAX_NUM_BATCHED_TOKENS",
     "LWD_ENABLE_MTP": "PD_ENABLE_MTP",
 }
-# The three engine launchers hand these to every role.
-KNOB_SCRIPTS = ("edge.sh", "cloud_p.sh", "cloud_d.sh")
+# Which launchers must honour each knob. The four sizing knobs also go to the edge
+# (its context/seq/batch window has to match the clouds), but MTP does not: the
+# draft model is cloud-owned (LWD_MODULE_OWNERSHIP: model.mtp -> cloud only).
+KNOB_SCRIPTS = {
+    "LWD_GPU_MEM_UTIL": ("edge.sh", "cloud_p.sh", "cloud_d.sh"),
+    "LWD_MAX_MODEL_LEN": ("edge.sh", "cloud_p.sh", "cloud_d.sh"),
+    "LWD_MAX_NUM_SEQS": ("edge.sh", "cloud_p.sh", "cloud_d.sh"),
+    "LWD_MAX_NUM_BATCHED_TOKENS": ("edge.sh", "cloud_p.sh", "cloud_d.sh"),
+    "LWD_ENABLE_MTP": ("cloud_p.sh", "cloud_d.sh"),
+}
 ENV_RE = re.compile(r'^export\s+([A-Z0-9_]+)="?\$\{\1:-([^}"]*)\}"?', re.MULTILINE)
 BUFFER_BUDGET_MIB = 12288
 
@@ -242,6 +250,17 @@ def main(argv: list[str]) -> int:
     report.check("--data-parallel-size" not in edge,
                  "edge: must not pass --data-parallel-size (one process serves every DP)")
     report.check("--enforce-eager" in edge, "edge: keep --enforce-eager")
+    # The draft model is a cloud-owned module (LWD_MODULE_OWNERSHIP: model.mtp ->
+    # cloud only), so the edge must not ask for speculative decoding at all.
+    report.check(
+        "--speculative-config" not in edge and "lwd_mtp_args" not in (root / "edge.sh").read_text(encoding="utf-8"),
+        "edge: must not enable MTP — the draft model is cloud-owned, the edge only samples",
+    )
+    for name, script_args in (("cloud_p", cloud_p), ("cloud_d", cloud_d)):
+        report.check(
+            "lwd_mtp_args" in (root / f"{name}.sh").read_text(encoding="utf-8"),
+            f"{name}: must call lwd_mtp_args so LWD_ENABLE_MTP reaches the draft",
+        )
     report.check('"role":"edge"' in edge.get("--additional-config", ""),
                  "edge: --additional-config must carry role=edge")
 
@@ -284,6 +303,44 @@ def main(argv: list[str]) -> int:
             )
         report.check("engine_id" not in cfg,
                      f"{name}: the LWD topology assigns engine ids; do not pass engine_id")
+
+    # --- proxy: LWD routes by instance/DP, so it is not the plain PD proxy ---
+    proxy_sh = (root / "start_proxy.sh").read_text(encoding="utf-8")
+    report.check(
+        "vllm.v1.lwd_control.pd.proxy" in proxy_sh,
+        "start_proxy.sh must run the LWD control-plane proxy "
+        "(python -m vllm.v1.lwd_control.pd.proxy), which routes per cloud_id/target_dp",
+    )
+    report.check(
+        "--config" in proxy_sh,
+        "the LWD proxy takes its per-DP target list from pd_proxy.json (--config)",
+    )
+    proxy_json = root / "pd_proxy.json"
+    if report.check(proxy_json.is_file(), "pd_proxy.json missing"):
+        try:
+            cfg = json.loads(proxy_json.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            report.check(False, f"pd_proxy.json is not valid JSON ({exc})")
+            cfg = {}
+        expected_targets = {}
+        for role, base in (("prefill", coord[:dp_size]), ("decode", coord[dp_size:])):
+            for dp, port in enumerate(base):
+                expected_targets[(role, dp)] = f"http://{cloud_host}:{port}/v1/chat/completions"
+        for role, cloud_id in (("prefill", 0), ("decode", 1)):
+            entries = cfg.get(role, [])
+            report.check(len(entries) == dp_size,
+                         f"pd_proxy.json: {role} needs {dp_size} targets, got {len(entries)}")
+            for entry in entries:
+                dp = entry.get("target_dp")
+                key = (role, dp)
+                report.check(entry.get("cloud_id") == cloud_id,
+                             f"pd_proxy.json: {role} dp{dp} cloud_id must be {cloud_id}")
+                report.check(
+                    entry.get("url") == expected_targets.get(key),
+                    f"pd_proxy.json: {role} dp{dp} url should be "
+                    f"{expected_targets.get(key)} (the DP's coord_port from the topology), "
+                    f"got {entry.get('url')}",
+                )
 
     # --- prefill / decode flag parity ---------------------------------------
     allowed = {
@@ -369,7 +426,7 @@ def main(argv: list[str]) -> int:
     # --- knobs ---------------------------------------------------------------
     for key, reason in SHARED_KNOBS:
         report.check(key in env, f"{key} missing from env.sh")
-        for script in KNOB_SCRIPTS:
+        for script in KNOB_SCRIPTS[key]:
             text = (root / script).read_text(encoding="utf-8")
             # LWD_ENABLE_MTP is consumed by lwd_mtp_args() in env.sh, so calling
             # that helper is the evidence the launcher honours the knob.

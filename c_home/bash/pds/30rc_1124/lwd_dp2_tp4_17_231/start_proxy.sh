@@ -1,31 +1,36 @@
 #!/usr/bin/env bash
 # Client-facing proxy for the edge/cloud deployment — 76.76.26.231:8102.
 #
-# The LWD topology points the edge at this URL (edges[0].coordination.pd_proxy_url),
-# and the proxy itself is the plain PD proxy shipped with vllm-ascend:
-#   examples/disaggregated_prefill_v1/load_balance_proxy_server_example.py
-# It does not know about LWD: the edge talks to it exactly like a client, and the
-# proxy performs the usual prefill -> decode hand-off.
+# IMPORTANT: this is NOT the standard Mooncake PD proxy used by the centralized
+# package next door. LWD routes by cloud instance and DP rank, so the proxy is the
+# LWD control-plane one:
 #
-# Start it after both cloud engines are up and before the edge.
+#   python -m vllm.v1.lwd_control.pd.proxy --config pd_proxy.json
+#
+# Its config (pd_proxy.json next to this script, CLI: vllm/v1/lwd_control/pd/
+# proxy.py:351-353 --config/--host/--port) lists one target per cloud DP, pointing
+# at that DP's coord_port from pd_host_topology.yaml:
+#   prefill dp0 -> 8100, dp1 -> 8101, decode dp0 -> 8110, dp1 -> 8111
+#
+# The edge reaches this proxy through the topology's
+# edges[0].coordination.pd_proxy_url, so the port here must match that URL.
+#
+# Start it after both cloud engines are up and before the edge. No NPU, no UCX and
+# no model are needed here.
 set -euo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=env.sh
 source "$SCRIPT_DIR/env.sh"
 
-PROXY="$CODEBASE_DIR/vllm-ascend/examples/disaggregated_prefill_v1/load_balance_proxy_server_example.py"
-if [[ ! -f $PROXY ]]; then
-  printf '[lwd][preflight] ERROR: %s not found.\n' "$PROXY" >&2
-  printf '[lwd][preflight]        expected inside the vllm-ascend checkout at %s\n' "$CODEBASE_DIR/vllm-ascend" >&2
-  [[ $LWD_DRY_RUN == 1 ]] || exit 5
+CONFIG="$SCRIPT_DIR/pd_proxy.json"
+if [[ ! -f $CONFIG ]]; then
+  printf '[lwd][preflight] ERROR: %s not found (per-DP target list for the LWD proxy)\n' "$CONFIG" >&2
+  exit 5
 fi
 
 lwd_preflight "$LWD_PROXY_PORT"
 
-lwd_run "$LWD_PYTHON" "$PROXY" \
+lwd_run "$LWD_PYTHON" -m vllm.v1.lwd_control.pd.proxy \
+  --config "$CONFIG" \
   --host 0.0.0.0 \
-  --port "$LWD_PROXY_PORT" \
-  --prefiller-hosts "$LWD_CLOUD_HOST" \
-  --prefiller-ports "$LWD_PREFILL_PORT" \
-  --decoder-hosts "$LWD_CLOUD_HOST" \
-  --decoder-ports "$LWD_DECODE_PORT"
+  --port "$LWD_PROXY_PORT"

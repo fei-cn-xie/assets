@@ -13,7 +13,6 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/env.sh"
 lwd_runtime_env
 lwd_host_env edge
-lwd_mtp_args
 lwd_require_ucx_runtime
 
 lwd_preflight "$LWD_EDGE_PORT"
@@ -29,5 +28,4 @@ lwd_run "$LWD_PYTHON" -m vllm.entrypoints.cli.main serve "$LWD_MODEL" \
   --trust-remote-code --served-model-name qwen3.6 \
   --max-model-len "$LWD_MAX_MODEL_LEN" --max-num-seqs "$LWD_MAX_NUM_SEQS" --max-num-batched-tokens "$LWD_MAX_NUM_BATCHED_TOKENS" \
   --gpu-memory-utilization "$LWD_GPU_MEM_UTIL" \
-  --async-scheduling \
-  ${LWD_MTP_ARGS[@]+"${LWD_MTP_ARGS[@]}"}
+  --async-scheduling

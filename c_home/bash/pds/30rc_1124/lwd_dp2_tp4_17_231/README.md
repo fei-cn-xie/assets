@@ -84,6 +84,31 @@ export LWD_UCX_TCP_ONLY=1
 漂移会直接 FAIL。若将来换了机器，用 `LWD_UCX_NET_DEVICES_17` / `LWD_UCX_NET_DEVICES_231` 覆盖，
 并同步改 `env.sh` 的默认值。
 
+## proxy：两套部署用的是**不同的** proxy
+
+这是边云式与集中式最容易搞混的一处：
+
+| | 集中式 `../mooncake_pd2_tp4_231` | 本包（边云式） |
+| --- | --- | --- |
+| 程序 | `examples/disaggregated_prefill_v1/load_balance_proxy_server_example.py` | `python -m vllm.v1.lwd_control.pd.proxy` |
+| 参数 | `--prefiller-hosts/-ports --decoder-hosts/-ports` | `--config pd_proxy.json --port 8102` |
+| 投递目标 | 两侧各一个 `vllm serve` 端点（引擎内部 LB 到 DP） | **每个云 DP 的 `coord_port`**，按 `cloud_id` + `target_dp` 精确投递 |
+| 为什么 | 集中式没有按 DP 路由的概念 | LWD 的请求必须落到持有该 DP KV 的协调端点 |
+
+`pd_proxy.json` 里的 4 个 URL 必须与 `pd_host_topology.yaml` 的 `coord_port` 一一对应——
+`check_configs.py` 会逐条比对（`cloud_id`、`target_dp`、`url`），漂移直接 FAIL。
+
+## MTP 只在云端：边端不带 `--speculative-config`
+
+LWD 的模块归属表把 `model.mtp` 划给 **cloud**（`vllm/model_executor/models/utils.py:864-875`），
+边端只负责 embedding / 采样，所以：
+
+- `cloud_p.sh` / `cloud_d.sh`：调用 `lwd_mtp_args`（受 `LWD_ENABLE_MTP` 控制）
+- `edge.sh`：**不带** `--speculative-config`
+
+校验器会拦下"给边端加 MTP"这种改法。两侧都开 MTP 的性能对比因此是"云端开 draft + 边端采样"，
+这与集中式（每个引擎各自开 draft）在机制上不同，对比时注意口径。
+
 ## 文件
 
 | 文件 | 作用 |
@@ -92,7 +117,8 @@ export LWD_UCX_TCP_ONLY=1
 | `pd_host_topology.yaml` | LWD 拓扑（边=17 一卡，云=231 两个实例各 2 DP）；两台主机必须用同一份 |
 | `edge.sh` | 边端（17，NPU 0）；**最后启动**，它会阻塞等待链路（每个 IO 最多 605s） |
 | `cloud_p.sh` / `cloud_d.sh` | 云端 prefill / decode（231，NPU 0-7 / 8-15） |
-| `start_proxy.sh` | 调用 vllm-ascend 自带 `examples/disaggregated_prefill_v1/load_balance_proxy_server_example.py` |
+| `start_proxy.sh` | 起 **LWD 控制面 proxy**：`python -m vllm.v1.lwd_control.pd.proxy --config pd_proxy.json`（**不是**集中式用的那个 `load_balance_proxy_server_example.py`） |
+| `pd_proxy.json` | 每个云 DP 一个投递目标：prefill dp0→8100、dp1→8101，decode dp0→8110、dp1→8111（即拓扑里的 `coord_port`） |
 | `check_configs.py` | 静态自检（拉起**前**）：拓扑形状/端口/链路、三方 knob 一致、与集中式包交叉校验、CRLF |
 
 ## 启动顺序
