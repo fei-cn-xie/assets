@@ -218,7 +218,10 @@ print(json.dumps({
     "model": argv[argv.index("serve") + 1] if "serve" in argv else None,
     "environment": {
         k: v for k, v in os.environ.items()
-        if k.startswith(("LWD_", "VLLM_", "HCCL_", "GLOO_", "TP_", "ASCEND_", "UCX_"))
+        if k.startswith((
+            "LWD_", "VLLM_", "HCCL_", "GLOO_", "TP_", "ASCEND_", "UCX_",
+            "LD_", "OMP_", "PYTHONPATH", "MASTER_ADDR", "PYTORCH_", "TASK_QUEUE", "CODEBASE_",
+        ))
     },
 }, ensure_ascii=False, default=str))
 PY

@@ -23,6 +23,10 @@ export PD_MODEL="${PD_MODEL:-/home/weight/Qwen3.6-27B/}"
 # vllm-ascend rather than being vendored here.
 export CODEBASE_DIR="${CODEBASE_DIR:-/vllm-workspace}"
 export PD_ASCEND_DIR="${PD_ASCEND_DIR:-$CODEBASE_DIR/vllm-ascend/examples/disaggregated_prefill_v1}"
+# Mooncake's python bindings live in the ascend-toolkit site-packages. Without
+# this the engines start fine but the first KV transfer fails, so it is part of
+# the runtime env rather than an optional knob.
+export PD_MOONCAKE_LIB="${PD_MOONCAKE_LIB:-/usr/local/Ascend/ascend-toolkit/latest/python/site-packages/mooncake}"
 export PYTHONPATH="$CODEBASE_DIR/vllm-ascend:$CODEBASE_DIR/vllm${PYTHONPATH:+:$PYTHONPATH}"
 
 # This deployment is single host, so the address is also its own peer address.
@@ -80,6 +84,12 @@ elif [[ $# != 0 ]]; then
 fi
 
 pd_runtime_env() {
+  export LD_LIBRARY_PATH="$PD_MOONCAKE_LIB${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+  # Only preload jemalloc where it exists: an unconditional LD_PRELOAD floods every
+  # child with "cannot be preloaded: ignored" ERROR lines.
+  if [[ -f /usr/lib/aarch64-linux-gnu/libjemalloc.so.2 ]]; then
+    export LD_PRELOAD="/usr/lib/aarch64-linux-gnu/libjemalloc.so.2:${LD_PRELOAD:-}"
+  fi
   # vLLM derives every peer address from get_ip(), which honours VLLM_HOST_IP and
   # otherwise auto-detects an interface (on the 195 host that picked a docker
   # bridge). Pin it to the data NIC's address.
@@ -150,7 +160,10 @@ print(json.dumps({
     "model": argv[argv.index("serve") + 1] if "serve" in argv else None,
     "environment": {
         k: v for k, v in __import__("os").environ.items()
-        if k.startswith(("PD_", "VLLM_", "HCCL_", "GLOO_", "TP_", "ASCEND_"))
+        if k.startswith((
+            "PD_", "VLLM_", "HCCL_", "GLOO_", "TP_", "ASCEND_",
+            "LD_", "OMP_", "PYTHONPATH", "MASTER_ADDR", "PYTORCH_", "TASK_QUEUE", "UCX_",
+        ))
     },
 }, ensure_ascii=False, default=str))
 PY

@@ -269,6 +269,18 @@ def main(argv: list[str]) -> int:
     report.check(not clash, f"KV port range overlaps a listening port: {clash}")
     report.notes.append(f"KV handshake ports: prefill {sorted(pk)}, decode {sorted(dk)}")
 
+    # --- runtime env essentials ---------------------------------------------
+    # These are not knobs: without them the engines start and then fail on the
+    # first KV transfer (mooncake) or advertise the wrong peer address (host ip).
+    env_sh = (root / "env.sh").read_text(encoding="utf-8")
+    for needle, why in (
+        ('PD_MOONCAKE_LIB', "the Mooncake python bindings' library path"),
+        ('LD_LIBRARY_PATH="$PD_MOONCAKE_LIB', "LD_LIBRARY_PATH must include that path"),
+        ('export VLLM_HOST_IP="$PD_HOST"', "peer addresses come from get_ip()"),
+        ('export HCCL_IF_IP="$PD_HOST"', "HCCL must bind the data NIC address"),
+    ):
+        report.check(needle in env_sh, f"env.sh is missing {needle} ({why})")
+
     # --- shared knobs, in-package -------------------------------------------
     for key, reason in SHARED_KNOBS:
         report.check(key in env, f"{key} missing from env.sh")
