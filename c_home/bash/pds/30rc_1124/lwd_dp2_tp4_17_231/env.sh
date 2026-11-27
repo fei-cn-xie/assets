@@ -32,8 +32,12 @@ export LWD_SCRIPT_DIR
 # One topology file for all three roles; it must be identical on both hosts
 # (LwdTopology hashes it, every process logs "[LWD][config] ... digest=").
 export LWD_TOPOLOGY="${LWD_TOPOLOGY:-$LWD_SCRIPT_DIR/pd_host_topology.yaml}"
-LWD_TOPOLOGY_JSON="$("$LWD_PYTHON" -c 'import json, os; print(json.dumps(os.environ["LWD_TOPOLOGY"]))')"
-export LWD_TOPOLOGY_JSON
+# JSON-escaped form of the topology path, needed only by the engine launchers.
+# Lazy on purpose: sourcing env.sh (validators, verify_dp.sh) must not spawn an
+# interpreter, and a wrong $LWD_PYTHON should fail the launcher that needs it.
+lwd_topology_json() {
+  "$LWD_PYTHON" -c 'import json, os; print(json.dumps(os.environ["LWD_TOPOLOGY"]))'
+}
 
 # --- hosts and their data NICs ---------------------------------------------
 export LWD_EDGE_HOST="${LWD_EDGE_HOST:-76.76.26.17}"

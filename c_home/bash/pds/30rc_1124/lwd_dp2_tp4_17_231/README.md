@@ -119,7 +119,21 @@ LWD 的模块归属表把 `model.mtp` 划给 **cloud**（`vllm/model_executor/mo
 | `cloud_p.sh` / `cloud_d.sh` | 云端 prefill / decode（231，NPU 0-7 / 8-15） |
 | `start_proxy.sh` | 起 **LWD 控制面 proxy**：`python -m vllm.v1.lwd_control.pd.proxy --config pd_proxy.json`（**不是**集中式用的那个 `load_balance_proxy_server_example.py`） |
 | `pd_proxy.json` | 每个云 DP 一个投递目标：prefill dp0→8100、dp1→8101，decode dp0→8110、dp1→8111（即拓扑里的 `coord_port`） |
-| `check_configs.py` | 静态自检（拉起**前**）：拓扑形状/端口/链路、三方 knob 一致、与集中式包交叉校验、CRLF |
+| `check_configs.py` | 静态自检（拉起**前**）：拓扑形状/端口/链路、三方 knob 一致、proxy 目标一致性、与集中式包交叉校验、CRLF |
+| `verify_dp.sh` | 只读自检（拉起**后**）：按主机自动判角色；云端查 EngineCore/worker 数、8 个 KV 端口归属、coord_port 与 proxy 连通、一次真实请求；边端查 worker 与 8510 |
+
+## 拉起后的自检
+
+```bash
+bash verify_dp.sh            # 在 231 上跑，自动判定 cloud 角色
+bash verify_dp.sh --role edge  # 在 17 上跑
+bash verify_dp.sh --quick      # 跳过最后那次真实请求
+```
+
+它只读、不启停进程。检查项：云端 4 个 EngineCore、≥16 个 worker、8 个生产者 KV 端口
+（14570-14577）分属 2 个 PID、两个云的 `/v1/models`、4 个 `coord_port` 与 proxy 的 TCP 连通性；
+边端 1 个 worker 与 `8510/v1/models`。注意 LWD proxy **只注册了 `POST /v1/chat/completions`**，
+没有 `/health`，所以探活用的是 TCP 连接 + 一次真实请求。
 
 ## 启动顺序
 

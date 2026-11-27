@@ -23,7 +23,7 @@ lwd_run "$LWD_PYTHON" -m vllm.entrypoints.cli.main serve "$LWD_MODEL" \
   --master-addr "$LWD_EDGE_HOST" --master-port 29527 \
   --pipeline-parallel-size 1 \
   --tensor-parallel-size 1 \
-  --additional-config '{"enable_cpu_binding":true,"lwd_config":{"path":'"${LWD_TOPOLOGY_JSON}"',"role":"edge","instance_id":0}}' \
+  --additional-config '{"enable_cpu_binding":true,"lwd_config":{"path":'"$(lwd_topology_json)"',"role":"edge","instance_id":0}}' \
   --enforce-eager \
   --trust-remote-code --served-model-name qwen3.6 \
   --max-model-len "$LWD_MAX_MODEL_LEN" --max-num-seqs "$LWD_MAX_NUM_SEQS" --max-num-batched-tokens "$LWD_MAX_NUM_BATCHED_TOKENS" \
