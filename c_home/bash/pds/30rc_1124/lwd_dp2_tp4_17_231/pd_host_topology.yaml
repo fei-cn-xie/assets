@@ -35,11 +35,15 @@ deployment:
   clouds_num: 2
   data_plane_comm: host
   data_plane_host:
-    # Host budget gate counts one pool pair per edge -> cloud DP link:
-    # (2 prefill + 2 decode) DPs => 4 links => 4 * 4 * (256 + 32) = 4608 MiB,
-    # under the 12288 MiB budget
-    # (vllm_ascend/.../lwd_host_channels.py:201-216, 262-266).
-    # TP does not enter this count: the link is per DP, not per card.
+    # Host budget gate, from lwd_host_channels.py:254-274:
+    #   need_mb = (links / 2) * BLOCKS_PER_CHANNEL * (up + down)
+    # with BLOCKS_PER_CHANNEL = 4 (ucx_io.py:58) and links = 2 per connection.
+    #   * the EDGE process owns every connection of its instance (:262), here
+    #     2 prefill + 2 decode DPs => 8 links => 4 * 4 * (256 + 32) = 4608 MiB
+    #   * each CLOUD engine owns only its own DP => 2 links => 1152 MiB
+    # Both are under the 12288 MiB gate (:203).
+    # TP=4 does NOT multiply this: only TP rank 0 creates IO objects (:263), so a
+    # 4-card replica pays the same host buffers as a 1-card one.
     up_buffer_size: 256
     down_buffer_size: 32
     # sidecar = one transport daemon per host, spawned by the first engine
