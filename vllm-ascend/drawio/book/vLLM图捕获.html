@@ -1,0 +1,1093 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>站6 怎么把提交开销压掉 · 10 页</title><style>
+:root { --ink:#1f2328; --dim:#57606a; --line:#d0d7de; --bg:#ffffff;
+        --soft:#f6f8fa; --accent:#0969da; }
+* { box-sizing: border-box; }
+body { margin:0; padding:0 20px 80px; background:var(--bg); color:var(--ink);
+       font:15px/1.7 "Microsoft YaHei","PingFang SC",system-ui,sans-serif; }
+nav.top { position:sticky; top:0; z-index:9; background:rgba(255,255,255,.94);
+          backdrop-filter:blur(6px); border-bottom:1px solid var(--line);
+          padding:10px 0; margin-bottom:24px; font-size:13px; }
+nav.top a { color:var(--accent); text-decoration:none; margin-right:14px; }
+nav.top a:hover { text-decoration:underline; }
+h1 { font-size:24px; margin:18px 0 6px; }
+h2 { font-size:19px; margin:34px 0 8px; padding-top:10px;
+     border-top:1px solid var(--line); }
+.lead { color:var(--dim); margin:0 0 18px; }
+figure { margin:0 0 34px; }
+figcaption { font-size:14px; color:var(--dim); margin:8px 0 0; }
+.svgwrap { overflow-x:auto; border:1px solid var(--line); border-radius:8px;
+           background:#fff; padding:6px; }
+.svgwrap svg { display:block; height:auto; max-width:100%; }
+.ptitle { font-size:16px; font-weight:700; margin:0 0 4px; }
+.psub { color:var(--dim); font-size:13px; margin:0 0 10px; }
+.concl { background:var(--soft); border-left:4px solid var(--accent);
+         padding:10px 14px; margin:12px 0 0; font-size:14px; border-radius:0 6px 6px 0; }
+.concl b { color:var(--ink); }
+details { margin-top:10px; }
+summary { cursor:pointer; color:var(--accent); font-size:13px; }
+pre { background:var(--soft); padding:10px 12px; border-radius:6px;
+      white-space:pre-wrap; word-break:break-word; font-size:12.5px;
+      line-height:1.65; margin:8px 0 0; }
+.cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr));
+         gap:14px; margin:18px 0 10px; }
+.card { border:1px solid var(--line); border-radius:10px; padding:14px 16px;
+        text-decoration:none; color:inherit; display:block; }
+.card:hover { border-color:var(--accent); background:var(--soft); }
+.card .k { color:var(--dim); font-size:12px; letter-spacing:.05em; }
+.card .t { font-size:15px; font-weight:700; margin:2px 0 4px; }
+.card .d { color:var(--dim); font-size:13px; }
+.tag { display:inline-block; font-size:12px; color:var(--dim);
+       border:1px solid var(--line); border-radius:99px; padding:1px 9px; margin-left:6px; }
+</style></head><body><nav class="top"> <a href="index.html">总目录</a> <a href="../学习地图.md">学习地图.md</a></nav><h1>站6　怎么把提交开销压掉 · 10 页</h1>
+<p class="lead">捕获与回放、三个硬约束、四种模式、桶与 dispatch、昇腾 ACL Graph</p>
+<p class="lead">本页 10 张图；点击编号跳转：<a href="#p0">1</a> <a href="#p1">2</a> <a href="#p2">3</a> <a href="#p3">4</a> <a href="#p4">5</a> <a href="#p5">6</a> <a href="#p6">7</a> <a href="#p7">8</a> <a href="#p8">9</a> <a href="#p9">10</a></p>
+<figure id="p0">
+<p class="ptitle">① 为什么需要图捕获：CPU 在「下发」，NPU 在「等」</p>
+<p class="psub">一句话：推理的每一步都要把整层的成百上千个算子逐个提交给设备。decode 时每步只算很少的 token，于是提交的时间开始和计算的时间同一个量级——图捕获就是把「逐个提交」压成「一次提交」。</p>
+<div class="svgwrap"><svg xmlns="http://www.w3.org/2000/svg" width="977"1576" height="675"1090" viewBox="0 0 1576 1090">
+<rect width="1576" height="1090" fill="#ffffff"/>
+<text x="36.0" y="34.0" font-size="11" fill="#333333">① 为什么需要图捕获：CPU 在「下发」，NPU 在「等」</text>
+<text x="36.0" y="62.0" font-size="11" fill="#666666">一句话：推理的每一步都要把整层的成百上千个算子逐个提交给设备。decode 时每步只算很少的 token，于是提交的时间开始和计算的时间同一个量级——图捕获就是把「逐个提交」压成「一次提交」。</text>
+<text x="36.0" y="136.0" font-size="11" fill="#333333">第一步：先看清一步推理里其实有两条时间线</text>
+<text x="36.0" y="170.0" font-size="11" fill="#333333">普通执行（eager / 逐算子下发）</text>
+<rect x="36.0" y="186.0" width="700.0" height="150.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="42.0" y="200.0" font-size="10" fill="#333333" font-family="Microsoft YaHei">CPU：算子1 提交 → 算子2 提交 → 算子3 提交 → …（每层几十个，几十层）</text>
+<text x="42.0" y="213.5" font-size="11" fill="#333333" font-family="Microsoft YaHei">NPU：　　　　　　　执行1　　　　　执行2　　　　　执行3 …</text>
+<text x="42.0" y="228.35" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="42.0" y="243.2" font-size="11" fill="#333333" font-family="Microsoft YaHei">两条线在同一个流上交替：CPU 提交一个，NPU 才能算一个。当「执行」很短（decode 只算 1 个 token）时，NPU 有大量时间在等 CPU 提交下一个算子。</text>
+<text x="796.0" y="170.0" font-size="11" fill="#333333">图捕获之后（回放）</text>
+<rect x="796.0" y="186.0" width="664.0" height="150.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="802.0" y="200.0" font-size="10" fill="#333333" font-family="Microsoft YaHei">CPU：replay() —— 只提交一次</text>
+<text x="802.0" y="213.5" font-size="11" fill="#333333" font-family="Microsoft YaHei">NPU：　　▷ 整段计算连着跑（中间不再等 CPU）</text>
+<text x="802.0" y="228.35" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="802.0" y="243.2" font-size="11" fill="#333333" font-family="Microsoft YaHei">整张图的算子序列、依赖、参数在启动时就录好了；回放时 CPU 只发一条命令，剩下的交给驱动/硬件按录好的顺序跑。</text>
+<text x="36.0" y="376.0" font-size="11" fill="#333333">第二步：为什么 decode 阶段最吃亏（prefill 反而还好）</text>
+<rect x="36.0" y="396.0" width="700.0" height="176.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="410.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="46.0" y="418.0" font-size="11" fill="#333333">prefill（一次算整段 prompt）</text>
+<text x="46.0" y="444.0" font-size="11" fill="#333333">一次要算 N 个 token（几百到几万），矩阵很「宽」。device 上的计算时间长 → 提交开销被摊薄，CPU 追得上。所以 prefill 不做整图捕获也影响不大。</text>
+<rect x="796.0" y="396.0" width="664.0" height="176.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="802.0" y="410.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="806.0" y="418.0" font-size="11" fill="#333333">decode（一次只算新生成的 1 个 token）</text>
+<text x="806.0" y="444.0" font-size="11" fill="#333333">每请求 1 个 query token（spec decode 时是 1+N）。计算量极小 → 每步的时间几乎由「下发次数」决定。而层数 × 每层算子数 一个都不能少 → 提交开销成为主导。所以「图」几乎只为 decode 而生。</text>
+<rect x="36.0" y="612.0" width="1424.0" height="118.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="626.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">代价与收益（本仓文档的原话）</text>
+<text x="42.0" y="640.85" font-size="10" fill="#333333" font-family="Microsoft YaHei">① 收益：把 host 侧的上千次下发压成一次，换来的是「稳态 decode 性能」（vllm/docs/configuration/optimization.md:25 原文：跳过图捕获可以最快启动，代价是稳态 decode 性能）。</text>
+<text x="42.0" y="654.35" font-size="11" fill="#333333" font-family="Microsoft YaHei">② 代价：启动变慢（要真跑一遍来录）+ 显存变多（每张图要占一份内存池），而且形状必须固定（见 ④ 的三条硬约束）。</text>
+<text x="42.0" y="669.2" font-size="9" fill="#333333" font-family="Microsoft YaHei">③ Ascend 侧的设计目标与 CUDA 一致：reduce host launch overhead for small and medium runtime shapes（vllm-ascend/docs/.../ACL_Graph.md:7）。</text>
+<rect x="36.0" y="764.0" width="1424.0" height="104.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="778.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">代码锚点（想自己去翻的时候用）</text>
+<text x="42.0" y="792.85" font-size="9" fill="#666666" font-family="Microsoft YaHei">收益/代价的定性描述：vllm/docs/configuration/optimization.md:25、vllm/docs/design/cuda_graphs.md:43-46、vllm/docs/configuration/conserving_memory.md:48-65</text>
+<text x="42.0" y="805.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">decode 每请求只有 1 个 query token：vllm/config/vllm.py:661-679</text>
+<text x="42.0" y="819.85" font-size="11" fill="#333333" font-family="Microsoft YaHei">「uniform decode」判定：vllm/v1/cudagraph_dispatcher.py:37、vllm/v1/worker/gpu_model_runner.py:3888-3907</text>
+<text x="42.0" y="834.7" font-size="11" fill="#333333" font-family="Microsoft YaHei">host 侧同步被当作热路径敌人：vllm/envs.py:635-643（VLLM_GPU_SYNC_CHECK）、vllm/utils/gpu_sync_debug.py:3</text>
+<text x="42.0" y="849.5500000000001" font-size="11" fill="#333333" font-family="Microsoft YaHei">Ascend 的设计目标原文：vllm-ascend/docs/source/developer_guide/Design_Documents/ACL_Graph.md:7</text>
+<rect x="36.0" y="900.0" width="1424.0" height="58.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="914.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">一句话记住这一页：图捕获不是「让算子变快」，而是把下发的次数变少——prefill 计算量大、摊得开；decode 每步只有 1 个 token，省下的 CPU 提交时间直接变成端到端的 token 间隔（TPOT）。</text>
+<text x="36.0" y="1006.0" font-size="11" fill="#333333">图例</text>
+<rect x="148.0" y="989.0" width="120.0" height="26.0" rx="4" fill="#eceff1" stroke="#607d8b"/>
+<text x="154.0" y="1003.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">客户端</text>
+<rect x="276.0" y="989.0" width="120.0" height="26.0" rx="4" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="282.0" y="1003.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">边端 edge</text>
+<rect x="404.0" y="989.0" width="120.0" height="26.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="410.0" y="1003.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 P (prefill)</text>
+<rect x="532.0" y="989.0" width="120.0" height="26.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="538.0" y="1003.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 D (decode)</text>
+<rect x="660.0" y="989.0" width="120.0" height="26.0" rx="4" fill="#b0e3e6" stroke="#0e8088"/>
+<text x="666.0" y="1003.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">PD Proxy</text>
+<rect x="788.0" y="989.0" width="120.0" height="26.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="794.0" y="1003.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">中立/通用</text>
+<rect x="916.0" y="989.0" width="120.0" height="26.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="922.0" y="1003.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">失败/取消</text>
+<text x="210.0" y="1040.0" font-size="11" fill="#666666">控制面 ZMQ</text>
+<text x="460.0" y="1040.0" font-size="11" fill="#666666">数据面 UCX·Mooncake</text>
+<text x="710.0" y="1040.0" font-size="11" fill="#666666">HTTP</text>
+<path d="M386.0,346.0 L1128.0,346.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<path d="M148.0,1038.0 L204.0,1038.0" fill="none" stroke="#9673a6" marker-end="url(#a)"/>
+<path d="M398.0,1038.0 L454.0,1038.0" fill="none" stroke="#d6b656" marker-end="url(#a)"/>
+<path d="M648.0,1038.0 L704.0,1038.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333333"/></marker></defs>
+</svg></div>
+<div class="concl"><b>一句话结论　</b>推理的每一步都要把整层的成百上千个算子逐个提交给设备。decode 时每步只算很少的 token，于是提交的时间开始和计算的时间同一个量级——图捕获就是把「逐个提交」压成「一次提交」。</div>
+<details><summary>代码锚点（5 条，可 grep）</summary><pre>收益/代价的定性描述：vllm/docs/configuration/optimization.md:25、vllm/docs/design/cuda_graphs.md:43-46、vllm/docs/configuration/conserving_memory.md:48-65
+decode 每请求只有 1 个 query token：vllm/config/vllm.py:661-679
+「uniform decode」判定：vllm/v1/cudagraph_dispatcher.py:37、vllm/v1/worker/gpu_model_runner.py:3888-3907
+host 侧同步被当作热路径敌人：vllm/envs.py:635-643（VLLM_GPU_SYNC_CHECK）、vllm/utils/gpu_sync_debug.py:3
+Ascend 的设计目标原文：vllm-ascend/docs/source/developer_guide/Design_Documents/ACL_Graph.md:7</pre></details>
+</figure>
+<figure id="p1">
+<p class="ptitle">② 什么是图：把「跑一遍」录下来，以后一次「播」</p>
+<p class="psub">一句话：捕获＝在专用 stream 上真正跑一遍 forward，同时把设备上发生的算子序列与地址关系录成图；回放＝一条命令重放整张图，CPU 不再逐个提交。</p>
+<div class="svgwrap"><svg xmlns="http://www.w3.org/2000/svg" width="977"1576" height="673"1086" viewBox="0 0 1576 1086">
+<rect width="1576" height="1086" fill="#ffffff"/>
+<text x="36.0" y="34.0" font-size="11" fill="#333333">② 什么是图：把「跑一遍」录下来，以后一次「播」</text>
+<text x="36.0" y="62.0" font-size="11" fill="#666666">一句话：捕获＝在专用 stream 上真正跑一遍 forward，同时把设备上发生的算子序列与地址关系录成图；回放＝一条命令重放整张图，CPU 不再逐个提交。</text>
+<text x="36.0" y="134.0" font-size="11" fill="#333333">第一步：三步看清它到底「录」了什么</text>
+<rect x="36.0" y="154.0" width="466.0" height="214.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="42.0" y="168.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="46.0" y="176.0" font-size="11" fill="#333333">① 普通执行：每次都重来一遍</text>
+<text x="46.0" y="202.0" font-size="11" fill="#333333">Python 每步重新执行一遍模型代码：· 读当前的输入张量· 逐个调用算子（kernel/launch）· CPU 把每个算子提交给设备没有记忆：第 100 步和第 1 步做的事情完全一样，但 CPU 还是要把这上千次提交再做一遍。</text>
+<rect x="526.0" y="154.0" width="466.0" height="214.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="532.0" y="168.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="536.0" y="176.0" font-size="11" fill="#333333">② 捕获：真跑一遍，同时录下来</text>
+<text x="536.0" y="202.0" font-size="11" fill="#333333">在专用 stream 上放 torch.cuda.graph(...)（昇腾是 torch.npu.graph）：· 里面真的把 forward 跑了一次· 设备上发生的算子、依赖、地址，被录成一张图· 输入张量的地址也被记下（回放时必须一样）代价：这一步要真花钱（时间 + 一份内存池）。</text>
+<rect x="1016.0" y="154.0" width="444.0" height="214.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="1022.0" y="168.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="1026.0" y="176.0" font-size="11" fill="#333333">③ 回放：一句 replay()</text>
+<text x="1026.0" y="202.0" font-size="11" fill="#333333">以后每步只做：· 把新输入 copy_ 到捕获时那几块固定 buffer 里· 调一次 graph.replay()· 从固定输出 buffer 里读结果CPU 只提交一次；设备按录好的顺序连着跑。注意：Python 代码不会再执行。</text>
+<rect x="36.0" y="428.0" width="1424.0" height="108.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="442.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">最关键的一条性质：录进去的只有「设备操作」，Python 逻辑不再执行</text>
+<text x="42.0" y="456.85" font-size="10" fill="#333333" font-family="Microsoft YaHei">本仓文档原话：这段代码在捕获期间执行，只有它发出的 GPU 操作会被记录并在回放时执行，它的 Python 本体不会再跑一遍（vllm/docs/design/model_runner_v2.md:198）。</text>
+<text x="42.0" y="470.35" font-size="11" fill="#333333" font-family="Microsoft YaHei">推论 1：图里的 if / for 只在捕获时决定一次，回放时不会重新判断——所以形状、分支、循环次数都必须固定。</text>
+<text x="42.0" y="485.20000000000005" font-size="11" fill="#333333" font-family="Microsoft YaHei">推论 2：图里的 .item() / print / 分配内存 也只会发生一次，值会被「烤」进图里（后面 ④ 会讲这条坑）。</text>
+<text x="36.0" y="550.0" font-size="11" fill="#333333">第二步：一个类比（记住这个就够了）</text>
+<rect x="36.0" y="570.0" width="700.0" height="150.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="584.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="46.0" y="592.0" font-size="11" fill="#333333">像「宏」（macro）/ 像「录屏回放」</text>
+<text x="46.0" y="618.0" font-size="11" fill="#333333">· 普通执行 = 每一步都手工点一遍菜单；· 捕获 = 手工点一次，把动作序列录成一个宏；· 回放 = 以后按一下宏的快捷键，它把整串动作重放。宏能成立的前提：每次点的位置必须一样（＝地址固定）、菜单结构不能变（＝形状固定）。</text>
+<rect x="796.0" y="570.0" width="664.0" height="150.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="802.0" y="584.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="806.0" y="592.0" font-size="11" fill="#333333">它「不是」什么（三个常见误解）</text>
+<text x="806.0" y="618.0" font-size="11" fill="#333333">· 不是「把模型编译成更快的算子」——那是 torch.compile 干的事；· 不是「缓存计算结果」——它不省计算，只省「提交」；· 不是「自动加速一切」——形状一变就要换一张图，没有对应图就退回普通执行。</text>
+<rect x="36.0" y="760.0" width="1424.0" height="104.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="774.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">代码锚点（想自己去翻的时候用）</text>
+<text x="42.0" y="788.85" font-size="9" fill="#666666" font-family="Microsoft YaHei">捕获的真实代码（跑一遍并录）：vllm/compilation/cuda_graph.py:315-321（with torch.cuda.graph(...): output = self.runnable(...)）</text>
+<text x="42.0" y="801.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">回放就一行：vllm/compilation/cuda_graph.py:362（entry.cudagraph.replay()）</text>
+<text x="42.0" y="815.85" font-size="11" fill="#333333" font-family="Microsoft YaHei">「只录 GPU 操作、Python 不再跑」：vllm/docs/design/model_runner_v2.md:198</text>
+<text x="42.0" y="830.7" font-size="11" fill="#333333" font-family="Microsoft YaHei">录下来的产物是「零参可调用列表」：vllm/compilation/breakable_cudagraph.py:3-21</text>
+<text x="42.0" y="845.5500000000001" font-size="11" fill="#333333" font-family="Microsoft YaHei">Ascend 上的对应实现：vllm-ascend/vllm_ascend/compilation/acl_graph.py（捕获与回放各一处）</text>
+<rect x="36.0" y="896.0" width="1424.0" height="58.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="910.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">一句话记住这一页：捕获 = 「真跑一遍顺便录下来」，回放 = 「一条命令重放」；它省的是 CPU 的提交次数，不是计算量——所以前提是「形状固定、地址固定、图里不能有 CPU 同步」。</text>
+<text x="36.0" y="1002.0" font-size="11" fill="#333333">图例</text>
+<rect x="148.0" y="985.0" width="120.0" height="26.0" rx="4" fill="#eceff1" stroke="#607d8b"/>
+<text x="154.0" y="999.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">客户端</text>
+<rect x="276.0" y="985.0" width="120.0" height="26.0" rx="4" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="282.0" y="999.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">边端 edge</text>
+<rect x="404.0" y="985.0" width="120.0" height="26.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="410.0" y="999.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 P (prefill)</text>
+<rect x="532.0" y="985.0" width="120.0" height="26.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="538.0" y="999.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 D (decode)</text>
+<rect x="660.0" y="985.0" width="120.0" height="26.0" rx="4" fill="#b0e3e6" stroke="#0e8088"/>
+<text x="666.0" y="999.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">PD Proxy</text>
+<rect x="788.0" y="985.0" width="120.0" height="26.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="794.0" y="999.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">中立/通用</text>
+<rect x="916.0" y="985.0" width="120.0" height="26.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="922.0" y="999.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">失败/取消</text>
+<text x="210.0" y="1036.0" font-size="11" fill="#666666">控制面 ZMQ</text>
+<text x="460.0" y="1036.0" font-size="11" fill="#666666">数据面 UCX·Mooncake</text>
+<text x="710.0" y="1036.0" font-size="11" fill="#666666">HTTP</text>
+<path d="M272.0,388.0 L759.0,388.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<path d="M762.0,388.0 L1238.0,388.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<path d="M148.0,1034.0 L204.0,1034.0" fill="none" stroke="#9673a6" marker-end="url(#a)"/>
+<path d="M398.0,1034.0 L454.0,1034.0" fill="none" stroke="#d6b656" marker-end="url(#a)"/>
+<path d="M648.0,1034.0 L704.0,1034.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333333"/></marker></defs>
+</svg></div>
+<div class="concl"><b>一句话结论　</b>捕获＝在专用 stream 上真正跑一遍 forward，同时把设备上发生的算子序列与地址关系录成图；回放＝一条命令重放整张图，CPU 不再逐个提交。</div>
+<details><summary>代码锚点（4 条，可 grep）</summary><pre>捕获的真实代码（跑一遍并录）：vllm/compilation/cuda_graph.py:315-321（with torch.cuda.graph(...): output = self.runnable(...)）
+回放就一行：vllm/compilation/cuda_graph.py:362（entry.cudagraph.replay()）
+「只录 GPU 操作、Python 不再跑」：vllm/docs/design/model_runner_v2.md:198
+录下来的产物是「零参可调用列表」：vllm/compilation/breakable_cudagraph.py:3-21</pre></details>
+</figure>
+<figure id="p2">
+<p class="ptitle">③ 一次捕获里发生了什么（10 步，按代码顺序）</p>
+<p class="psub">一句话：包一层 wrapper → 开闸门 → 切到侧流 → 从大到小逐个桶：warmup 几遍 → 同步 → 在 torch.cuda.graph 里真跑一遍 → 关闸门、锁 workspace。注意：捕获是在「profile 量完显存、KV 块池也建好」之后才做的。</p>
+<div class="svgwrap"><svg xmlns="http://www.w3.org/2000/svg" width="977"1576" height="882"1424" viewBox="0 0 1576 1424">
+<rect width="1576" height="1424" fill="#ffffff"/>
+<text x="36.0" y="34.0" font-size="11" fill="#333333">③ 一次捕获里发生了什么（10 步，按代码顺序）</text>
+<text x="36.0" y="62.0" font-size="11" fill="#666666">一句话：包一层 wrapper → 开闸门 → 切到侧流 → 从大到小逐个桶：warmup 几遍 → 同步 → 在 torch.cuda.graph 里真跑一遍 → 关闸门、锁 workspace。注意：捕获是在「profile 量完显存、KV 块池也建好」之后才做的。</text>
+<text x="36.0" y="140.0" font-size="11" fill="#333333">左列：准备阶段（1-5）　右列：逐桶录制（6-10）</text>
+<rect x="36.0" y="158.0" width="690.0" height="118.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="172.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="46.0" y="180.0" font-size="11" fill="#333333">①　包 wrapper（决定「图从哪开始到哪结束」）</text>
+<text x="46.0" y="204.0" font-size="11" fill="#333333">FULL：在整模型外面包一层 CUDAGraphWrapper。PIECEWISE：由编译后端给每个子图各包一层（每个 attention 之间一段）。这一步决定了图的粒度，也决定了 attention 在不在图里。</text>
+<rect x="36.0" y="306.0" width="690.0" height="118.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="320.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="46.0" y="328.0" font-size="11" fill="#333333">②　开「捕获闸门」</text>
+<text x="46.0" y="352.0" font-size="11" fill="#333333">全局标志位打开：此刻允许捕获。若在别的时候触发捕获，会直接抛 CUDA graph capturing detected at an inappropriate time。</text>
+<rect x="36.0" y="454.0" width="690.0" height="132.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="468.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="46.0" y="476.0" font-size="11" fill="#333333">③　切到侧流 + 冻住 GC + 清缓存量基线</text>
+<text x="46.0" y="500.0" font-size="11" fill="#333333">必须在非默认 stream 上捕获，这样只录到本次的算子（不然会把别人的也录进去）。然后 synchronize + empty_cache，记下此刻的空闲显存 → 用来事后算「图占了多少钱」。</text>
+<rect x="36.0" y="616.0" width="690.0" height="118.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="42.0" y="630.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="46.0" y="638.0" font-size="11" fill="#333333">④　拿到「进程级」的 graph 显存池</text>
+<text x="46.0" y="662.0" font-size="11" fill="#333333">整个进程只有一个 pool（不是每张图一个）。所以多张图共用一块池，占用≈各桶峰值的最大值。</text>
+<rect x="36.0" y="764.0" width="690.0" height="132.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="42.0" y="778.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="46.0" y="786.0" font-size="11" fill="#333333">⑤　排好捕获顺序：从大到小</text>
+<text x="46.0" y="810.0" font-size="11" fill="#333333">代码注释写得很直白：先抓大形状，小形状可以复用大形状已经分配过的池内存。反过来（先小后大）会多占显存，甚至 OOM。</text>
+<rect x="778.0" y="158.0" width="682.0" height="118.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="784.0" y="172.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="788.0" y="180.0" font-size="11" fill="#333333">⑥　每个桶先 warmup 几遍</text>
+<text x="788.0" y="204.0" font-size="11" fill="#333333">在无图模式下把这一步空跑 N 遍（cudagraph_num_of_warmups，V1 默认 1）。目的是让算子库/通信库把 lazy 初始化都做完。</text>
+<rect x="778.0" y="306.0" width="682.0" height="118.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="784.0" y="320.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="788.0" y="328.0" font-size="11" fill="#333333">⑦　warmup 完必须同步一次</text>
+<text x="788.0" y="352.0" font-size="11" fill="#333333">注释原因：warmup 可能在辅助流上跑，不等它完成就开始捕获，会录到一半。</text>
+<rect x="778.0" y="454.0" width="682.0" height="146.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="784.0" y="468.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="788.0" y="476.0" font-size="11" fill="#333333">⑧　把输入「钉」到固定地址（dummy run 里做）</text>
+<text x="788.0" y="500.0" font-size="11" fill="#333333">input_ids / positions / slot_mapping / attn_metadata 全部取预先分配好的持久 buffer 的切片；捕获时 slot_mapping 全填 -1（跳过真正写 KV），attn_metadata 用 for_cudagraph_capture 专用构造。这就是「地址固定」约束的落地方式。</text>
+<rect x="778.0" y="630.0" width="682.0" height="146.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="784.0" y="644.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="788.0" y="652.0" font-size="11" fill="#333333">⑨　真正的录制：在 torch.cuda.graph 里跑一遍 forward</text>
+<text x="788.0" y="676.0" font-size="11" fill="#333333">with torch.cuda.graph(cudagraph, pool=全局pool, stream=当前侧流): output = self.runnable(...)这一跑被录成图；output 只留弱引用（省显存，因为它是池里的同一块）。昇腾侧对应 torch.npu.graph(...)。</text>
+<rect x="778.0" y="806.0" width="682.0" height="118.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="784.0" y="820.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="788.0" y="828.0" font-size="11" fill="#333333">⑩　收尾：关闸门、锁 workspace、打日志</text>
+<text x="788.0" y="852.0" font-size="11" fill="#333333">关掉捕获闸门；把通信 workspace 的尺寸锁死（回放期间改尺寸会让图里的指针失效）；打印 Graph capturing finished in N secs, took X GiB。</text>
+<rect x="36.0" y="958.0" width="1424.0" height="96.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="972.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">它在启动流程里的位置（很容易记错）</text>
+<text x="42.0" y="986.85" font-size="10" fill="#333333" font-family="Microsoft YaHei">正确的顺序是：加载权重 → profile（eager 空跑一遍量激活峰值）→ 按剩余显存切 KV 块池 → 然后才捕获图。</text>
+<text x="42.0" y="1000.35" font-size="11" fill="#333333" font-family="Microsoft YaHei">原因：捕获本身也要占显存，而且要用「图显存池」去估；所以必须先把权重和 KV 的账算清，才知道还能不能抓图、抓多大。</text>
+<rect x="36.0" y="1088.0" width="1424.0" height="112.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="1102.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">代码锚点（想自己去翻的时候用）</text>
+<text x="42.0" y="1116.85" font-size="9" fill="#666666" font-family="Microsoft YaHei">捕获入口（V1）：vllm/v1/worker/gpu_model_runner.py:6843 → :6997 → :6949 → :5851</text>
+<text x="42.0" y="1129.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">捕获入口（V2，本分支默认）：vllm/v1/worker/gpu/model_runner.py:998-1071 → vllm/v1/worker/gpu/cudagraph_utils.py:398-488</text>
+<text x="42.0" y="1143.85" font-size="11" fill="#333333" font-family="Microsoft YaHei">启动时序（profile→KV→捕获）：vllm/v1/engine/core.py:254、:308、:354、:356；vllm/v1/worker/gpu_worker.py:773-816</text>
+<text x="42.0" y="1158.6999999999998" font-size="11" fill="#333333" font-family="Microsoft YaHei">闸门：vllm/compilation/monitor.py:87-104；侧流：vllm/distributed/parallel_state.py:1637-1666</text>
+<text x="42.0" y="1173.5499999999997" font-size="11" fill="#333333" font-family="Microsoft YaHei">全局 pool：vllm/compilation/cuda_graph.py:200、:305-308；平台单例 vllm/platforms/interface.py:1174-1181</text>
+<text x="42.0" y="1188.3999999999996" font-size="11" fill="#333333" font-family="Microsoft YaHei">录制那一行：vllm/compilation/cuda_graph.py:315-321；从大到小：vllm/v1/worker/gpu_model_runner.py:6858-6860、vllm/v1/cudagraph_dispatcher.py:326-350</text>
+<rect x="36.0" y="1234.0" width="1424.0" height="58.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="1248.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">一句话记住这一页：捕获 = 开闸门 + 侧流 + 逐桶（warmup → 同步 → 在 graph 上下文里真跑一遍）」；输入必须来自预分配的持久 buffer；顺序必须从大到小；结束要锁 workspace。</text>
+<text x="36.0" y="1340.0" font-size="11" fill="#333333">图例</text>
+<rect x="148.0" y="1323.0" width="120.0" height="26.0" rx="4" fill="#eceff1" stroke="#607d8b"/>
+<text x="154.0" y="1337.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">客户端</text>
+<rect x="276.0" y="1323.0" width="120.0" height="26.0" rx="4" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="282.0" y="1337.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">边端 edge</text>
+<rect x="404.0" y="1323.0" width="120.0" height="26.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="410.0" y="1337.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 P (prefill)</text>
+<rect x="532.0" y="1323.0" width="120.0" height="26.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="538.0" y="1337.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 D (decode)</text>
+<rect x="660.0" y="1323.0" width="120.0" height="26.0" rx="4" fill="#b0e3e6" stroke="#0e8088"/>
+<text x="666.0" y="1337.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">PD Proxy</text>
+<rect x="788.0" y="1323.0" width="120.0" height="26.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="794.0" y="1337.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">中立/通用</text>
+<rect x="916.0" y="1323.0" width="120.0" height="26.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="922.0" y="1337.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">失败/取消</text>
+<text x="210.0" y="1374.0" font-size="11" fill="#666666">控制面 ZMQ</text>
+<text x="460.0" y="1374.0" font-size="11" fill="#666666">数据面 UCX·Mooncake</text>
+<text x="710.0" y="1374.0" font-size="11" fill="#666666">HTTP</text>
+<path d="M148.0,1372.0 L204.0,1372.0" fill="none" stroke="#9673a6" marker-end="url(#a)"/>
+<path d="M398.0,1372.0 L454.0,1372.0" fill="none" stroke="#d6b656" marker-end="url(#a)"/>
+<path d="M648.0,1372.0 L704.0,1372.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333333"/></marker></defs>
+</svg></div>
+<div class="concl"><b>一句话结论　</b>包一层 wrapper → 开闸门 → 切到侧流 → 从大到小逐个桶：warmup 几遍 → 同步 → 在 torch.cuda.graph 里真跑一遍 → 关闸门、锁 workspace。注意：捕获是在「profile 量完显存、KV 块池也建好」之后才做的。</div>
+<details><summary>代码锚点（6 条，可 grep）</summary><pre>捕获入口（V1）：vllm/v1/worker/gpu_model_runner.py:6843 → :6997 → :6949 → :5851
+捕获入口（V2，本分支默认）：vllm/v1/worker/gpu/model_runner.py:998-1071 → vllm/v1/worker/gpu/cudagraph_utils.py:398-488
+启动时序（profile→KV→捕获）：vllm/v1/engine/core.py:254、:308、:354、:356；vllm/v1/worker/gpu_worker.py:773-816
+闸门：vllm/compilation/monitor.py:87-104；侧流：vllm/distributed/parallel_state.py:1637-1666
+全局 pool：vllm/compilation/cuda_graph.py:200、:305-308；平台单例 vllm/platforms/interface.py:1174-1181
+录制那一行：vllm/compilation/cuda_graph.py:315-321；从大到小：vllm/v1/worker/gpu_model_runner.py:6858-6860、vllm/v1/cudagraph_dispatcher.py:326-350</pre></details>
+</figure>
+<figure id="p3">
+<p class="ptitle">④ 三个硬约束：图为什么「挑食」</p>
+<p class="psub">一句话：录下来的图里记的是具体的地址和具体的形状，所以回放时必须一模一样；图里也不能有「回头问 CPU」的操作。三条约束各自对应一类常见故障。</p>
+<div class="svgwrap"><svg xmlns="http://www.w3.org/2000/svg" width="977"1576" height="779"1258" viewBox="0 0 1576 1258">
+<rect width="1576" height="1258" fill="#ffffff"/>
+<text x="36.0" y="34.0" font-size="11" fill="#333333">④ 三个硬约束：图为什么「挑食」</text>
+<text x="36.0" y="62.0" font-size="11" fill="#666666">一句话：录下来的图里记的是具体的地址和具体的形状，所以回放时必须一模一样；图里也不能有「回头问 CPU」的操作。三条约束各自对应一类常见故障。</text>
+<text x="36.0" y="134.0" font-size="11" fill="#333333">约束一：形状固定 —— 所以要「按桶捕获 + padding」</text>
+<rect x="36.0" y="152.0" width="700.0" height="168.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="42.0" y="166.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="46.0" y="174.0" font-size="11" fill="#333333">为什么必须固定</text>
+<text x="46.0" y="200.0" font-size="11" fill="#333333">图里的循环次数、reshape、kernel 的 grid 大小都由形状决定。形状变了 = 图里那些数都对不上 → 只能换一张图。而形状在真实流量里千变万化（1 个请求 / 7 个请求 / 44 个 token…），不可能每个都抓。</text>
+<rect x="796.0" y="152.0" width="664.0" height="168.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="802.0" y="166.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="806.0" y="174.0" font-size="11" fill="#333333">本仓怎么解决：有限个桶 + 向上取整</text>
+<text x="806.0" y="200.0" font-size="11" fill="#333333">只抓有限的一组尺寸（cudagraph_capture_sizes，如 1,2,4,8,16,…,512）。运行时的 batch 先「对齐到最近的桶」＝ padding（多出来的位置填占位）。padding 的具体落点：block_table 填 NULL_BLOCK_ID、slot_mapping 填 -1。副作用：padding 带来的空算力，也算在图的开销里（有 num_paddings 统计）。</text>
+<text x="36.0" y="342.0" font-size="11" fill="#333333">约束二：地址固定 —— 所以要用「持久 buffer + copy_」</text>
+<rect x="36.0" y="360.0" width="700.0" height="176.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="42.0" y="374.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="46.0" y="382.0" font-size="11" fill="#333333">为什么必须固定</text>
+<text x="46.0" y="408.0" font-size="11" fill="#333333">图里记的是张量的显存地址，不是「第几个参数」。回放时如果输入换了一块新显存，图还是往老地址读 → 读到的是垃圾。所以每次进图前必须把新数据写进捕获时那几块地址。</text>
+<rect x="796.0" y="360.0" width="664.0" height="176.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="802.0" y="374.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="806.0" y="382.0" font-size="11" fill="#333333">本仓怎么解决：预分配 + 每步 copy_</text>
+<text x="806.0" y="408.0" font-size="11" fill="#333333">input_ids / positions / query_start_loc / seq_lens 等一次性按最大长度分配好（持久 buffer）。每步只做 copy_ 覆写这些 buffer 的前 N 个位置。代码里甚至有开关：debug 模式下会比对「捕获期与回放期的输入地址是否一致」，不一致直接抛 Input addresses for cudagraphs are different during replay。</text>
+<text x="36.0" y="558.0" font-size="11" fill="#333333">约束三：图里不能有「回头问 CPU」的操作</text>
+<rect x="36.0" y="576.0" width="700.0" height="176.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="42.0" y="590.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="46.0" y="598.0" font-size="11" fill="#333333">为什么</text>
+<text x="46.0" y="624.0" font-size="11" fill="#333333">回放时 CPU 只发一条命令，之后不再参与。所以图里任何需要「读回一个值再决定下一步」的操作都没法工作：.item() / print / 动态分配 / 条件分支里的 Python 判断。更糟的是它们不会报错——只会把捕获那一刻的值「烤」进图里，于是你拿到一个永远算出旧结果、但一点也不报错的图。</text>
+<rect x="796.0" y="576.0" width="664.0" height="176.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="802.0" y="590.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="806.0" y="598.0" font-size="11" fill="#333333">本仓的对应处理</text>
+<text x="806.0" y="624.0" font-size="11" fill="#333333">捕获闸门：在非捕获窗口触发捕获会直接抛CUDA graph capturing detected at an inappropriate time。捕获期禁止重新分配：attention 后端看 forward_context.capturing 决定「只登记任务、不申请 workspace」。一次性准备全在图外：dummy run 里把 metadata 都构造好再进图。</text>
+<rect x="36.0" y="792.0" width="1424.0" height="96.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="806.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">三张「故障 → 原因」速查（对得上就是这三条之一）</text>
+<text x="42.0" y="820.85" font-size="10" fill="#333333" font-family="Microsoft YaHei">① 输出全是重复/错乱的旧结果 → 某处 .item() 或分支被烤进图（约束三）。</text>
+<text x="42.0" y="834.35" font-size="11" fill="#333333" font-family="Microsoft YaHei">② 报 Input addresses ... different during replay → 有代码在回放时换了输入张量（约束二）。</text>
+<text x="42.0" y="849.2" font-size="11" fill="#333333" font-family="Microsoft YaHei">③ 并发一上来反而变慢、图「没了」→ 形状超了最大桶，静默回落 eager（约束一）。</text>
+<rect x="36.0" y="922.0" width="1424.0" height="112.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="936.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">代码锚点（想自己去翻的时候用）</text>
+<text x="42.0" y="950.85" font-size="9" fill="#666666" font-family="Microsoft YaHei">桶与 padding：vllm/config/compilation.py:655-658（capture_sizes）、vllm/forward_context.py:29-58（BatchDescriptor）、vllm/v1/worker/gpu_model_runner.py:2353-2355 / :4150-4152（padding 落点）</text>
+<text x="42.0" y="963.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">持久 buffer 与 copy_：vllm/v1/worker/gpu/input_batch.py:19-40、vllm/v1/worker/gpu_model_runner.py:4435、:1815</text>
+<text x="42.0" y="977.85" font-size="11" fill="#333333" font-family="Microsoft YaHei">地址校验断言：vllm/compilation/cuda_graph.py:348-357；breakable_cudagraph.py:422</text>
+<text x="42.0" y="992.7" font-size="11" fill="#333333" font-family="Microsoft YaHei">闸门与捕获期禁止分配：vllm/compilation/monitor.py:87-104；vllm-ascend/vllm_ascend/ascend_forward_context.py:177（capturing 标志）</text>
+<text x="42.0" y="1007.5500000000001" font-size="11" fill="#333333" font-family="Microsoft YaHei">「.item() 被烤进图」的仓内注释：vllm/model_executor/models/cohere_compass.py:1633、vllm/v1/attention/backends/rocm_aiter_fa.py:778</text>
+<rect x="36.0" y="1068.0" width="1424.0" height="58.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="1082.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">一句话记住这一页：形状固定 → 按桶捕获 + padding；地址固定 → 持久 buffer + copy_；不能问 CPU → 一切动态准备都放在图外。三条里破一条，要么报错、要么静默算错、要么悄悄退回 eager。</text>
+<text x="36.0" y="1174.0" font-size="11" fill="#333333">图例</text>
+<rect x="148.0" y="1157.0" width="120.0" height="26.0" rx="4" fill="#eceff1" stroke="#607d8b"/>
+<text x="154.0" y="1171.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">客户端</text>
+<rect x="276.0" y="1157.0" width="120.0" height="26.0" rx="4" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="282.0" y="1171.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">边端 edge</text>
+<rect x="404.0" y="1157.0" width="120.0" height="26.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="410.0" y="1171.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 P (prefill)</text>
+<rect x="532.0" y="1157.0" width="120.0" height="26.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="538.0" y="1171.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 D (decode)</text>
+<rect x="660.0" y="1157.0" width="120.0" height="26.0" rx="4" fill="#b0e3e6" stroke="#0e8088"/>
+<text x="666.0" y="1171.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">PD Proxy</text>
+<rect x="788.0" y="1157.0" width="120.0" height="26.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="794.0" y="1171.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">中立/通用</text>
+<rect x="916.0" y="1157.0" width="120.0" height="26.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="922.0" y="1171.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">失败/取消</text>
+<text x="210.0" y="1208.0" font-size="11" fill="#666666">控制面 ZMQ</text>
+<text x="460.0" y="1208.0" font-size="11" fill="#666666">数据面 UCX·Mooncake</text>
+<text x="710.0" y="1208.0" font-size="11" fill="#666666">HTTP</text>
+<path d="M148.0,1206.0 L204.0,1206.0" fill="none" stroke="#9673a6" marker-end="url(#a)"/>
+<path d="M398.0,1206.0 L454.0,1206.0" fill="none" stroke="#d6b656" marker-end="url(#a)"/>
+<path d="M648.0,1206.0 L704.0,1206.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333333"/></marker></defs>
+</svg></div>
+<div class="concl"><b>一句话结论　</b>录下来的图里记的是具体的地址和具体的形状，所以回放时必须一模一样；图里也不能有「回头问 CPU」的操作。三条约束各自对应一类常见故障。</div>
+<details><summary>代码锚点（5 条，可 grep）</summary><pre>桶与 padding：vllm/config/compilation.py:655-658（capture_sizes）、vllm/forward_context.py:29-58（BatchDescriptor）、vllm/v1/worker/gpu_model_runner.py:2353-2355 / :4150-4152（padding 落点）
+持久 buffer 与 copy_：vllm/v1/worker/gpu/input_batch.py:19-40、vllm/v1/worker/gpu_model_runner.py:4435、:1815
+地址校验断言：vllm/compilation/cuda_graph.py:348-357；breakable_cudagraph.py:422
+闸门与捕获期禁止分配：vllm/compilation/monitor.py:87-104；vllm-ascend/vllm_ascend/ascend_forward_context.py:177（capturing 标志）
+「.item() 被烤进图」的仓内注释：vllm/model_executor/models/cohere_compass.py:1633、vllm/v1/attention/backends/rocm_aiter_fa.py:778</pre></details>
+</figure>
+<figure id="p4">
+<p class="ptitle">⑤ 四种图模式：图从哪里开始、到哪里结束</p>
+<p class="psub">一句话：PIECEWISE 把 attention 挖出去（attention 之间那些层进图），FULL 连 attention 一起进图（但只给「形状整齐的 decode」用）。vLLM 默认是两者都要（FULL_AND_PIECEWISE），按 batch 形状挑。</p>
+<div class="svgwrap"><svg xmlns="http://www.w3.org/2000/svg" width="977"1576" height="834"1346" viewBox="0 0 1576 1346">
+<rect width="1576" height="1346" fill="#ffffff"/>
+<text x="36.0" y="34.0" font-size="11" fill="#333333">⑤ 四种图模式：图从哪里开始、到哪里结束</text>
+<text x="36.0" y="62.0" font-size="11" fill="#666666">一句话：PIECEWISE 把 attention 挖出去（attention 之间那些层进图），FULL 连 attention 一起进图（但只给「形状整齐的 decode」用）。vLLM 默认是两者都要（FULL_AND_PIECEWISE），按 batch 形状挑。</text>
+<text x="36.0" y="136.0" font-size="11" fill="#333333">第一步：同一段 forward 的三种切法（沙色＝逐个 eager 下发，绿＝分段图里跑的段，橙＝整张图一起跑）</text>
+<text x="36.0" y="168.0" font-size="11" fill="#333333">① eager（NONE）：全部逐个算子下发</text>
+<rect x="36.0" y="178.0" width="90.0" height="34.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="192.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">ln</text>
+<rect x="130.0" y="178.0" width="90.0" height="34.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="136.0" y="192.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">qkv</text>
+<rect x="224.0" y="178.0" width="90.0" height="34.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="230.0" y="192.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">attn</text>
+<rect x="318.0" y="178.0" width="90.0" height="34.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="324.0" y="192.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">o_proj</text>
+<rect x="412.0" y="178.0" width="80.0" height="34.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="418.0" y="192.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">ln</text>
+<rect x="496.0" y="178.0" width="110.0" height="34.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="502.0" y="192.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">MLP</text>
+<rect x="610.0" y="178.0" width="780.0" height="34.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="616.0" y="192.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">…下一层…</text>
+<text x="36.0" y="252.0" font-size="11" fill="#333333">② PIECEWISE：attention 留 eager、其余进图（层数越多，图段越多）</text>
+<rect x="36.0" y="262.0" width="90.0" height="34.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="42.0" y="276.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">ln</text>
+<rect x="130.0" y="262.0" width="90.0" height="34.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="136.0" y="276.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">qkv</text>
+<rect x="224.0" y="262.0" width="90.0" height="34.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="230.0" y="276.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">attn</text>
+<rect x="318.0" y="262.0" width="90.0" height="34.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="324.0" y="276.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">o_proj</text>
+<rect x="412.0" y="262.0" width="80.0" height="34.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="418.0" y="276.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">ln</text>
+<rect x="496.0" y="262.0" width="110.0" height="34.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="502.0" y="276.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">MLP</text>
+<rect x="610.0" y="262.0" width="780.0" height="34.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="616.0" y="276.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">…下一层…</text>
+<text x="36.0" y="336.0" font-size="11" fill="#333333">③ FULL：整层连 attention 一起进图（只允许「整齐的 decode」形状）</text>
+<rect x="36.0" y="346.0" width="90.0" height="34.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="42.0" y="360.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">ln</text>
+<rect x="130.0" y="346.0" width="90.0" height="34.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="136.0" y="360.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">qkv</text>
+<rect x="224.0" y="346.0" width="90.0" height="34.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="230.0" y="360.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">attn</text>
+<rect x="318.0" y="346.0" width="90.0" height="34.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="324.0" y="360.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">o_proj</text>
+<rect x="412.0" y="346.0" width="80.0" height="34.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="418.0" y="360.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">ln</text>
+<rect x="496.0" y="346.0" width="110.0" height="34.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="502.0" y="360.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">MLP</text>
+<rect x="610.0" y="346.0" width="780.0" height="34.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="616.0" y="360.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">…下一层…</text>
+<text x="36.0" y="404.0" font-size="11" fill="#333333">第二步：四种模式的定义与本仓用法</text>
+<rect x="36.0" y="422.0" width="200.0" height="38.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="42.0" y="436.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">模式</text>
+<rect x="236.0" y="422.0" width="560.0" height="38.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="242.0" y="436.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">什么进图</text>
+<rect x="796.0" y="422.0" width="420.0" height="38.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="802.0" y="436.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">代价/特点</text>
+<rect x="1216.0" y="422.0" width="260.0" height="38.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="1222.0" y="436.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">典型用途</text>
+<rect x="36.0" y="460.0" width="200.0" height="38.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="474.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">NONE</text>
+<rect x="236.0" y="460.0" width="560.0" height="38.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="242.0" y="474.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">完全不用图（= --enforce-eager 的效果）</text>
+<rect x="796.0" y="460.0" width="420.0" height="38.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="802.0" y="474.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">启动最快、稳态最慢</text>
+<rect x="1216.0" y="460.0" width="260.0" height="38.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1222.0" y="474.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">P 侧、edge、调试</text>
+<rect x="36.0" y="498.0" width="200.0" height="38.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="512.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">PIECEWISE</text>
+<rect x="236.0" y="498.0" width="560.0" height="38.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="242.0" y="512.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">只把「attention 之间」的部分进图，attention 留在 eager</text>
+<rect x="796.0" y="498.0" width="420.0" height="38.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="802.0" y="512.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">形状要求宽松，能覆盖 prefill；图段数随层数增长</text>
+<rect x="1216.0" y="498.0" width="260.0" height="38.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1222.0" y="512.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">O1 默认；prefill/mixed 批次</text>
+<rect x="36.0" y="536.0" width="200.0" height="38.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="550.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">FULL</text>
+<rect x="236.0" y="536.0" width="560.0" height="38.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="242.0" y="550.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">整模型一张图，含 attention</text>
+<rect x="796.0" y="536.0" width="420.0" height="38.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="802.0" y="550.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">最快，但要求 batch 形状规整（uniform decode）且地址固定</text>
+<rect x="1216.0" y="536.0" width="260.0" height="38.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1222.0" y="550.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">只在 decode 用</text>
+<rect x="36.0" y="574.0" width="200.0" height="38.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="588.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">FULL_DECODE_ONLY</text>
+<rect x="236.0" y="574.0" width="560.0" height="38.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="242.0" y="588.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">decode 用 FULL，其余一律 eager</text>
+<rect x="796.0" y="574.0" width="420.0" height="38.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="802.0" y="588.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">P/D 分离里 decode 实例的标准配置</text>
+<rect x="1216.0" y="574.0" width="260.0" height="38.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1222.0" y="588.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">本仓 D 侧脚本就是这么配的</text>
+<rect x="36.0" y="612.0" width="200.0" height="38.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="626.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">FULL_AND_PIECEWISE</text>
+<rect x="236.0" y="612.0" width="560.0" height="38.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="242.0" y="626.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">decode 用 FULL，其它用 PIECEWISE</text>
+<rect x="796.0" y="612.0" width="420.0" height="38.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="802.0" y="626.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">默认（O2）；兼顾两类流量，显存与启动开销最大</text>
+<rect x="1216.0" y="612.0" width="260.0" height="38.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1222.0" y="626.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">vLLM 默认</text>
+<rect x="36.0" y="686.0" width="700.0" height="168.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="42.0" y="700.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="46.0" y="708.0" font-size="11" fill="#333333">为什么 PIECEWISE 要把 attention 挖出去</text>
+<text x="46.0" y="734.0" font-size="11" fill="#333333">attention 是不透明的 custom op，且它的形状随「KV 长度」变化——而 KV 长度每个请求都不同、每步都在变，无法在捕获时固定。所以编译时在 attention 处「打个断点」：前面进图、attention eager、后面再进图。这也解释了为什么 PIECEWISE 的图段数 ≈ 层数 ×2。</text>
+<rect x="796.0" y="686.0" width="664.0" height="168.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="802.0" y="700.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="806.0" y="708.0" font-size="11" fill="#333333">那 FULL 凭什么能把 attention 也放进去</text>
+<text x="806.0" y="734.0" font-size="11" fill="#333333">因为 decode 阶段的形状是「整齐」的：每请求 1 个 query token（spec decode 时 1+N），batch 大小又被 padding 到固定的桶。此时 attention 的 dynamic 部分只剩「KV 长度数组」，而它可以像别的输入一样被 copy_ 进固定 buffer。所以 FULL 只对「uniform decode」开放——这行判断在 dispatcher 里。</text>
+<rect x="36.0" y="894.0" width="1424.0" height="92.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="908.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">怎么选（实用建议）</text>
+<text x="42.0" y="922.85" font-size="10" fill="#333333" font-family="Microsoft YaHei">① 想最快跑通/调试 → NONE（--enforce-eager）：启动最快、报错最直白。</text>
+<text x="42.0" y="936.35" font-size="11" fill="#333333" font-family="Microsoft YaHei">② 单机混跑 prefill+decode → 默认 FULL_AND_PIECEWISE（O2）。</text>
+<text x="42.0" y="951.2" font-size="11" fill="#333333" font-family="Microsoft YaHei">③ P/D 分离 → P 侧 NONE 或 PIECEWISE、D 侧 FULL_DECODE_ONLY（本仓部署脚本正是这样：P 与 edge 加 --enforce-eager，D 配 FULL_DECODE_ONLY）。</text>
+<rect x="36.0" y="1020.0" width="1424.0" height="104.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="1034.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">代码锚点（想自己去翻的时候用）</text>
+<text x="42.0" y="1048.85" font-size="9" fill="#666666" font-family="Microsoft YaHei">模式枚举与语义：vllm/config/compilation.py:53-110、:614-649</text>
+<text x="42.0" y="1061.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">默认值来自 -O 级别：vllm/config/vllm.py:277（O0→NONE）、:300（O1→PIECEWISE）、:323/:346（O2/O3→FULL_AND_PIECEWISE）、:447（默认 O2）</text>
+<text x="42.0" y="1075.85" font-size="11" fill="#333333" font-family="Microsoft YaHei">PIECEWISE 的切点 = attention 类 op：vllm/config/compilation.py:772-790、:1169（set_splitting_ops_for_v1）</text>
+<text x="42.0" y="1090.6999999999998" font-size="11" fill="#333333" font-family="Microsoft YaHei">attention 是「捕获期要打断」的 custom op：vllm/model_executor/layers/attention/attention.py:758-794（eager_break_during_capture）</text>
+<text x="42.0" y="1105.5499999999997" font-size="11" fill="#333333" font-family="Microsoft YaHei">两种 wrapper 的嵌套：vllm/v1/worker/gpu_model_runner.py:5453-5493</text>
+<rect x="36.0" y="1156.0" width="1424.0" height="58.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="1170.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">一句话记住这一页：PIECEWISE＝把 attention 挖空的「分段图」，形状宽松、段数多；FULL＝整张图，最快但只吃「整齐的 decode」；vLLM 默认两种都抓，运行时按 batch 形状挑一种。</text>
+<text x="36.0" y="1262.0" font-size="11" fill="#333333">图例</text>
+<rect x="148.0" y="1245.0" width="120.0" height="26.0" rx="4" fill="#eceff1" stroke="#607d8b"/>
+<text x="154.0" y="1259.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">客户端</text>
+<rect x="276.0" y="1245.0" width="120.0" height="26.0" rx="4" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="282.0" y="1259.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">边端 edge</text>
+<rect x="404.0" y="1245.0" width="120.0" height="26.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="410.0" y="1259.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 P (prefill)</text>
+<rect x="532.0" y="1245.0" width="120.0" height="26.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="538.0" y="1259.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 D (decode)</text>
+<rect x="660.0" y="1245.0" width="120.0" height="26.0" rx="4" fill="#b0e3e6" stroke="#0e8088"/>
+<text x="666.0" y="1259.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">PD Proxy</text>
+<rect x="788.0" y="1245.0" width="120.0" height="26.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="794.0" y="1259.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">中立/通用</text>
+<rect x="916.0" y="1245.0" width="120.0" height="26.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="922.0" y="1259.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">失败/取消</text>
+<rect x="1044.0" y="1245.0" width="240.0" height="26.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="1050.0" y="1259.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">FULL 的图范围</text>
+<text x="210.0" y="1296.0" font-size="11" fill="#666666">控制面 ZMQ</text>
+<text x="460.0" y="1296.0" font-size="11" fill="#666666">数据面 UCX·Mooncake</text>
+<text x="710.0" y="1296.0" font-size="11" fill="#666666">HTTP</text>
+<text x="960.0" y="1296.0" font-size="11" fill="#666666">虚线/灰 = 仍在 eager 执行</text>
+<path d="M148.0,1294.0 L204.0,1294.0" fill="none" stroke="#9673a6" marker-end="url(#a)"/>
+<path d="M398.0,1294.0 L454.0,1294.0" fill="none" stroke="#d6b656" marker-end="url(#a)"/>
+<path d="M648.0,1294.0 L704.0,1294.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<path d="M898.0,1294.0 L954.0,1294.0" fill="none" stroke="#a1887f" marker-end="url(#a)" stroke-dasharray="5 4"/>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333333"/></marker></defs>
+</svg></div>
+<div class="concl"><b>一句话结论　</b>PIECEWISE 把 attention 挖出去（attention 之间那些层进图），FULL 连 attention 一起进图（但只给「形状整齐的 decode」用）。vLLM 默认是两者都要（FULL_AND_PIECEWISE），按 batch 形状挑。</div>
+<details><summary>代码锚点（5 条，可 grep）</summary><pre>模式枚举与语义：vllm/config/compilation.py:53-110、:614-649
+默认值来自 -O 级别：vllm/config/vllm.py:277（O0→NONE）、:300（O1→PIECEWISE）、:323/:346（O2/O3→FULL_AND_PIECEWISE）、:447（默认 O2）
+PIECEWISE 的切点 = attention 类 op：vllm/config/compilation.py:772-790、:1169（set_splitting_ops_for_v1）
+attention 是「捕获期要打断」的 custom op：vllm/model_executor/layers/attention/attention.py:758-794（eager_break_during_capture）
+两种 wrapper 的嵌套：vllm/v1/worker/gpu_model_runner.py:5453-5493</pre></details>
+</figure>
+<figure id="p5">
+<p class="ptitle">⑥ 形状桶与 dispatch：这一步到底用哪张图</p>
+<p class="psub">一句话：启动时按「桶」抓了一批图；运行时先把本步的 batch 形状向上取整到某个桶，再按 (token 数, 是否整齐 decode, LoRA 数) 去查表 —— 查不到就用 eager。</p>
+<div class="svgwrap"><svg xmlns="http://www.w3.org/2000/svg" width="977"1576" height="809"1306" viewBox="0 0 1576 1306">
+<rect width="1576" height="1306" fill="#ffffff"/>
+<text x="36.0" y="34.0" font-size="11" fill="#333333">⑥ 形状桶与 dispatch：这一步到底用哪张图</text>
+<text x="36.0" y="62.0" font-size="11" fill="#666666">一句话：启动时按「桶」抓了一批图；运行时先把本步的 batch 形状向上取整到某个桶，再按 (token 数, 是否整齐 decode, LoRA 数) 去查表 —— 查不到就用 eager。</text>
+<text x="36.0" y="134.0" font-size="11" fill="#333333">第一步：桶不是连续的，是一串阶梯（本仓默认栅格）</text>
+<rect x="36.0" y="152.0" width="1424.0" height="96.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="166.0" font-size="10" fill="#333333" font-family="Microsoft YaHei">默认栅格 = 1, 2, 4 + 8, 16, 24, …, 248（步长 8）+ 256, 272, …, 上限（步长 16），上限默认 512（Blackwell 1024），且不超过 max_num_batched_tokens。</text>
+<text x="42.0" y="179.5" font-size="11" fill="#333333" font-family="Microsoft YaHei">还会补上 max_num_batched_tokens 本身；开 spec decode 时按 uniform_decode_query_len 的倍数补桶。</text>
+<text x="42.0" y="194.35" font-size="11" fill="#c0392b" font-family="Microsoft YaHei">含义：batch 越小越「细」，越大越「粗」——因为小 batch 的延迟最敏感。</text>
+<text x="36.0" y="264.0" font-size="11" fill="#333333">第二步：一个 5 个请求、共 5 个 token 的 decode step 会发生什么</text>
+<rect x="36.0" y="282.0" width="700.0" height="158.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="296.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="46.0" y="304.0" font-size="11" fill="#333333">① 先算本步形状</text>
+<text x="46.0" y="330.0" font-size="11" fill="#333333">num_tokens = 5（5 个请求各 1 个新 token）uniform_decode = True（大家都只算 1 个 token）查表：5 → 落到桶 8（向上取整）</text>
+<rect x="796.0" y="282.0" width="664.0" height="158.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="802.0" y="296.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="806.0" y="304.0" font-size="11" fill="#333333">② 把形状 padding 到 8</text>
+<text x="806.0" y="330.0" font-size="11" fill="#333333">多出来的 3 个位置填占位：· block_table 填 NULL_BLOCK_ID（不指向真实块）· slot_mapping 填 -1（跳过写 KV）· seq_lens / query_start_loc 补成合法值输出只取前 5 个位置的结果（其余丢弃）。</text>
+<text x="36.0" y="462.0" font-size="11" fill="#333333">第三步：dispatch 的查表顺序（三条路，最后一条是保底）</text>
+<rect x="36.0" y="480.0" width="430.0" height="92.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="42.0" y="494.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">① 先查 FULL 的精确键</text>
+<text x="42.0" y="508.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">(padded num_tokens, uniform, 活跃 LoRA 数) 完全匹配</text>
+<rect x="506.0" y="480.0" width="460.0" height="92.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="512.0" y="494.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">② 再查 PIECEWISE 的放宽键</text>
+<text x="512.0" y="508.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">PIECEWISE 不关心 num_reqs / uniform，键更宽松</text>
+<rect x="996.0" y="480.0" width="464.0" height="92.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="1002.0" y="494.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">③ 都不中 → 返回 NONE（eager）</text>
+<text x="1002.0" y="508.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">⚠ 这一步没有任何日志，是最隐蔽的「图没了」</text>
+<rect x="36.0" y="612.0" width="1424.0" height="118.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="42.0" y="626.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">四个「提前退出、直接 eager」的条件（都会让图静默失效）</text>
+<text x="42.0" y="640.85" font-size="10" fill="#333333" font-family="Microsoft YaHei">① 模式是 NONE（本来就没图）；② 桶还没初始化（还没捕获完）；③ num_tokens 超过最大桶（并发突然变高最容易踩）；④ 只允许 NONE 的特殊场景（例如某些 attention 后端 / encoder-decoder 不支持 FULL）。</text>
+<text x="42.0" y="654.35" font-size="9" fill="#333333" font-family="Microsoft YaHei">排查手法：看 KV cache usage 与 Running 请求数是否刚好越过了最大桶；或者直接开 --cudagraph-metrics 看命中率。</text>
+<text x="36.0" y="746.0" font-size="11" fill="#333333">第四步：桶的上下界怎么被卡住（三个数决定）</text>
+<rect x="36.0" y="764.0" width="320.0" height="34.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="42.0" y="778.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">参数</text>
+<rect x="356.0" y="764.0" width="460.0" height="34.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="362.0" y="778.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">管什么</text>
+<rect x="816.0" y="764.0" width="600.0" height="34.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="822.0" y="778.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">对桶的影响</text>
+<rect x="36.0" y="798.0" width="320.0" height="34.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="812.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">max_num_seqs</text>
+<rect x="356.0" y="798.0" width="460.0" height="34.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="362.0" y="812.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">同时跑的请求数上限</text>
+<rect x="816.0" y="798.0" width="600.0" height="34.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="822.0" y="812.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">决定「最大桶大约多大」</text>
+<rect x="36.0" y="832.0" width="320.0" height="34.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="846.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">max_num_batched_tokens</text>
+<rect x="356.0" y="832.0" width="460.0" height="34.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="362.0" y="846.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">一步的 token 预算</text>
+<rect x="816.0" y="832.0" width="600.0" height="34.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="822.0" y="846.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">再给一个上界（chunked prefill 会打到这里）</text>
+<rect x="36.0" y="866.0" width="320.0" height="34.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="880.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">max_cudagraph_capture_size</text>
+<rect x="356.0" y="866.0" width="460.0" height="34.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="362.0" y="880.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">显式上限（默认 512 / Blackwell 1024）</text>
+<rect x="816.0" y="866.0" width="600.0" height="34.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="822.0" y="880.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">超过就一律 eager</text>
+<rect x="36.0" y="900.0" width="320.0" height="34.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="914.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">--cudagraph-capture-sizes</text>
+<rect x="356.0" y="900.0" width="460.0" height="34.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="362.0" y="914.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">手工指定桶列表</text>
+<rect x="816.0" y="900.0" width="600.0" height="34.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="822.0" y="914.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">想省显存就缩小它（如 [1,2,4,8,16]）</text>
+<rect x="36.0" y="970.0" width="1424.0" height="112.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="984.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">代码锚点（想自己去翻的时候用）</text>
+<text x="42.0" y="998.85" font-size="9" fill="#666666" font-family="Microsoft YaHei">栅格与上限推导：vllm/config/vllm.py:2196-2463（:2262-2269 上限、:2376-2388 栅格、:2348-2349 取 min、:2398-2400 spec 倍数）</text>
+<text x="42.0" y="1011.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">桶键 BatchDescriptor：vllm/forward_context.py:29-58；bs→padded 映射 vllm/v1/cudagraph_dispatcher.py:72-91</text>
+<text x="42.0" y="1025.85" font-size="11" fill="#333333" font-family="Microsoft YaHei">注册桶：cudagraph_dispatcher.py:166-233；dispatch 决策与四条早退：:235-324（早退 :274-281、回落 NONE :320-324）</text>
+<text x="42.0" y="1040.6999999999998" font-size="11" fill="#333333" font-family="Microsoft YaHei">padding 落点：vllm/v1/worker/gpu_model_runner.py:2353-2355（NULL_BLOCK_ID）、:4150-4152（slot_mapping=-1）</text>
+<text x="42.0" y="1055.5499999999997" font-size="11" fill="#333333" font-family="Microsoft YaHei">按 attention 后端降级：vllm/config/compilation.py:1382-1545</text>
+<rect x="36.0" y="1116.0" width="1424.0" height="58.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="1130.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">一句话记住这一页：桶是一串「阶梯」，运行时向上取整 + padding；dispatch 先查 FULL 精确键、再查 PIECEWISE 放宽键、都不中就静默回 eager。「并发一高就变慢」十有八九是越过了最大桶。</text>
+<text x="36.0" y="1222.0" font-size="11" fill="#333333">图例</text>
+<rect x="148.0" y="1205.0" width="120.0" height="26.0" rx="4" fill="#eceff1" stroke="#607d8b"/>
+<text x="154.0" y="1219.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">客户端</text>
+<rect x="276.0" y="1205.0" width="120.0" height="26.0" rx="4" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="282.0" y="1219.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">边端 edge</text>
+<rect x="404.0" y="1205.0" width="120.0" height="26.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="410.0" y="1219.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 P (prefill)</text>
+<rect x="532.0" y="1205.0" width="120.0" height="26.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="538.0" y="1219.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 D (decode)</text>
+<rect x="660.0" y="1205.0" width="120.0" height="26.0" rx="4" fill="#b0e3e6" stroke="#0e8088"/>
+<text x="666.0" y="1219.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">PD Proxy</text>
+<rect x="788.0" y="1205.0" width="120.0" height="26.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="794.0" y="1219.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">中立/通用</text>
+<rect x="916.0" y="1205.0" width="120.0" height="26.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="922.0" y="1219.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">失败/取消</text>
+<text x="210.0" y="1256.0" font-size="11" fill="#666666">控制面 ZMQ</text>
+<text x="460.0" y="1256.0" font-size="11" fill="#666666">数据面 UCX·Mooncake</text>
+<text x="710.0" y="1256.0" font-size="11" fill="#666666">HTTP</text>
+<path d="M251.0,526.0 L736.0,526.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<path d="M736.0,526.0 L1228.0,526.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<path d="M148.0,1254.0 L204.0,1254.0" fill="none" stroke="#9673a6" marker-end="url(#a)"/>
+<path d="M398.0,1254.0 L454.0,1254.0" fill="none" stroke="#d6b656" marker-end="url(#a)"/>
+<path d="M648.0,1254.0 L704.0,1254.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333333"/></marker></defs>
+</svg></div>
+<div class="concl"><b>一句话结论　</b>启动时按「桶」抓了一批图；运行时先把本步的 batch 形状向上取整到某个桶，再按 (token 数, 是否整齐 decode, LoRA 数) 去查表 —— 查不到就用 eager。</div>
+<details><summary>代码锚点（5 条，可 grep）</summary><pre>栅格与上限推导：vllm/config/vllm.py:2196-2463（:2262-2269 上限、:2376-2388 栅格、:2348-2349 取 min、:2398-2400 spec 倍数）
+桶键 BatchDescriptor：vllm/forward_context.py:29-58；bs→padded 映射 vllm/v1/cudagraph_dispatcher.py:72-91
+注册桶：cudagraph_dispatcher.py:166-233；dispatch 决策与四条早退：:235-324（早退 :274-281、回落 NONE :320-324）
+padding 落点：vllm/v1/worker/gpu_model_runner.py:2353-2355（NULL_BLOCK_ID）、:4150-4152（slot_mapping=-1）
+按 attention 后端降级：vllm/config/compilation.py:1382-1545</pre></details>
+</figure>
+<figure id="p6">
+<p class="ptitle">⑦ 启动期的捕获流程：它排在「权重 → profile → KV」之后</p>
+<p class="psub">一句话：加载权重 → profile 量激活峰值 → 切 KV 块池 → 估算图显存 → 逐桶捕获。所以启动日志里「Graph capturing finished」永远出现在「Available KV cache memory」之后。</p>
+<div class="svgwrap"><svg xmlns="http://www.w3.org/2000/svg" width="977"1576" height="803"1296" viewBox="0 0 1576 1296">
+<rect width="1576" height="1296" fill="#ffffff"/>
+<text x="36.0" y="34.0" font-size="11" fill="#333333">⑦ 启动期的捕获流程：它排在「权重 → profile → KV」之后</text>
+<text x="36.0" y="62.0" font-size="11" fill="#666666">一句话：加载权重 → profile 量激活峰值 → 切 KV 块池 → 估算图显存 → 逐桶捕获。所以启动日志里「Graph capturing finished」永远出现在「Available KV cache memory」之后。</text>
+<text x="36.0" y="138.0" font-size="11" fill="#333333">第一步：启动时间线（前四步都是「为图做准备的账」）</text>
+<rect x="36.0" y="156.0" width="224.0" height="78.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="170.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">① 加载权重</text>
+<text x="42.0" y="184.85" font-size="9" fill="#666666" font-family="Microsoft YaHei">权重先吃掉显存</text>
+<rect x="272.0" y="156.0" width="224.0" height="78.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="278.0" y="170.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">② profile 空跑</text>
+<text x="278.0" y="184.85" font-size="9" fill="#666666" font-family="Microsoft YaHei">eager 跑一遍，量激活峰值</text>
+<rect x="508.0" y="156.0" width="224.0" height="78.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="514.0" y="170.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">③ 切 KV 块池</text>
+<text x="514.0" y="184.85" font-size="9" fill="#666666" font-family="Microsoft YaHei">剩余显存才给 KV</text>
+<rect x="744.0" y="156.0" width="224.0" height="78.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="750.0" y="170.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">④ 估算图显存</text>
+<text x="750.0" y="184.85" font-size="9" fill="#666666" font-family="Microsoft YaHei">可选；失败不影响正确性</text>
+<rect x="980.0" y="156.0" width="224.0" height="78.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="986.0" y="170.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">⑤ 逐桶捕获</text>
+<text x="986.0" y="184.85" font-size="9" fill="#666666" font-family="Microsoft YaHei">从大到小真跑一遍</text>
+<rect x="1216.0" y="156.0" width="224.0" height="78.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1222.0" y="170.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">⑥ 锁 workspace</text>
+<text x="1222.0" y="184.85" font-size="9" fill="#666666" font-family="Microsoft YaHei">回放期不许改尺寸</text>
+<text x="36.0" y="256.0" font-size="11" fill="#333333">第二步：四个容易搞错的点</text>
+<rect x="36.0" y="274.0" width="700.0" height="132.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="42.0" y="288.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="48.0" y="296.0" font-size="11" fill="#333333">①　捕获必须在 profile 与 KV 之后</text>
+<text x="48.0" y="320.0" font-size="11" fill="#333333">因为图本身要占显存（进程级图池），且要用这个池去估算。先抓图再算 KV，会把 KV 预算算错、甚至启动 OOM。</text>
+<rect x="796.0" y="274.0" width="664.0" height="132.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="802.0" y="288.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="808.0" y="296.0" font-size="11" fill="#333333">②　图池是「进程级」的，不是每桶一份</text>
+<text x="808.0" y="320.0" font-size="11" fill="#333333">所有桶共用一块池，占用 ≈ 各桶峰值的最大值。所以必须从大到小捕获：大桶先占下够用的池，小桶复用它。</text>
+<rect x="36.0" y="446.0" width="700.0" height="132.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="42.0" y="460.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="48.0" y="468.0" font-size="11" fill="#333333">③　每个桶都要 warmup 几遍再录</text>
+<text x="48.0" y="492.0" font-size="11" fill="#333333">warmup 会触发算子库/通信库的 lazy 初始化；不 warmup 直接录，图里会混进「第一次才发生」的初始化动作，回放时行为不一致。</text>
+<rect x="796.0" y="446.0" width="664.0" height="132.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="802.0" y="460.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="808.0" y="468.0" font-size="11" fill="#333333">④　启动成本是可量化的</text>
+<text x="808.0" y="492.0" font-size="11" fill="#333333">日志会打「Graph capturing finished in N secs, took X GiB」，还会同时打印「估算 vs 实际」的图显存对比，方便判断要不要缩桶。</text>
+<text x="36.0" y="600.0" font-size="11" fill="#333333">第三步：这份「启动保险」的价格</text>
+<rect x="36.0" y="618.0" width="220.0" height="36.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="42.0" y="632.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">项</text>
+<rect x="256.0" y="618.0" width="760.0" height="36.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="262.0" y="632.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">本仓口径</text>
+<rect x="1016.0" y="618.0" width="420.0" height="36.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="1022.0" y="632.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">应对</text>
+<rect x="36.0" y="654.0" width="220.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="668.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">启动时间</text>
+<rect x="256.0" y="654.0" width="760.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="262.0" y="668.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">典型 5~20 秒（随桶数与模型深度增长）</text>
+<rect x="1016.0" y="654.0" width="420.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1022.0" y="668.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">桶越多、层越深越慢</text>
+<rect x="36.0" y="690.0" width="220.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="704.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">显存</text>
+<rect x="256.0" y="690.0" width="760.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="262.0" y="704.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">进程级图池 ≈ 各桶峰值取 max（不是相加）</text>
+<rect x="1016.0" y="690.0" width="420.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1022.0" y="704.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">可从 KV 预算里扣掉这部分</text>
+<rect x="36.0" y="726.0" width="220.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="740.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">显存不够时</text>
+<rect x="256.0" y="726.0" width="760.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="262.0" y="740.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">捕获段没有 try/except 回退，OOM 直接失败启动</text>
+<rect x="1016.0" y="726.0" width="420.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1022.0" y="740.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">所以先调小桶或降 gpu-memory-utilization</text>
+<rect x="36.0" y="762.0" width="220.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="776.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">稳态收益</text>
+<rect x="256.0" y="762.0" width="760.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="262.0" y="776.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">decode 每步少发上千次命令 → TPOT 下降</text>
+<rect x="1016.0" y="762.0" width="420.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1022.0" y="776.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">prefill 大 batch 基本不受益</text>
+<rect x="36.0" y="834.0" width="1424.0" height="92.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="848.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">想省这笔钱，有三个旋钮（按代价从小到大）</text>
+<text x="42.0" y="862.85" font-size="10" fill="#333333" font-family="Microsoft YaHei">① 缩小桶列表：--cudagraph-capture-sizes [1,2,4,8,16]——桶少了，池变小、启动变快，代价是更多请求落到 eager。</text>
+<text x="42.0" y="876.35" font-size="11" fill="#333333" font-family="Microsoft YaHei">② 降模式：只留 decode 的图（FULL_DECODE_ONLY），别抓 mixed 的 PIECEWISE。</text>
+<text x="42.0" y="891.2" font-size="11" fill="#333333" font-family="Microsoft YaHei">③ 关掉：--enforce-eager / -O0——启动最快，稳态 decode 变慢。</text>
+<rect x="36.0" y="960.0" width="1424.0" height="112.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="974.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">代码锚点（想自己去翻的时候用）</text>
+<text x="42.0" y="988.85" font-size="9" fill="#666666" font-family="Microsoft YaHei">启动顺序（profile→KV→编译/捕获）：vllm/v1/engine/core.py:254、:308、:354、:356；vllm/v1/worker/gpu_worker.py:773-816</text>
+<text x="42.0" y="1001.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">图显存估算：vllm/v1/worker/gpu_worker.py:580-592；vllm/v1/worker/gpu_model_runner.py:6674-6710</text>
+<text x="42.0" y="1015.85" font-size="11" fill="#333333" font-family="Microsoft YaHei">捕获主循环（从大到小、逐桶 warmup）：vllm/v1/worker/gpu_model_runner.py:6905-6914、:6949-6995</text>
+<text x="42.0" y="1030.7" font-size="11" fill="#333333" font-family="Microsoft YaHei">锁 workspace：vllm/v1/worker/gpu_model_runner.py:6934-6936</text>
+<text x="42.0" y="1045.55" font-size="11" fill="#333333" font-family="Microsoft YaHei">耗时与显存日志：vllm/v1/worker/gpu_model_runner.py:6942-6946；估算 vs 实际 vllm/v1/worker/gpu_worker.py:818-832</text>
+<text x="42.0" y="1060.3999999999999" font-size="11" fill="#333333" font-family="Microsoft YaHei">缩桶的两个开关：vllm/engine/arg_utils.py:1660-1665（--cudagraph-capture-sizes）、vllm/docs/configuration/conserving_memory.md:48-65</text>
+<rect x="36.0" y="1106.0" width="1424.0" height="58.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="1120.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">一句话记住这一页：捕获排在「权重 → profile → KV」之后；图池是进程级共用、必须从大到小抓；桶越多启动越慢、显存越多；想省就缩桶或降模式，别指望它自己回退。</text>
+<text x="36.0" y="1212.0" font-size="11" fill="#333333">图例</text>
+<rect x="148.0" y="1195.0" width="120.0" height="26.0" rx="4" fill="#eceff1" stroke="#607d8b"/>
+<text x="154.0" y="1209.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">客户端</text>
+<rect x="276.0" y="1195.0" width="120.0" height="26.0" rx="4" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="282.0" y="1209.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">边端 edge</text>
+<rect x="404.0" y="1195.0" width="120.0" height="26.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="410.0" y="1209.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 P (prefill)</text>
+<rect x="532.0" y="1195.0" width="120.0" height="26.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="538.0" y="1209.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 D (decode)</text>
+<rect x="660.0" y="1195.0" width="120.0" height="26.0" rx="4" fill="#b0e3e6" stroke="#0e8088"/>
+<text x="666.0" y="1209.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">PD Proxy</text>
+<rect x="788.0" y="1195.0" width="120.0" height="26.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="794.0" y="1209.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">中立/通用</text>
+<rect x="916.0" y="1195.0" width="120.0" height="26.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="922.0" y="1209.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">失败/取消</text>
+<text x="210.0" y="1246.0" font-size="11" fill="#666666">控制面 ZMQ</text>
+<text x="460.0" y="1246.0" font-size="11" fill="#666666">数据面 UCX·Mooncake</text>
+<text x="710.0" y="1246.0" font-size="11" fill="#666666">HTTP</text>
+<path d="M262.0,195.0 L270.0,195.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<path d="M498.0,195.0 L506.0,195.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<path d="M734.0,195.0 L742.0,195.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<path d="M970.0,195.0 L978.0,195.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<path d="M1206.0,195.0 L1214.0,195.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<path d="M148.0,1244.0 L204.0,1244.0" fill="none" stroke="#9673a6" marker-end="url(#a)"/>
+<path d="M398.0,1244.0 L454.0,1244.0" fill="none" stroke="#d6b656" marker-end="url(#a)"/>
+<path d="M648.0,1244.0 L704.0,1244.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333333"/></marker></defs>
+</svg></div>
+<div class="concl"><b>一句话结论　</b>加载权重 → profile 量激活峰值 → 切 KV 块池 → 估算图显存 → 逐桶捕获。所以启动日志里「Graph capturing finished」永远出现在「Available KV cache memory」之后。</div>
+<details><summary>代码锚点（6 条，可 grep）</summary><pre>启动顺序（profile→KV→编译/捕获）：vllm/v1/engine/core.py:254、:308、:354、:356；vllm/v1/worker/gpu_worker.py:773-816
+图显存估算：vllm/v1/worker/gpu_worker.py:580-592；vllm/v1/worker/gpu_model_runner.py:6674-6710
+捕获主循环（从大到小、逐桶 warmup）：vllm/v1/worker/gpu_model_runner.py:6905-6914、:6949-6995
+锁 workspace：vllm/v1/worker/gpu_model_runner.py:6934-6936
+耗时与显存日志：vllm/v1/worker/gpu_model_runner.py:6942-6946；估算 vs 实际 vllm/v1/worker/gpu_worker.py:818-832
+缩桶的两个开关：vllm/engine/arg_utils.py:1660-1665（--cudagraph-capture-sizes）、vllm/docs/configuration/conserving_memory.md:48-65</pre></details>
+</figure>
+<figure id="p7">
+<p class="ptitle">⑧ 回放期：一次 decode step 从 scheduler 到 replay 再到吐 token</p>
+<p class="psub">一句话：图只覆盖「模型 forward」这一段；进图前要备好静态输入，出图后还要算 logits、采样、回收——这些都在图外。</p>
+<div class="svgwrap"><svg xmlns="http://www.w3.org/2000/svg" width="977"1576" height="757"1222" viewBox="0 0 1576 1222">
+<rect width="1576" height="1222" fill="#ffffff"/>
+<text x="36.0" y="34.0" font-size="11" fill="#333333">⑧ 回放期：一次 decode step 从 scheduler 到 replay 再到吐 token</text>
+<text x="36.0" y="62.0" font-size="11" fill="#666666">一句话：图只覆盖「模型 forward」这一段；进图前要备好静态输入，出图后还要算 logits、采样、回收——这些都在图外。</text>
+<text x="36.0" y="138.0" font-size="11" fill="#333333">把一次 step 从头走到尾，标出「图内 / 图外」</text>
+<rect x="36.0" y="156.0" width="1424.0" height="62.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="170.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">①　调度器出计划</text>
+<text x="42.0" y="184.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">SchedulerOutput：每请求算几个 token + 新块的 block_ids。（图外，EngineCore 主线程）</text>
+<rect x="36.0" y="228.0" width="1424.0" height="62.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="42.0" y="242.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">②　决定这一步用哪个桶 / 哪张图</text>
+<text x="42.0" y="256.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">按 padded num_tokens + uniform + LoRA 数查表 → 得到 cudagraph_mode 与 batch_descriptor。查不到就是 NONE（eager）。</text>
+<rect x="36.0" y="300.0" width="1424.0" height="62.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="42.0" y="314.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">③　备好静态输入（图外）</text>
+<text x="42.0" y="328.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">把本步的 input_ids / positions / slot_mapping / seq_lens 用 copy_ 写进持久 buffer 的前 N 个位置；slot_mapping 按 padded 长度补齐。</text>
+<rect x="36.0" y="372.0" width="1424.0" height="62.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="42.0" y="386.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">④　进 forward context（图外）</text>
+<text x="42.0" y="400.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">set_forward_context(attn_metadata, ..., num_tokens=num_tokens_padded, cudagraph_runtime_mode=, batch_descriptor=)——把「本步用哪张图」写进上下文，wrapper 在 forward 里读它。</text>
+<rect x="36.0" y="444.0" width="1424.0" height="68.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="42.0" y="458.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">⑤　命中图 → replay()（图内只这一下）</text>
+<text x="42.0" y="472.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">显存里已有这张图 → 一条 graph.replay()；CPU 只提交一次，设备按录好的顺序跑完整个 forward。</text>
+<rect x="36.0" y="522.0" width="1424.0" height="62.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="42.0" y="536.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">⑥　取输出（图外，且输出是「池子里那块静态显存」）</text>
+<text x="42.0" y="550.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">写 right 的是捕获期就定好的输出 buffer（弱引用）；再用它算 logits——注意 logits 与采样不在图里。</text>
+<rect x="36.0" y="594.0" width="1424.0" height="62.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="42.0" y="608.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">⑦　采样 + 回收 + 回 CPU（图外）</text>
+<text x="42.0" y="622.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">选 token、判结束、把结果搬回 CPU、写进 EngineCoreOutputs 发给前端。</text>
+<rect x="36.0" y="666.0" width="1424.0" height="62.0" rx="4" fill="#fff2cc" stroke="#d6b656"/>
+<text x="42.0" y="680.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">⑧　KV 真正写进去的时机</text>
+<text x="42.0" y="694.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">写 KV 发生在 attention 自己的 op 里（图内），但写到哪由进图前算好的 slot_mapping 决定；padding 的位置填 -1，等于跳过。</text>
+<rect x="36.0" y="744.0" width="1424.0" height="108.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="758.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">为什么「采样 / logits」一定要留在图外（三个理由）</text>
+<text x="42.0" y="772.85" font-size="10" fill="#333333" font-family="Microsoft YaHei">① 形状不定：这一步要采几个 token 取决于 batch 里各请求的状态，而且 spec decode 还要按 draft 结果变；</text>
+<text x="42.0" y="786.35" font-size="11" fill="#333333" font-family="Microsoft YaHei">② 要问 CPU：判结束、算 stop 条件、生成输出事件都是 CPU 逻辑，进了图就再也问不了；</text>
+<text x="42.0" y="801.2" font-size="11" fill="#333333" font-family="Microsoft YaHei">③ 要回主机：把 sampled token 搬回 CPU 是同步操作，图里禁止。</text>
+<rect x="36.0" y="886.0" width="1424.0" height="112.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="900.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">代码锚点（想自己去翻的时候用）</text>
+<text x="42.0" y="914.85" font-size="9" fill="#666666" font-family="Microsoft YaHei">execute_model 与选路：vllm/v1/worker/gpu_model_runner.py:4188、:4289-4310、:3954-4066</text>
+<text x="42.0" y="927.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">进 forward context：同文件 :4446-4457；命中后 replay：vllm/compilation/cuda_graph.py:242-246、:258-265、:362</text>
+<text x="42.0" y="941.85" font-size="11" fill="#333333" font-family="Microsoft YaHei">V2 的显式 replay（FULL 连输入都不传）：vllm/v1/worker/gpu/model_runner.py:1901-1909；vllm/v1/worker/gpu/cudagraph_utils.py:529-542</text>
+<text x="42.0" y="956.7" font-size="11" fill="#333333" font-family="Microsoft YaHei">图外算 logits / 采样：gpu_model_runner.py:4478-4499（logits）、:4567（sample_tokens）、:3690（回 CPU 记账）</text>
+<text x="42.0" y="971.5500000000001" font-size="11" fill="#333333" font-family="Microsoft YaHei">KV 写入与 slot_mapping：:4388-4397、:4455；vllm/model_executor/layers/attention/attention.py:750-794</text>
+<rect x="36.0" y="1032.0" width="1424.0" height="58.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="1046.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">一句话记住这一页：图只包住「模型 forward」；进图前备好静态输入并告诉上下文用哪张图，出图后算 logits / 采样 / 回 CPU。所以图能省的只是forward 内部的下发次数，省不了采样与调度。</text>
+<text x="36.0" y="1138.0" font-size="11" fill="#333333">图例</text>
+<rect x="148.0" y="1121.0" width="120.0" height="26.0" rx="4" fill="#eceff1" stroke="#607d8b"/>
+<text x="154.0" y="1135.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">客户端</text>
+<rect x="276.0" y="1121.0" width="120.0" height="26.0" rx="4" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="282.0" y="1135.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">边端 edge</text>
+<rect x="404.0" y="1121.0" width="120.0" height="26.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="410.0" y="1135.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 P (prefill)</text>
+<rect x="532.0" y="1121.0" width="120.0" height="26.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="538.0" y="1135.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 D (decode)</text>
+<rect x="660.0" y="1121.0" width="120.0" height="26.0" rx="4" fill="#b0e3e6" stroke="#0e8088"/>
+<text x="666.0" y="1135.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">PD Proxy</text>
+<rect x="788.0" y="1121.0" width="120.0" height="26.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="794.0" y="1135.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">中立/通用</text>
+<rect x="916.0" y="1121.0" width="120.0" height="26.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="922.0" y="1135.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">失败/取消</text>
+<rect x="1044.0" y="1121.0" width="240.0" height="26.0" rx="4" fill="#fff2cc" stroke="#d6b656"/>
+<text x="1050.0" y="1135.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">数据面（KV 写入）</text>
+<text x="210.0" y="1172.0" font-size="11" fill="#666666">控制面 ZMQ</text>
+<text x="460.0" y="1172.0" font-size="11" fill="#666666">数据面 UCX·Mooncake</text>
+<text x="710.0" y="1172.0" font-size="11" fill="#666666">HTTP</text>
+<path d="M148.0,1170.0 L204.0,1170.0" fill="none" stroke="#9673a6" marker-end="url(#a)"/>
+<path d="M398.0,1170.0 L454.0,1170.0" fill="none" stroke="#d6b656" marker-end="url(#a)"/>
+<path d="M648.0,1170.0 L704.0,1170.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333333"/></marker></defs>
+</svg></div>
+<div class="concl"><b>一句话结论　</b>图只覆盖「模型 forward」这一段；进图前要备好静态输入，出图后还要算 logits、采样、回收——这些都在图外。</div>
+<details><summary>代码锚点（5 条，可 grep）</summary><pre>execute_model 与选路：vllm/v1/worker/gpu_model_runner.py:4188、:4289-4310、:3954-4066
+进 forward context：同文件 :4446-4457；命中后 replay：vllm/compilation/cuda_graph.py:242-246、:258-265、:362
+V2 的显式 replay（FULL 连输入都不传）：vllm/v1/worker/gpu/model_runner.py:1901-1909；vllm/v1/worker/gpu/cudagraph_utils.py:529-542
+图外算 logits / 采样：gpu_model_runner.py:4478-4499（logits）、:4567（sample_tokens）、:3690（回 CPU 记账）
+KV 写入与 slot_mapping：:4388-4397、:4455；vllm/model_executor/layers/attention/attention.py:750-794</pre></details>
+</figure>
+<figure id="p8">
+<p class="ptitle">⑨ 昇腾侧：ACL Graph，以及本仓「D 用图、P 和 edge 不用」的选择</p>
+<p class="psub">一句话：昇腾上叫 ACL Graph（PyTorch 里是 torch.npu.NPUGraph），用法与 CUDA Graph 同构；最大差别是回放前要先在 host 侧刷新 attention 参数。本仓部署里只有 D 侧开图。</p>
+<div class="svgwrap"><svg xmlns="http://www.w3.org/2000/svg" width="977"1576" height="941"1518" viewBox="0 0 1576 1518">
+<rect width="1576" height="1518" fill="#ffffff"/>
+<text x="36.0" y="34.0" font-size="11" fill="#333333">⑨ 昇腾侧：ACL Graph，以及本仓「D 用图、P 和 edge 不用」的选择</text>
+<text x="36.0" y="62.0" font-size="11" fill="#666666">一句话：昇腾上叫 ACL Graph（PyTorch 里是 torch.npu.NPUGraph），用法与 CUDA Graph 同构；最大差别是回放前要先在 host 侧刷新 attention 参数。本仓部署里只有 D 侧开图。</text>
+<text x="36.0" y="136.0" font-size="11" fill="#333333">第一步：两者「同一套抽象，两处实现」</text>
+<rect x="36.0" y="154.0" width="260.0" height="34.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="42.0" y="168.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">维度</text>
+<rect x="296.0" y="154.0" width="560.0" height="34.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="302.0" y="168.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">CUDA 侧</text>
+<rect x="856.0" y="154.0" width="600.0" height="34.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="862.0" y="168.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">昇腾侧</text>
+<rect x="36.0" y="188.0" width="260.0" height="34.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="202.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">图对象</text>
+<rect x="296.0" y="188.0" width="560.0" height="34.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="302.0" y="202.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">torch.cuda.CUDAGraph</text>
+<rect x="856.0" y="188.0" width="600.0" height="34.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="862.0" y="202.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">torch.npu.NPUGraph（vllm-ascend 里做了别名）</text>
+<rect x="36.0" y="222.0" width="260.0" height="34.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="236.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">捕获上下文</text>
+<rect x="296.0" y="222.0" width="560.0" height="34.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="302.0" y="236.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">torch.cuda.graph(...)</text>
+<rect x="856.0" y="222.0" width="600.0" height="34.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="862.0" y="236.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">torch.npu.graph(...)（acl_graph.py 主线）</text>
+<rect x="36.0" y="256.0" width="260.0" height="34.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="270.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">内存池</text>
+<rect x="296.0" y="256.0" width="560.0" height="34.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="302.0" y="270.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">graph_pool_handle（平台钩子透传）</text>
+<rect x="856.0" y="256.0" width="600.0" height="34.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="862.0" y="270.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">同一个钩子最终也落到 torch.npu.graph_pool_handle</text>
+<rect x="36.0" y="290.0" width="260.0" height="34.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="304.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">包装器</text>
+<rect x="296.0" y="290.0" width="560.0" height="34.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="302.0" y="304.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">CUDAGraphWrapper</text>
+<rect x="856.0" y="290.0" width="600.0" height="34.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="862.0" y="304.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">ACLGraphWrapper（平台注册给 vLLM）</text>
+<rect x="36.0" y="324.0" width="260.0" height="34.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="338.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">模式枚举</text>
+<rect x="296.0" y="324.0" width="560.0" height="34.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="302.0" y="338.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">CUDAGraphMode：NONE/PIECEWISE/FULL…</text>
+<rect x="856.0" y="324.0" width="600.0" height="34.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="862.0" y="338.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">完全复用同一套枚举</text>
+<rect x="36.0" y="358.0" width="260.0" height="34.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="372.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">回放前</text>
+<rect x="296.0" y="358.0" width="560.0" height="34.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="302.0" y="372.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">直接 replay()</text>
+<rect x="856.0" y="358.0" width="600.0" height="34.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="862.0" y="372.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">必须先刷 host 侧参数再 replay（见下）</text>
+<text x="36.0" y="414.0" font-size="11" fill="#333333">第二步：昇腾独有的「回放前刷新」——这是最该记住的一条</text>
+<rect x="36.0" y="432.0" width="700.0" height="186.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="42.0" y="446.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="46.0" y="454.0" font-size="11" fill="#333333">问题：attention 的这几个量每步都在变</text>
+<text x="46.0" y="480.0" font-size="11" fill="#333333">· actual_seq_lengths（query 累计长度）· actual_seq_lengths_kv（每个请求当前的 KV 长度）· block_table（本步用哪些块）它们在昇腾上是以 host 侧 Python list 的形式随 metadata 传的，而图里只认地址——所以不能只 replay，必须先把这些值刷进去。</text>
+<rect x="796.0" y="432.0" width="664.0" height="186.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="802.0" y="446.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="806.0" y="454.0" font-size="11" fill="#333333">解法：register_task + graph_task_update</text>
+<text x="806.0" y="480.0" font-size="11" fill="#333333">把 attention 算子用 register_task 注册成图里的任务，并附一个 ParamProvider（负责取上面的动态值）；回放前用 torch.npu.graph_task_update_begin/end 包住一次算子调用 → 把这些参数更新进图；然后才 replay。对应实现：UpdatableGraph / graph_task_* API。</text>
+<text x="36.0" y="640.0" font-size="11" fill="#333333">第三步：本仓部署脚本怎么配（这一条能解释很多现象）</text>
+<rect x="36.0" y="658.0" width="460.0" height="112.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="42.0" y="672.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">D 侧（decode）：开图</text>
+<text x="42.0" y="686.85" font-size="10" fill="#333333" font-family="Microsoft YaHei">--compilation-config '{&quot;cudagraph_mode&quot;:&quot;FULL_DECODE_ONLY&quot;}'，有的包还显式给 cudagraph_capture_sizes</text>
+<text x="42.0" y="700.35" font-size="9" fill="#333333" font-family="Microsoft YaHei">sidecar/cloud_d.sh:31 · mooncake_pd_195/decode.sh:34</text>
+<rect x="516.0" y="658.0" width="460.0" height="112.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="522.0" y="672.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">P 侧（prefill）：--enforce-eager</text>
+<text x="522.0" y="686.85" font-size="10" fill="#333333" font-family="Microsoft YaHei">prefill 是长宽矩阵、形状差异大；且 P 只跑一次就交接，省启动时间更划算</text>
+<text x="522.0" y="700.35" font-size="9" fill="#333333" font-family="Microsoft YaHei">cloud_p.sh:26 · prefill.sh:33</text>
+<rect x="996.0" y="658.0" width="464.0" height="112.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="1002.0" y="672.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">edge：--enforce-eager，而且代码里直接跳过捕获</text>
+<text x="1002.0" y="686.85" font-size="10" fill="#333333" font-family="Microsoft YaHei">LwdEdgeWorker 覆写了 compile_or_warm_up_model，直接返回 0 秒——因为 edge 的 forward 被 LWD 劫持，只做 embed/unembed</text>
+<text x="1002.0" y="700.35" font-size="9" fill="#333333" font-family="Microsoft YaHei">lwd_edge_worker.py:122-131（日志 [lwd-edge] skip model warmup/capture）</text>
+<rect x="36.0" y="810.0" width="1424.0" height="104.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="824.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">两个重要澄清</text>
+<text x="42.0" y="838.85" font-size="10" fill="#333333" font-family="Microsoft YaHei">① 「LWD 下必须 enforce-eager」并不存在于代码里——全仓 grep 找不到这条强制；它只是部署脚本的约定（P/edge 加 flag、D 开 FULL_DECODE_ONLY）。</text>
+<text x="42.0" y="852.35" font-size="11" fill="#333333" font-family="Microsoft YaHei">② eager 与 --compilation-config 同时给不会报错：eager 会静默胜出（一条 warning_once + 一条 info），用户给的 cudagraph_mode 被丢弃、永远不捕获。</text>
+<text x="36.0" y="930.0" font-size="11" fill="#333333">第四步：昇腾侧已知限制（遇到别当成 bug 猜）</text>
+<rect x="36.0" y="948.0" width="320.0" height="32.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="42.0" y="962.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">限制</text>
+<rect x="356.0" y="948.0" width="1060.0" height="32.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="362.0" y="962.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">表现 / 应对</text>
+<rect x="36.0" y="980.0" width="320.0" height="32.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="994.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">PIECEWISE 需要编译</text>
+<rect x="356.0" y="980.0" width="1060.0" height="32.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="362.0" y="994.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">必须 VLLM_COMPILE 或开 breakable，否则启动即 AssertionError</text>
+<rect x="36.0" y="1012.0" width="320.0" height="32.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="1026.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">DP 要取最小</text>
+<rect x="356.0" y="1012.0" width="1060.0" height="32.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="362.0" y="1026.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">cudagraph_mode 跨 DP rank 取最小：一个 rank 是 NONE 就全体 NONE</text>
+<rect x="36.0" y="1044.0" width="320.0" height="32.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="1058.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">TP × query_len 对齐</text>
+<rect x="356.0" y="1044.0" width="1060.0" height="32.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="362.0" y="1058.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">FULL decode 的桶要对齐到 LCM(query_len, TP)（临时 workaround）</text>
+<rect x="36.0" y="1076.0" width="320.0" height="32.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="1090.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">流资源耗尽</text>
+<rect x="356.0" y="1076.0" width="1060.0" height="32.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="362.0" y="1090.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">报 207008 / Alloc sq cq fail → 调小 capture sizes 或升级 HDK</text>
+<rect x="36.0" y="1108.0" width="320.0" height="32.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="1122.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">超桶静默掉出</text>
+<rect x="356.0" y="1108.0" width="1060.0" height="32.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="362.0" y="1122.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">num_tokens 超过最大桶 → 直接回 eager，没有日志</text>
+<rect x="36.0" y="1174.0" width="1424.0" height="120.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="1188.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">代码锚点（想自己去翻的时候用）</text>
+<text x="42.0" y="1202.85" font-size="9" fill="#666666" font-family="Microsoft YaHei">ACL 图包装器与捕获/回放：vllm-ascend/vllm_ascend/compilation/acl_graph.py:156-302（torch.npu.graph 在 :210；replay :297-302；捕获失败文案 :228-243）</text>
+<text x="42.0" y="1215.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">参数刷新：vllm-ascend/vllm_ascend/compilation/updatable_graph.py:72-76、:147-174</text>
+<text x="42.0" y="1229.85" font-size="11" fill="#333333" font-family="Microsoft YaHei">平台接入（wrapper 与静态图支持）：vllm-ascend/vllm_ascend/platform.py:159-160、:218-222；模式降级 :1171-1246、:1346-1352</text>
+<text x="42.0" y="1244.6999999999998" font-size="11" fill="#333333" font-family="Microsoft YaHei">CUDA→NPU 名字别名：vllm-ascend/vllm_ascend/worker/model_runner_v1.py:6687-6739；V2 版 worker/v2/utils.py:162-171</text>
+<text x="42.0" y="1259.5499999999997" font-size="11" fill="#333333" font-family="Microsoft YaHei">edge 跳过捕获：vllm-ascend/vllm_ascend/worker/lwd_edge_model/lwd_edge_worker.py:122-131</text>
+<text x="42.0" y="1274.3999999999996" font-size="11" fill="#333333" font-family="Microsoft YaHei">部署侧 flag：assets/c_home/bash/pds/30rc_1124/sidecar/cloud_d.sh:31（D 开图）、cloud_p.sh:26 与 edge.sh:30（enforce-eager）</text>
+<rect x="36.0" y="1328.0" width="1424.0" height="58.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="1342.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">一句话记住这一页：昇腾的图叫 ACL Graph，用法与 CUDA 同构，但回放前要多一步「host 侧刷 attention 参数」；本仓只在 D 侧开 FULL_DECODE_ONLY，P 与 edge 一律 eager（edge 还在代码里直接跳过捕获）。</text>
+<text x="36.0" y="1434.0" font-size="11" fill="#333333">图例</text>
+<rect x="148.0" y="1417.0" width="120.0" height="26.0" rx="4" fill="#eceff1" stroke="#607d8b"/>
+<text x="154.0" y="1431.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">客户端</text>
+<rect x="276.0" y="1417.0" width="120.0" height="26.0" rx="4" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="282.0" y="1431.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">边端 edge</text>
+<rect x="404.0" y="1417.0" width="120.0" height="26.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="410.0" y="1431.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 P (prefill)</text>
+<rect x="532.0" y="1417.0" width="120.0" height="26.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="538.0" y="1431.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 D (decode)</text>
+<rect x="660.0" y="1417.0" width="120.0" height="26.0" rx="4" fill="#b0e3e6" stroke="#0e8088"/>
+<text x="666.0" y="1431.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">PD Proxy</text>
+<rect x="788.0" y="1417.0" width="120.0" height="26.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="794.0" y="1431.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">中立/通用</text>
+<rect x="916.0" y="1417.0" width="120.0" height="26.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="922.0" y="1431.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">失败/取消</text>
+<text x="210.0" y="1468.0" font-size="11" fill="#666666">控制面 ZMQ</text>
+<text x="460.0" y="1468.0" font-size="11" fill="#666666">数据面 UCX·Mooncake</text>
+<text x="710.0" y="1468.0" font-size="11" fill="#666666">HTTP</text>
+<path d="M148.0,1466.0 L204.0,1466.0" fill="none" stroke="#9673a6" marker-end="url(#a)"/>
+<path d="M398.0,1466.0 L454.0,1466.0" fill="none" stroke="#d6b656" marker-end="url(#a)"/>
+<path d="M648.0,1466.0 L704.0,1466.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333333"/></marker></defs>
+</svg></div>
+<div class="concl"><b>一句话结论　</b>昇腾上叫 ACL Graph（PyTorch 里是 torch.npu.NPUGraph），用法与 CUDA Graph 同构；最大差别是回放前要先在 host 侧刷新 attention 参数。本仓部署里只有 D 侧开图。</div>
+<details><summary>代码锚点（5 条，可 grep）</summary><pre>ACL 图包装器与捕获/回放：vllm-ascend/vllm_ascend/compilation/acl_graph.py:156-302（torch.npu.graph 在 :210；replay :297-302；捕获失败文案 :228-243）
+参数刷新：vllm-ascend/vllm_ascend/compilation/updatable_graph.py:72-76、:147-174
+平台接入（wrapper 与静态图支持）：vllm-ascend/vllm_ascend/platform.py:159-160、:218-222；模式降级 :1171-1246、:1346-1352
+CUDA→NPU 名字别名：vllm-ascend/vllm_ascend/worker/model_runner_v1.py:6687-6739；V2 版 worker/v2/utils.py:162-171
+edge 跳过捕获：vllm-ascend/vllm_ascend/worker/lwd_edge_model/lwd_edge_worker.py:122-131</pre></details>
+</figure>
+<figure id="p9">
+<p class="ptitle">⑩ 排障与坑：六种「以为开了图、其实没有」</p>
+<p class="psub">一句话：图失效几乎都不报错——要么静默回落 eager，要么开着但算错。这页是排查顺序：先看有没有捕获，再看有没有命中，最后看是不是越了桶。</p>
+<div class="svgwrap"><svg xmlns="http://www.w3.org/2000/svg" width="977"1576" height="896"1446" viewBox="0 0 1576 1446">
+<rect width="1576" height="1446" fill="#ffffff"/>
+<text x="36.0" y="34.0" font-size="11" fill="#333333">⑩ 排障与坑：六种「以为开了图、其实没有」</text>
+<text x="36.0" y="62.0" font-size="11" fill="#666666">一句话：图失效几乎都不报错——要么静默回落 eager，要么开着但算错。这页是排查顺序：先看有没有捕获，再看有没有命中，最后看是不是越了桶。</text>
+<text x="36.0" y="134.0" font-size="11" fill="#333333">六种情况（按「先怀疑谁」排序）</text>
+<rect x="36.0" y="152.0" width="1424.0" height="84.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="42.0" y="166.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="48.0" y="172.0" font-size="11" fill="#333333">①　启动日志里根本没有捕获</text>
+<text x="48.0" y="194.0" font-size="11" fill="#333333">现象：没有 Graph capturing finished / Capturing ACL graph原因：被 --enforce-eager 或 -O0 一票否决；或 cudagraph_mode=NONE　→　处置：看有没有 Enforce eager set, disabling torch.compile and CUDAGraphs 这条 warning</text>
+<rect x="36.0" y="246.0" width="1424.0" height="84.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="42.0" y="260.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="48.0" y="266.0" font-size="11" fill="#333333">②　捕获了但并发一高就变慢</text>
+<text x="48.0" y="288.0" font-size="11" fill="#333333">现象：低并发时快、并发上到某个数就退回原速原因：num_tokens 超过最大桶（默认 512）→ dispatcher 直接回 NONE，且无日志　→　处置：看最大桶与 max_num_seqs 的关系；必要时 --max-cudagraph-capture-size 调大或压并发</text>
+<rect x="36.0" y="340.0" width="1424.0" height="84.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="42.0" y="354.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="48.0" y="360.0" font-size="11" fill="#333333">③　捕获时就 OOM / 启动直接失败</text>
+<text x="48.0" y="382.0" font-size="11" fill="#333333">现象：Graph capturing ... 之后进程退出原因：图池显存放不下（捕获段没有 try/except 回退）　→　处置：缩桶（--cudagraph-capture-sizes 1,2,4,8,16）或降 gpu-memory-utilization</text>
+<rect x="36.0" y="434.0" width="1424.0" height="84.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="42.0" y="448.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="48.0" y="454.0" font-size="11" fill="#333333">④　所有请求都拿到同一个旧结果</text>
+<text x="48.0" y="476.0" font-size="11" fill="#333333">现象：输出重复、内容像是缓存的原因：某处 .item() / 分支被「烤」进图（约束三）　→　处置：把该逻辑挪到图外；或先 --enforce-eager 验证是不是图的问题</text>
+<rect x="36.0" y="528.0" width="1424.0" height="84.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="42.0" y="542.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="48.0" y="548.0" font-size="11" fill="#333333">⑤　报 Input addresses ... different during replay</text>
+<text x="48.0" y="570.0" font-size="11" fill="#333333">现象：回放时抛地址不一致原因：有代码在回放期换了输入张量（没走持久 buffer）　→　处置：改成 copy_ 进固定 buffer；查这段日志的栈找到改地址的地方</text>
+<rect x="36.0" y="622.0" width="1424.0" height="84.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="42.0" y="636.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="48.0" y="642.0" font-size="11" fill="#333333">⑥　昇腾上捕获报错 207008 / Alloc sq cq fail</text>
+<text x="48.0" y="664.0" font-size="11" fill="#333333">现象：RuntimeError，提示流资源不足或旧 HDK原因：capture sizes 太大 / HDK 版本旧　→　处置：调小 capture sizes；或升级 HDK（仓内文案给的处理建议）</text>
+<text x="36.0" y="708.0" font-size="11" fill="#333333">四步排查法（照着走，不要一上来就改代码）</text>
+<rect x="36.0" y="726.0" width="1424.0" height="92.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="740.0" font-size="10" fill="#333333" font-family="Microsoft YaHei">① 确认模式：看启动日志的 cudagraph 模式与桶数（有没有被 eager 否决、有没有被 NPU 降级）。</text>
+<text x="42.0" y="753.5" font-size="11" fill="#333333" font-family="Microsoft YaHei">② 确认捕获：有没有 Graph capturing finished in N secs, took X GiB；显存是否符合预期。</text>
+<text x="42.0" y="768.35" font-size="11" fill="#333333" font-family="Microsoft YaHei">③ 确认命中：开指标（--cudagraph-metrics）看命中率；或临时移除 --disable-log-stats 观察。</text>
+<text x="42.0" y="783.2" font-size="11" fill="#333333" font-family="Microsoft YaHei">④ 确认形状：对比 Running 请求数 × 每请求 token 数与最大桶，判断是不是「越桶掉出」。</text>
+<text x="36.0" y="834.0" font-size="11" fill="#333333">必背的六条日志</text>
+<rect x="36.0" y="852.0" width="760.0" height="32.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="42.0" y="866.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">日志原文（关键字）</text>
+<rect x="796.0" y="852.0" width="120.0" height="32.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="802.0" y="866.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">级别</text>
+<rect x="916.0" y="852.0" width="400.0" height="32.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="922.0" y="866.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">含义</text>
+<rect x="36.0" y="884.0" width="760.0" height="32.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="898.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">Enforce eager set, disabling torch.compile and CUDAGraphs...</text>
+<rect x="796.0" y="884.0" width="120.0" height="32.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="802.0" y="898.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">WARNING</text>
+<rect x="916.0" y="884.0" width="400.0" height="32.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="922.0" y="898.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">eager 一票否决</text>
+<rect x="36.0" y="916.0" width="760.0" height="32.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="930.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">Capturing ACL graph (FULL, BatchDescriptor(...))</text>
+<rect x="796.0" y="916.0" width="120.0" height="32.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="802.0" y="930.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">DEBUG</text>
+<rect x="916.0" y="916.0" width="400.0" height="32.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="922.0" y="930.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">昇腾每抓一张图（需开 debug 日志）</text>
+<rect x="36.0" y="948.0" width="760.0" height="32.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="962.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">Graph capturing finished in N secs, took X GiB</text>
+<rect x="796.0" y="948.0" width="120.0" height="32.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="802.0" y="962.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">INFO</text>
+<rect x="916.0" y="948.0" width="400.0" height="32.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="922.0" y="962.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">捕获完成：耗时与图显存</text>
+<rect x="36.0" y="980.0" width="760.0" height="32.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="994.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">CUDA graph pool memory: X GiB (actual), Y GiB (estimated)</text>
+<rect x="796.0" y="980.0" width="120.0" height="32.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="802.0" y="994.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">INFO</text>
+<rect x="916.0" y="980.0" width="400.0" height="32.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="922.0" y="994.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">估算 vs 实际</text>
+<rect x="36.0" y="1012.0" width="760.0" height="32.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="1026.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">ACL graph replay is active (logged once).</text>
+<rect x="796.0" y="1012.0" width="120.0" height="32.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="802.0" y="1026.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">INFO</text>
+<rect x="916.0" y="1012.0" width="400.0" height="32.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="922.0" y="1026.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">journal 里确认图真的在用</text>
+<rect x="36.0" y="1044.0" width="760.0" height="32.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="1058.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">cudagraph_mode X is unsupported on NPU; falling back to NONE.</text>
+<rect x="796.0" y="1044.0" width="120.0" height="32.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="802.0" y="1058.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">INFO</text>
+<rect x="916.0" y="1044.0" width="400.0" height="32.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="922.0" y="1058.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">被平台降级了</text>
+<rect x="36.0" y="1110.0" width="1424.0" height="112.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="1124.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">代码锚点（想自己去翻的时候用）</text>
+<text x="42.0" y="1138.85" font-size="9" fill="#666666" font-family="Microsoft YaHei">静默回落 NONE（无日志）：vllm/v1/cudagraph_dispatcher.py:274-282</text>
+<text x="42.0" y="1151.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">eager 警告与降级：vllm/config/vllm.py:1591-1597；vllm-ascend/vllm_ascend/platform.py:1218-1222、:1346-1352</text>
+<text x="42.0" y="1165.85" font-size="11" fill="#333333" font-family="Microsoft YaHei">捕获失败的昇腾文案：vllm-ascend/vllm_ascend/compilation/acl_graph.py:228-243</text>
+<text x="42.0" y="1180.6999999999998" font-size="11" fill="#333333" font-family="Microsoft YaHei">地址不一致断言：vllm/compilation/cuda_graph.py:348-357</text>
+<text x="42.0" y="1195.5499999999997" font-size="11" fill="#333333" font-family="Microsoft YaHei">日志原文：vllm/v1/worker/gpu_model_runner.py:6942-6946（耗时/显存）、vllm-ascend/vllm_ascend/compilation/acl_graph.py:182、:301</text>
+<text x="42.0" y="1210.3999999999996" font-size="11" fill="#333333" font-family="Microsoft YaHei">指标开关：vllm-ascend/docs/source/developer_guide/Design_Documents/ACL_Graph.md:105</text>
+<rect x="36.0" y="1256.0" width="1424.0" height="58.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="1270.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">一句话记住这一页：图的问题九成不报错——先看「有没有捕获」，再看「有没有命中」，最后看「形状是否越桶」；任何一次怀疑，都用 --enforce-eager 做对照实验来二分。</text>
+<text x="36.0" y="1362.0" font-size="11" fill="#333333">图例</text>
+<rect x="148.0" y="1345.0" width="120.0" height="26.0" rx="4" fill="#eceff1" stroke="#607d8b"/>
+<text x="154.0" y="1359.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">客户端</text>
+<rect x="276.0" y="1345.0" width="120.0" height="26.0" rx="4" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="282.0" y="1359.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">边端 edge</text>
+<rect x="404.0" y="1345.0" width="120.0" height="26.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="410.0" y="1359.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 P (prefill)</text>
+<rect x="532.0" y="1345.0" width="120.0" height="26.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="538.0" y="1359.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 D (decode)</text>
+<rect x="660.0" y="1345.0" width="120.0" height="26.0" rx="4" fill="#b0e3e6" stroke="#0e8088"/>
+<text x="666.0" y="1359.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">PD Proxy</text>
+<rect x="788.0" y="1345.0" width="120.0" height="26.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="794.0" y="1359.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">中立/通用</text>
+<rect x="916.0" y="1345.0" width="120.0" height="26.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="922.0" y="1359.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">失败/取消</text>
+<text x="210.0" y="1396.0" font-size="11" fill="#666666">控制面 ZMQ</text>
+<text x="460.0" y="1396.0" font-size="11" fill="#666666">数据面 UCX·Mooncake</text>
+<text x="710.0" y="1396.0" font-size="11" fill="#666666">HTTP</text>
+<path d="M148.0,1394.0 L204.0,1394.0" fill="none" stroke="#9673a6" marker-end="url(#a)"/>
+<path d="M398.0,1394.0 L454.0,1394.0" fill="none" stroke="#d6b656" marker-end="url(#a)"/>
+<path d="M648.0,1394.0 L704.0,1394.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333333"/></marker></defs>
+</svg></div>
+<div class="concl"><b>一句话结论　</b>图失效几乎都不报错——要么静默回落 eager，要么开着但算错。这页是排查顺序：先看有没有捕获，再看有没有命中，最后看是不是越了桶。</div>
+<details><summary>代码锚点（6 条，可 grep）</summary><pre>静默回落 NONE（无日志）：vllm/v1/cudagraph_dispatcher.py:274-282
+eager 警告与降级：vllm/config/vllm.py:1591-1597；vllm-ascend/vllm_ascend/platform.py:1218-1222、:1346-1352
+捕获失败的昇腾文案：vllm-ascend/vllm_ascend/compilation/acl_graph.py:228-243
+地址不一致断言：vllm/compilation/cuda_graph.py:348-357
+日志原文：vllm/v1/worker/gpu_model_runner.py:6942-6946（耗时/显存）、vllm-ascend/vllm_ascend/compilation/acl_graph.py:182、:301
+指标开关：vllm-ascend/docs/source/developer_guide/Design_Documents/ACL_Graph.md:105</pre></details>
+</figure></body></html>

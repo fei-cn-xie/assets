@@ -1,0 +1,1166 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>站0 权重从哪来 · 10 页</title><style>
+:root { --ink:#1f2328; --dim:#57606a; --line:#d0d7de; --bg:#ffffff;
+        --soft:#f6f8fa; --accent:#0969da; }
+* { box-sizing: border-box; }
+body { margin:0; padding:0 20px 80px; background:var(--bg); color:var(--ink);
+       font:15px/1.7 "Microsoft YaHei","PingFang SC",system-ui,sans-serif; }
+nav.top { position:sticky; top:0; z-index:9; background:rgba(255,255,255,.94);
+          backdrop-filter:blur(6px); border-bottom:1px solid var(--line);
+          padding:10px 0; margin-bottom:24px; font-size:13px; }
+nav.top a { color:var(--accent); text-decoration:none; margin-right:14px; }
+nav.top a:hover { text-decoration:underline; }
+h1 { font-size:24px; margin:18px 0 6px; }
+h2 { font-size:19px; margin:34px 0 8px; padding-top:10px;
+     border-top:1px solid var(--line); }
+.lead { color:var(--dim); margin:0 0 18px; }
+figure { margin:0 0 34px; }
+figcaption { font-size:14px; color:var(--dim); margin:8px 0 0; }
+.svgwrap { overflow-x:auto; border:1px solid var(--line); border-radius:8px;
+           background:#fff; padding:6px; }
+.svgwrap svg { display:block; height:auto; max-width:100%; }
+.ptitle { font-size:16px; font-weight:700; margin:0 0 4px; }
+.psub { color:var(--dim); font-size:13px; margin:0 0 10px; }
+.concl { background:var(--soft); border-left:4px solid var(--accent);
+         padding:10px 14px; margin:12px 0 0; font-size:14px; border-radius:0 6px 6px 0; }
+.concl b { color:var(--ink); }
+details { margin-top:10px; }
+summary { cursor:pointer; color:var(--accent); font-size:13px; }
+pre { background:var(--soft); padding:10px 12px; border-radius:6px;
+      white-space:pre-wrap; word-break:break-word; font-size:12.5px;
+      line-height:1.65; margin:8px 0 0; }
+.cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr));
+         gap:14px; margin:18px 0 10px; }
+.card { border:1px solid var(--line); border-radius:10px; padding:14px 16px;
+        text-decoration:none; color:inherit; display:block; }
+.card:hover { border-color:var(--accent); background:var(--soft); }
+.card .k { color:var(--dim); font-size:12px; letter-spacing:.05em; }
+.card .t { font-size:15px; font-weight:700; margin:2px 0 4px; }
+.card .d { color:var(--dim); font-size:13px; }
+.tag { display:inline-block; font-size:12px; color:var(--dim);
+       border:1px solid var(--line); border-radius:99px; padding:1px 9px; margin-left:6px; }
+</style></head><body><nav class="top"> <a href="index.html">总目录</a> <a href="../学习地图.md">学习地图.md</a></nav><h1>站0　权重从哪来 · 10 页</h1>
+<p class="lead">训练九步、显存四件套、量化、MTP 两义、加载器挑文件、RL 后端</p>
+<p class="lead">本页 10 张图；点击编号跳转：<a href="#p0">1</a> <a href="#p1">2</a> <a href="#p2">3</a> <a href="#p3">4</a> <a href="#p4">5</a> <a href="#p5">6</a> <a href="#p6">7</a> <a href="#p7">8</a> <a href="#p8">9</a> <a href="#p9">10</a></p>
+<figure id="p0">
+<p class="ptitle">① 先划清边界：vLLM 不做训练，但它和训练共享三样东西</p>
+<p class="psub">一句话：vLLM 是推理引擎——它没有反向传播、没有优化器、没有损失函数；但它的模型定义、权重文件格式、配置约定与训练侧是同一套。搞清这一点，才不会在仓里白找训练代码。</p>
+<div class="svgwrap"><svg xmlns="http://www.w3.org/2000/svg" width="977"1576" height="660"1066" viewBox="0 0 1576 1066">
+<rect width="1576" height="1066" fill="#ffffff"/>
+<text x="36.0" y="34.0" font-size="11" fill="#333333">① 先划清边界：vLLM 不做训练，但它和训练共享三样东西</text>
+<text x="36.0" y="62.0" font-size="11" fill="#666666">一句话：vLLM 是推理引擎——它没有反向传播、没有优化器、没有损失函数；但它的模型定义、权重文件格式、配置约定与训练侧是同一套。搞清这一点，才不会在仓里白找训练代码。</text>
+<text x="36.0" y="132.0" font-size="11" fill="#333333">第一步：一条完整的「造模型」流水线（vLLM 只站在最右端）</text>
+<rect x="36.0" y="150.0" width="274.0" height="86.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="164.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">数据</text>
+<text x="42.0" y="178.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">清洗 / 去重 / 配比</text>
+<rect x="320.0" y="150.0" width="274.0" height="86.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="326.0" y="164.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">训练</text>
+<text x="326.0" y="178.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">前向 + 损失 + 反向 + 更新</text>
+<rect x="604.0" y="150.0" width="274.0" height="86.0" rx="4" fill="#fff2cc" stroke="#d6b656"/>
+<text x="610.0" y="164.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">产出</text>
+<text x="610.0" y="178.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">checkpoint（权重 + 优化器状态）</text>
+<rect x="888.0" y="150.0" width="274.0" height="86.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="894.0" y="164.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">转换</text>
+<text x="894.0" y="178.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">合并分片 / 格式转换 / 量化</text>
+<rect x="1172.0" y="150.0" width="274.0" height="86.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="1178.0" y="164.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">部署</text>
+<text x="1178.0" y="178.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">vLLM 加载并服务</text>
+<text x="36.0" y="260.0" font-size="11" fill="#666666">本仓两份材料的分工：① 训练侧（本套）只在“产出 → 转换”这一段；② 其余八套讲最右边的“部署”以及它与前面各段的接口。</text>
+<text x="36.0" y="272.0" font-size="11" fill="#333333">第二步：训练与推理共享的三样东西（这才是本套的意义）</text>
+<rect x="36.0" y="290.0" width="460.0" height="186.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="42.0" y="304.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="46.0" y="312.0" font-size="11" fill="#333333">① 模型结构定义</text>
+<text x="46.0" y="338.0" font-size="11" fill="#333333">同一个 `deepseek_mtp` / `qwen` 类既描述了「训练时怎么算」，也描述了「推理时怎么算」——只是推理不挂 backward。所以读 vLLM 的 models/ 目录，本质上是在读训练代码的 forward 部分。</text>
+<rect x="518.0" y="290.0" width="460.0" height="186.0" rx="4" fill="#fff2cc" stroke="#d6b656"/>
+<text x="524.0" y="304.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="528.0" y="312.0" font-size="11" fill="#333333">② 权重文件格式</text>
+<text x="528.0" y="338.0" font-size="11" fill="#333333">训练输出 safetensors 分片 + index.json；推理按同一份 index 只读权重，忽略优化器/训练状态文件。名字、形状、分片约定必须完全一致，否则加载报形状不匹配。</text>
+<rect x="1000.0" y="290.0" width="460.0" height="186.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="1006.0" y="304.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="1010.0" y="312.0" font-size="11" fill="#333333">③ 配置约定</text>
+<text x="1010.0" y="338.0" font-size="11" fill="#333333">`config.json` 里的层数、头数、隐藏维度既决定训练参数量，也决定推理的显存与并行切分。还有像 `num_nextn_predict_layers` 这种「训练期定义、推理期复用」的字段。</text>
+<rect x="36.0" y="516.0" width="1424.0" height="128.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="42.0" y="530.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">第三步：在 vLLM 仓里找不到的四样东西（省下你的搜索时间）</text>
+<text x="42.0" y="544.85" font-size="10" fill="#333333" font-family="Microsoft YaHei">① 反向传播（全仓 0 处 `loss.backward`）；② 优化器（0 处 `AdamW`/梯度清零）；③ 数据加载（包内 0 处 `DataLoader`）；④ 训练循环（0 处 `model.train()`，只有 `model.eval()`）。</text>
+<text x="42.0" y="558.35" font-size="11" fill="#333333" font-family="Microsoft YaHei">但它确实有一块与训练打交道的代码：一套跑在训练进程侧的「权重同步客户端」（把新权重推给正在服务的推理引擎），这是为强化学习准备的——详见第 ⑩ 页。</text>
+<text x="42.0" y="573.2" font-size="11" fill="#c0392b" font-family="Microsoft YaHei">它多出来的是训练侧没有的东西：调度器、KV cache、批量管理与图捕获——因为只有推理才需要「持续服务很多长短不一的请求」。</text>
+<rect x="36.0" y="664.0" width="1424.0" height="46.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="42.0" y="678.0" font-size="10" fill="#333333" font-family="Microsoft YaHei">本页交接：边界划清了。下一步（②）把训练那一格展开——一次训练 step 到底在算什么，以及它和推理的那一步差在哪。</text>
+<rect x="36.0" y="740.0" width="1424.0" height="104.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="754.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">代码锚点（想自己去翻的时候用）</text>
+<text x="42.0" y="768.85" font-size="9" fill="#666666" font-family="Microsoft YaHei">vLLM 的自我定位（serving）：vllm/README.md:1</text>
+<text x="42.0" y="781.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">模型定义被推理复用：vllm/model_executor/models/（每个模型一个 forward）</text>
+<text x="42.0" y="795.85" font-size="11" fill="#333333" font-family="Microsoft YaHei">权重加载只吃权重、忽略训练状态：vllm/model_executor/model_loader/weight_utils.py:1002、:1253-1271</text>
+<text x="42.0" y="810.7" font-size="11" fill="#333333" font-family="Microsoft YaHei">训练期定义但推理期不用的字段示例：vllm/transformers_utils/configs/hy_v4.py:53-54（mtp_loss_factor 注释写明 unused at inference）</text>
+<rect x="36.0" y="876.0" width="1424.0" height="58.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="890.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">一句话记住这一页：vLLM 不做训练，但它与训练共享模型结构、权重格式、配置；所以「理解训练」的价值不是去改 vLLM，而是理解那些权重数字是怎么来的、哪些字段只在训练期有意义。</text>
+<text x="36.0" y="982.0" font-size="11" fill="#333333">图例</text>
+<rect x="148.0" y="965.0" width="120.0" height="26.0" rx="4" fill="#eceff1" stroke="#607d8b"/>
+<text x="154.0" y="979.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">客户端</text>
+<rect x="276.0" y="965.0" width="120.0" height="26.0" rx="4" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="282.0" y="979.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">边端 edge</text>
+<rect x="404.0" y="965.0" width="120.0" height="26.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="410.0" y="979.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 P (prefill)</text>
+<rect x="532.0" y="965.0" width="120.0" height="26.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="538.0" y="979.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 D (decode)</text>
+<rect x="660.0" y="965.0" width="120.0" height="26.0" rx="4" fill="#b0e3e6" stroke="#0e8088"/>
+<text x="666.0" y="979.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">PD Proxy</text>
+<rect x="788.0" y="965.0" width="120.0" height="26.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="794.0" y="979.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">中立/通用</text>
+<rect x="916.0" y="965.0" width="120.0" height="26.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="922.0" y="979.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">失败/取消</text>
+<text x="210.0" y="1016.0" font-size="11" fill="#666666">控制面 ZMQ</text>
+<text x="460.0" y="1016.0" font-size="11" fill="#666666">数据面 UCX·Mooncake</text>
+<text x="710.0" y="1016.0" font-size="11" fill="#666666">HTTP</text>
+<path d="M311.0,193.0 L319.0,193.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<path d="M595.0,193.0 L603.0,193.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<path d="M879.0,193.0 L887.0,193.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<path d="M1163.0,193.0 L1171.0,193.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<path d="M148.0,1014.0 L204.0,1014.0" fill="none" stroke="#9673a6" marker-end="url(#a)"/>
+<path d="M398.0,1014.0 L454.0,1014.0" fill="none" stroke="#d6b656" marker-end="url(#a)"/>
+<path d="M648.0,1014.0 L704.0,1014.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333333"/></marker></defs>
+</svg></div>
+<div class="concl"><b>一句话结论　</b>vLLM 是推理引擎——它没有反向传播、没有优化器、没有损失函数；但它的模型定义、权重文件格式、配置约定与训练侧是同一套。搞清这一点，才不会在仓里白找训练代码。</div>
+<details><summary>代码锚点（3 条，可 grep）</summary><pre>vLLM 的自我定位（serving）：vllm/README.md:1
+权重加载只吃权重、忽略训练状态：vllm/model_executor/model_loader/weight_utils.py:1002、:1253-1271
+训练期定义但推理期不用的字段示例：vllm/transformers_utils/configs/hy_v4.py:53-54（mtp_loss_factor 注释写明 unused at inference）</pre></details>
+</figure>
+<figure id="p1">
+<p class="ptitle">② 一次训练 step：九步数据流，其中只有四步会出现在推理里</p>
+<p class="psub">一句话：训练一步 = 切 token → 前向 → 算损失 → 反向 → 更新；推理只保留「切 token → 前向 → 采样」，把中间三步全砍掉——这就是为什么推理能省下大半显存。</p>
+<div class="svgwrap"><svg xmlns="http://www.w3.org/2000/svg" width="977"1576" height="660"1066" viewBox="0 0 1576 1066">
+<rect width="1576" height="1066" fill="#ffffff"/>
+<text x="36.0" y="34.0" font-size="11" fill="#333333">② 一次训练 step：九步数据流，其中只有四步会出现在推理里</text>
+<text x="36.0" y="62.0" font-size="11" fill="#666666">一句话：训练一步 = 切 token → 前向 → 算损失 → 反向 → 更新；推理只保留「切 token → 前向 → 采样」，把中间三步全砍掉——这就是为什么推理能省下大半显存。</text>
+<text x="36.0" y="130.0" font-size="11" fill="#333333">第一步：九步（蓝＝训练独有，绿＝推理也有）</text>
+<rect x="36.0" y="148.0" width="156.0" height="104.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="162.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">① 取一条文本</text>
+<text x="42.0" y="176.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">数据集采样 → 一段字符串</text>
+<rect x="198.0" y="148.0" width="156.0" height="104.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="204.0" y="162.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">② 分词</text>
+<text x="204.0" y="176.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">字符串 → token id 序列</text>
+<rect x="360.0" y="148.0" width="156.0" height="104.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="366.0" y="162.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">③ 拼成 batch</text>
+<text x="366.0" y="176.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">多条序列补齐或打包（二维/一维）</text>
+<rect x="522.0" y="148.0" width="156.0" height="104.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="528.0" y="162.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">④ 前向 forward</text>
+<text x="528.0" y="176.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">逐层算 → 每个位置的 logits</text>
+<rect x="684.0" y="148.0" width="156.0" height="104.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="690.0" y="162.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">⑤ 算损失 loss</text>
+<text x="690.0" y="176.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">与「下一个词」比对 → 一个标量</text>
+<rect x="846.0" y="148.0" width="156.0" height="104.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="852.0" y="162.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">⑥ 反向 backward</text>
+<text x="852.0" y="176.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">从 loss 回传 → 每个参数的梯度</text>
+<rect x="1008.0" y="148.0" width="156.0" height="104.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="1014.0" y="162.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">⑦ 更新参数</text>
+<text x="1014.0" y="176.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">优化器按梯度走一小步</text>
+<rect x="1170.0" y="148.0" width="156.0" height="104.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="1176.0" y="162.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">⑧ 清梯度</text>
+<text x="1176.0" y="176.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">梯度清零，进入下一步</text>
+<rect x="1332.0" y="148.0" width="156.0" height="104.0" rx="4" fill="#fff2cc" stroke="#d6b656"/>
+<text x="1338.0" y="162.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">⑨ 周期存档</text>
+<text x="1338.0" y="176.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">checkpoint：权重 + 优化器状态</text>
+<text x="36.0" y="274.0" font-size="11" fill="#333333">第二步：推理把 ④ 之后换成什么（砍掉 ⑤~⑧，加上采样）</text>
+<rect x="36.0" y="292.0" width="1424.0" height="116.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="306.0" font-size="10" fill="#333333" font-family="Microsoft YaHei">推理：① 文本 → ② 分词 → ③ 组批 → ④ 前向 → ⑤′ 取最后一个位置的 logits → 采样一个 token → 把它接回输入，重复。</text>
+<text x="42.0" y="319.5" font-size="11" fill="#333333" font-family="Microsoft YaHei">区别的关键：训练要「每个位置」的 logits（因为要跟每个位置的正确下一个词比对），而推理只要「最后一个位置」的 logits（因为只需要下一个词）。</text>
+<text x="42.0" y="334.35" font-size="11" fill="#c0392b" font-family="Microsoft YaHei">注意 ⑤′ 之后没有损失、没有梯度、没有更新——权重从加载那一刻起就不变了（唯一的例外是图捕获时的格式重排）。</text>
+<text x="36.0" y="430.0" font-size="11" fill="#333333">第三步：三处「名字一样、语义不一样」的地方（最容易混）</text>
+<rect x="36.0" y="448.0" width="460.0" height="176.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="42.0" y="462.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="46.0" y="470.0" font-size="11" fill="#333333">batch 的含义</text>
+<text x="46.0" y="496.0" font-size="11" fill="#333333">训练：为了「梯度更稳、算力更满」把样本堆起来；推理：为了「吞吐」把不同请求拼一起，但会牺牲单请求延迟。→ 训练 batch 越大越好；推理 batch 是个权衡（入门套 ⑥）。</text>
+<rect x="518.0" y="448.0" width="460.0" height="176.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="524.0" y="462.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="528.0" y="470.0" font-size="11" fill="#333333">序列长度的处理</text>
+<text x="528.0" y="496.0" font-size="11" fill="#333333">训练：整条样本一次算完（长度固定后 padding）；推理：先算 prompt（一次），再逐 token 续写 —— 这就是 prefill/decode 之分。→ 同一个 forward，被切成两种形态调用（入门套 ④）。</text>
+<rect x="1000.0" y="448.0" width="460.0" height="176.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="1006.0" y="462.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="1010.0" y="470.0" font-size="11" fill="#333333">精度</text>
+<text x="1010.0" y="496.0" font-size="11" fill="#333333">训练：前向用低精度、但主权重与梯度累加常保持高精度（数值稳定）；推理：整份权重就是低精度（甚至量化），因为不需要数值稳定性。→ 这是「量化」在推理侧能成立的前提（见 ⑧）。</text>
+<rect x="36.0" y="664.0" width="1424.0" height="46.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="42.0" y="678.0" font-size="10" fill="#333333" font-family="Microsoft YaHei">本页交接：九步里最关键的一步是 ⑤ 算损失——它定义「模型在学什么」。下一步（③）把损失与 logits 讲清：为什么它就是一个词表上的概率分布。</text>
+<rect x="36.0" y="740.0" width="1424.0" height="104.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="754.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">代码锚点（想自己去翻的时候用）</text>
+<text x="42.0" y="768.85" font-size="9" fill="#666666" font-family="Microsoft YaHei">推理侧的 logits 计算与采样：vllm/v1/sample/sampler.py:21（Sampler）、:73（forward）</text>
+<text x="42.0" y="781.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">词表维度的分布：vllm/model_executor/layers/logits_processor.py（按 vocab 维算）</text>
+<text x="42.0" y="795.85" font-size="11" fill="#333333" font-family="Microsoft YaHei">「只取最后一个位置」的体现：gpu_model_runner 里 logits_indices 的构造（vllm/v1/worker/gpu_model_runner.py:4478-4499 附近）</text>
+<text x="42.0" y="810.7" font-size="11" fill="#333333" font-family="Microsoft YaHei">训练侧的五步（损失/反向/更新/清梯度/存档）在 vLLM 仓内不存在：见 ① 页的说明</text>
+<rect x="36.0" y="876.0" width="1424.0" height="58.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="890.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">一句话记住这一页：训练一步九步、推理一步四步；差别集中在「要不要对每个位置算损失、要不要保留中间激活」——这两件事决定了显存里有没有梯度与激活这两块。</text>
+<text x="36.0" y="982.0" font-size="11" fill="#333333">图例</text>
+<rect x="148.0" y="965.0" width="120.0" height="26.0" rx="4" fill="#eceff1" stroke="#607d8b"/>
+<text x="154.0" y="979.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">客户端</text>
+<rect x="276.0" y="965.0" width="120.0" height="26.0" rx="4" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="282.0" y="979.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">边端 edge</text>
+<rect x="404.0" y="965.0" width="120.0" height="26.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="410.0" y="979.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 P (prefill)</text>
+<rect x="532.0" y="965.0" width="120.0" height="26.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="538.0" y="979.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 D (decode)</text>
+<rect x="660.0" y="965.0" width="120.0" height="26.0" rx="4" fill="#b0e3e6" stroke="#0e8088"/>
+<text x="666.0" y="979.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">PD Proxy</text>
+<rect x="788.0" y="965.0" width="120.0" height="26.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="794.0" y="979.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">中立/通用</text>
+<rect x="916.0" y="965.0" width="120.0" height="26.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="922.0" y="979.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">失败/取消</text>
+<rect x="1044.0" y="965.0" width="240.0" height="26.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="1050.0" y="979.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">训练独有</text>
+<text x="210.0" y="1016.0" font-size="11" fill="#666666">控制面 ZMQ</text>
+<text x="460.0" y="1016.0" font-size="11" fill="#666666">数据面 UCX·Mooncake</text>
+<text x="710.0" y="1016.0" font-size="11" fill="#666666">HTTP</text>
+<path d="M193.0,200.0 L197.0,200.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<path d="M355.0,200.0 L359.0,200.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<path d="M517.0,200.0 L521.0,200.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<path d="M679.0,200.0 L683.0,200.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<path d="M841.0,200.0 L845.0,200.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<path d="M1003.0,200.0 L1007.0,200.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<path d="M1165.0,200.0 L1169.0,200.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<path d="M1327.0,200.0 L1331.0,200.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<path d="M148.0,1014.0 L204.0,1014.0" fill="none" stroke="#9673a6" marker-end="url(#a)"/>
+<path d="M398.0,1014.0 L454.0,1014.0" fill="none" stroke="#d6b656" marker-end="url(#a)"/>
+<path d="M648.0,1014.0 L704.0,1014.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333333"/></marker></defs>
+</svg></div>
+<div class="concl"><b>一句话结论　</b>训练一步 = 切 token → 前向 → 算损失 → 反向 → 更新；推理只保留「切 token → 前向 → 采样」，把中间三步全砍掉——这就是为什么推理能省下大半显存。</div>
+<details><summary>代码锚点（2 条，可 grep）</summary><pre>推理侧的 logits 计算与采样：vllm/v1/sample/sampler.py:21（Sampler）、:73（forward）
+「只取最后一个位置」的体现：gpu_model_runner 里 logits_indices 的构造（vllm/v1/worker/gpu_model_runner.py:4478-4499 附近）</pre></details>
+</figure>
+<figure id="p2">
+<p class="ptitle">③ 损失与 logits：模型输出其实是一个「词表上的分布」</p>
+<p class="psub">一句话：一次前向的产物是 [token 数, 词表大小] 的分数矩阵；推理拿它挑一个（采样），训练拿它打分（−log p(正确词)，即交叉熵）。同一个量，两种用法。</p>
+<div class="svgwrap"><svg xmlns="http://www.w3.org/2000/svg" width="977"1576" height="812"1310" viewBox="0 0 1576 1310">
+<rect width="1576" height="1310" fill="#ffffff"/>
+<text x="36.0" y="34.0" font-size="11" fill="#333333">③ 损失与 logits：模型输出其实是一个「词表上的分布」</text>
+<text x="36.0" y="62.0" font-size="11" fill="#666666">一句话：一次前向的产物是 [token 数, 词表大小] 的分数矩阵；推理拿它挑一个（采样），训练拿它打分（−log p(正确词)，即交叉熵）。同一个量，两种用法。</text>
+<text x="36.0" y="132.0" font-size="11" fill="#333333">第一步：一条链（前四步仓内都能查到，最后一步是训练侧用法）</text>
+<rect x="36.0" y="150.0" width="270.0" height="96.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="42.0" y="164.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">hidden</text>
+<text x="42.0" y="178.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">每层输出的隐藏向量</text>
+<text x="42.0" y="191.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">[token 数, hidden]</text>
+<rect x="317.0" y="150.0" width="270.0" height="96.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="323.0" y="164.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">lm_head</text>
+<text x="323.0" y="178.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">乘到词表维度</text>
+<text x="323.0" y="191.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">[token 数, 词表大小]</text>
+<rect x="598.0" y="150.0" width="270.0" height="96.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="604.0" y="164.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">log_softmax</text>
+<text x="604.0" y="178.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">取对数概率</text>
+<text x="604.0" y="191.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">仍是 [token 数, 词表大小]</text>
+<rect x="879.0" y="150.0" width="270.0" height="96.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="885.0" y="164.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">推理：挑一个</text>
+<text x="885.0" y="178.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">argmax / 按概率采样</text>
+<rect x="1160.0" y="150.0" width="270.0" height="96.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="1166.0" y="164.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">训练：−log p(y)</text>
+<text x="1166.0" y="178.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">取正确词那一列取负 → 一个标量</text>
+<text x="36.0" y="270.0" font-size="11" fill="#666666">前四步（含 log_softmax）在仓内有实现；最右一格是训练侧独有的用法，仓内没有它的代码——它只出现在训练框架里。</text>
+<text x="36.0" y="280.0" font-size="11" fill="#333333">第二步：为什么叫「分布」（三个必须理解的细节）</text>
+<rect x="36.0" y="298.0" width="460.0" height="180.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="312.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="46.0" y="320.0" font-size="11" fill="#333333">① 词表有多大</text>
+<text x="46.0" y="346.0" font-size="11" fill="#333333">每一行都是「下一个词是词表里第 i 个词」的分数。词表通常几万到十几万 → 这个矩阵很宽。所以 lm_head 是全模型里「输出维度最大」的那一层。</text>
+<rect x="518.0" y="298.0" width="460.0" height="180.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="524.0" y="312.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="528.0" y="320.0" font-size="11" fill="#333333">② 为什么要 log_softmax 而不是 softmax</text>
+<text x="528.0" y="346.0" font-size="11" fill="#333333">概率连乘会下溢，取对数后变成相加，数值稳定；而且 log 概率单调 → 排序不变（仓内注释明说这一点）。仓内 softmax/log_softmax 一律用 fp32 算，避免精度问题。</text>
+<rect x="1000.0" y="298.0" width="460.0" height="180.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="1006.0" y="312.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="1010.0" y="320.0" font-size="11" fill="#333333">③ 训练要「每个位置」，推理只要「最后一个」</text>
+<text x="1010.0" y="346.0" font-size="11" fill="#333333">训练：每个位置都有一个「正确的下一个词」，所以每个位置都算损失；推理：只关心接下来那一个词，所以只取最后一个位置的分布。→ 这就是「推理比训练省一大截」的第一层原因。</text>
+<rect x="36.0" y="518.0" width="1424.0" height="116.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="532.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">第三步：交叉熵到底在算什么（一句话 + 一个直觉）</text>
+<text x="42.0" y="546.85" font-size="10" fill="#333333" font-family="Microsoft YaHei">交叉熵 = −log p(正确词)：模型给正确词的概率越高，损失越小；给得越低，损失越大。</text>
+<text x="42.0" y="560.35" font-size="11" fill="#333333" font-family="Microsoft YaHei">直觉：它衡量的不是「答案对不对」，而是「模型有多确信正确答案」——所以哪怕 argmax 对了，只要概率很低，损失依然大，梯度依然会推着它变得更确信。</text>
+<text x="42.0" y="575.2" font-size="11" fill="#c0392b" font-family="Microsoft YaHei">这一步在 vLLM 仓里不存在：vLLM 只把 log 概率算出来（用于返回 logprobs），不拿它跟标签比。</text>
+<text x="36.0" y="656.0" font-size="11" fill="#333333">第四步：推理会在「分布」上再做四件事（训练侧不做或做法不同）</text>
+<rect x="36.0" y="674.0" width="300.0" height="36.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="42.0" y="688.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">加工</text>
+<rect x="336.0" y="674.0" width="560.0" height="36.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="342.0" y="688.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">怎么做</text>
+<rect x="896.0" y="674.0" width="564.0" height="36.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="902.0" y="688.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">目的</text>
+<rect x="36.0" y="710.0" width="300.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="724.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">温度 temperature</text>
+<rect x="336.0" y="710.0" width="560.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="342.0" y="724.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">把 logits 除以 T 再 softmax</text>
+<rect x="896.0" y="710.0" width="564.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="902.0" y="724.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">T→0 变贪心，T 大更随机</text>
+<rect x="36.0" y="746.0" width="300.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="760.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">top-k / top-p</text>
+<rect x="336.0" y="746.0" width="560.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="342.0" y="760.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">只保留前 k 个 / 累计概率到 p 的词</text>
+<rect x="896.0" y="746.0" width="564.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="902.0" y="760.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">裁掉长尾，避免抽到离谱词</text>
+<rect x="36.0" y="782.0" width="300.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="796.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">罚分（重复/存在/频率）</text>
+<rect x="336.0" y="782.0" width="560.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="342.0" y="796.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">对已出现过的词降分</text>
+<rect x="896.0" y="782.0" width="564.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="902.0" y="796.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">抑制复读</text>
+<rect x="36.0" y="818.0" width="300.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="832.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">logprobs 输出</text>
+<rect x="336.0" y="818.0" width="560.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="342.0" y="832.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">把 log 概率返回给调用方</text>
+<rect x="896.0" y="818.0" width="564.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="902.0" y="832.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">用于打分、置信度、RL 训练信号</text>
+<rect x="36.0" y="890.0" width="1424.0" height="46.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="42.0" y="904.0" font-size="10" fill="#333333" font-family="Microsoft YaHei">本页交接：logits 这条链解释了「训练的损失从哪来」。下一步（④）算显存账：训练为什么要多存三份东西，推理为什么不用。</text>
+<rect x="36.0" y="966.0" width="1424.0" height="120.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="980.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">代码锚点（想自己去翻的时候用）</text>
+<text x="42.0" y="994.85" font-size="9" fill="#666666" font-family="Microsoft YaHei">logits 的产生：vllm/model_executor/layers/logits_processor.py:108；fp32 输出 :163-170</text>
+<text x="42.0" y="1007.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">softmax 求概率：vllm/v1/sample/ops/topk_topp_sampler.py:168</text>
+<text x="42.0" y="1021.85" font-size="11" fill="#333333" font-family="Microsoft YaHei">log_softmax（logprobs）：vllm/v1/sample/sampler.py:306-307；fp32 注释 :96-97；单调性注释 :213-214</text>
+<text x="42.0" y="1036.7" font-size="11" fill="#333333" font-family="Microsoft YaHei">形状文档：vllm/docs/design/logits_processors.md:13（（num_requests) × (vocab_size)）</text>
+<text x="42.0" y="1051.55" font-size="11" fill="#333333" font-family="Microsoft YaHei">「只算采样位」的切片：vllm/v1/worker/gpu/model_runner.py:915</text>
+<text x="42.0" y="1066.3999999999999" font-size="11" fill="#333333" font-family="Microsoft YaHei">仓内明说没有反向：vllm/third_party/flash_linear_attention/ops/layernorm_guard.py:514-516</text>
+<rect x="36.0" y="1120.0" width="1424.0" height="58.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="1134.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">一句话记住这一页：模型输出是「词表上的分数」；推理挑一个、训练用正确答案给它打分。理解这一点，才能理解为什么训练要每个位置的分布、推理只要最后一个。</text>
+<text x="36.0" y="1226.0" font-size="11" fill="#333333">图例</text>
+<rect x="148.0" y="1209.0" width="120.0" height="26.0" rx="4" fill="#eceff1" stroke="#607d8b"/>
+<text x="154.0" y="1223.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">客户端</text>
+<rect x="276.0" y="1209.0" width="120.0" height="26.0" rx="4" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="282.0" y="1223.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">边端 edge</text>
+<rect x="404.0" y="1209.0" width="120.0" height="26.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="410.0" y="1223.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 P (prefill)</text>
+<rect x="532.0" y="1209.0" width="120.0" height="26.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="538.0" y="1223.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 D (decode)</text>
+<rect x="660.0" y="1209.0" width="120.0" height="26.0" rx="4" fill="#b0e3e6" stroke="#0e8088"/>
+<text x="666.0" y="1223.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">PD Proxy</text>
+<rect x="788.0" y="1209.0" width="120.0" height="26.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="794.0" y="1223.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">中立/通用</text>
+<rect x="916.0" y="1209.0" width="120.0" height="26.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="922.0" y="1223.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">失败/取消</text>
+<rect x="1044.0" y="1209.0" width="240.0" height="26.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="1050.0" y="1223.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">训练侧用法（仓内无实现）</text>
+<text x="210.0" y="1260.0" font-size="11" fill="#666666">控制面 ZMQ</text>
+<text x="460.0" y="1260.0" font-size="11" fill="#666666">数据面 UCX·Mooncake</text>
+<text x="710.0" y="1260.0" font-size="11" fill="#666666">HTTP</text>
+<path d="M308.0,198.0 L316.0,198.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<path d="M589.0,198.0 L597.0,198.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<path d="M870.0,198.0 L878.0,198.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<path d="M1151.0,198.0 L1159.0,198.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<path d="M148.0,1258.0 L204.0,1258.0" fill="none" stroke="#9673a6" marker-end="url(#a)"/>
+<path d="M398.0,1258.0 L454.0,1258.0" fill="none" stroke="#d6b656" marker-end="url(#a)"/>
+<path d="M648.0,1258.0 L704.0,1258.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333333"/></marker></defs>
+</svg></div>
+<div class="concl"><b>一句话结论　</b>一次前向的产物是 [token 数, 词表大小] 的分数矩阵；推理拿它挑一个（采样），训练拿它打分（−log p(正确词)，即交叉熵）。同一个量，两种用法。</div>
+<details><summary>代码锚点（6 条，可 grep）</summary><pre>logits 的产生：vllm/model_executor/layers/logits_processor.py:108；fp32 输出 :163-170
+softmax 求概率：vllm/v1/sample/ops/topk_topp_sampler.py:168
+log_softmax（logprobs）：vllm/v1/sample/sampler.py:306-307；fp32 注释 :96-97；单调性注释 :213-214
+形状文档：vllm/docs/design/logits_processors.md:13（（num_requests) × (vocab_size)）
+「只算采样位」的切片：vllm/v1/worker/gpu/model_runner.py:915
+仓内明说没有反向：vllm/third_party/flash_linear_attention/ops/layernorm_guard.py:514-516</pre></details>
+</figure>
+<figure id="p3">
+<p class="ptitle">④ 显存账：训练要存四份东西，推理只存三份（且其中一份是「峰值」）</p>
+<p class="psub">一句话：训练显存 = 权重 + 梯度 + 优化器状态 + 激活；推理显存 = 权重 + KV cache + 激活峰值。前者「梯度、优化器」两份在推理里根本不存在——这就是同样一张卡推理能扛更多并发的根本原因。</p>
+<div class="svgwrap"><svg xmlns="http://www.w3.org/2000/svg" width="977"1576" height="859"1386" viewBox="0 0 1576 1386">
+<rect width="1576" height="1386" fill="#ffffff"/>
+<text x="36.0" y="34.0" font-size="11" fill="#333333">④ 显存账：训练要存四份东西，推理只存三份（且其中一份是「峰值」）</text>
+<text x="36.0" y="62.0" font-size="11" fill="#666666">一句话：训练显存 = 权重 + 梯度 + 优化器状态 + 激活；推理显存 = 权重 + KV cache + 激活峰值。前者「梯度、优化器」两份在推理里根本不存在——这就是同样一张卡推理能扛更多并发的根本原因。</text>
+<text x="36.0" y="130.0" font-size="11" fill="#333333">第一步：六项对照（右列带锚点＝本仓可查；标「通用知识」＝仓内无依据）</text>
+<rect x="36.0" y="148.0" width="150.0" height="42.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="42.0" y="162.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">项</text>
+<rect x="186.0" y="148.0" width="520.0" height="42.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="192.0" y="162.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">训练</text>
+<rect x="706.0" y="148.0" width="460.0" height="42.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="712.0" y="162.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">推理</text>
+<rect x="1166.0" y="148.0" width="294.0" height="42.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="1172.0" y="162.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">结论</text>
+<rect x="36.0" y="190.0" width="150.0" height="42.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="204.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">权重</text>
+<rect x="186.0" y="190.0" width="520.0" height="42.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="192.0" y="204.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">1× 参数量（通用知识）</text>
+<rect x="706.0" y="190.0" width="460.0" height="42.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="712.0" y="204.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">1× 参数量（仓内日志明确统计）</text>
+<rect x="1166.0" y="190.0" width="294.0" height="42.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1172.0" y="204.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">两边都有</text>
+<rect x="36.0" y="232.0" width="150.0" height="42.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="246.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">梯度</text>
+<rect x="186.0" y="232.0" width="520.0" height="42.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="192.0" y="246.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">≈1× 参数量（通用知识）</text>
+<rect x="706.0" y="232.0" width="460.0" height="42.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="712.0" y="246.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">没有</text>
+<rect x="1166.0" y="232.0" width="294.0" height="42.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1172.0" y="246.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">推理不反向</text>
+<rect x="36.0" y="274.0" width="150.0" height="42.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="288.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">优化器状态</text>
+<rect x="186.0" y="274.0" width="520.0" height="42.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="192.0" y="288.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">Adam 一阶+二阶 ≈2×，混合精度再加 1× fp32 主权重（通用知识）</text>
+<rect x="706.0" y="274.0" width="460.0" height="42.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="712.0" y="288.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">没有</text>
+<rect x="1166.0" y="274.0" width="294.0" height="42.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1172.0" y="288.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">推理不更新</text>
+<rect x="36.0" y="316.0" width="150.0" height="42.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="330.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">激活</text>
+<rect x="186.0" y="316.0" width="520.0" height="42.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="192.0" y="330.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">要留到反向用，∝ 层数×batch×序列（通用知识）</text>
+<rect x="706.0" y="316.0" width="460.0" height="42.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="712.0" y="330.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">只要峰值，算完即释放</text>
+<rect x="1166.0" y="316.0" width="294.0" height="42.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1172.0" y="330.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">推理不留账本</text>
+<rect x="36.0" y="358.0" width="150.0" height="42.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="372.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">KV cache</text>
+<rect x="186.0" y="358.0" width="520.0" height="42.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="192.0" y="372.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">不存在（整段并行算，不缓存）（通用知识）</text>
+<rect x="706.0" y="358.0" width="460.0" height="42.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="712.0" y="372.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">推理独有，随 token 线性增长</text>
+<rect x="1166.0" y="358.0" width="294.0" height="42.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1172.0" y="372.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">推理独有</text>
+<rect x="36.0" y="400.0" width="150.0" height="42.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="414.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">经验比例</text>
+<rect x="186.0" y="400.0" width="520.0" height="42.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="192.0" y="414.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">混合精度 Adam 常按 权重:梯度:优化器 ≈ 1:1:2（通用知识）</text>
+<rect x="706.0" y="400.0" width="460.0" height="42.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="712.0" y="414.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">权重 + 激活峰值 + KV（仓内会计口径）</text>
+<rect x="1166.0" y="400.0" width="294.0" height="42.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1172.0" y="414.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">差一个量级</text>
+<text x="36.0" y="464.0" font-size="11" fill="#333333">第二步：推理侧的会计口径（这是仓内真的在跑的一段代码）</text>
+<rect x="36.0" y="482.0" width="1424.0" height="108.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="496.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">非 KV 显存 = 权重 + 非 torch 占用 + 激活峰值 + 图显存</text>
+<text x="42.0" y="510.85" font-size="11" fill="#333333" font-family="Microsoft YaHei">KV 可用 = 显存上限 − 非 KV 显存 − 一小块冗余</text>
+<text x="42.0" y="525.7" font-size="10" fill="#333333" font-family="Microsoft YaHei">日志会把这四项分开打印（权重、峰值激活、图显存各多少 GiB），所以「为什么 KV 只剩这么点」是可以直接查的，不用猜。</text>
+<text x="36.0" y="612.0" font-size="11" fill="#333333">第三步：由这张表能推出的三个实践结论</text>
+<rect x="36.0" y="630.0" width="460.0" height="168.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="42.0" y="644.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="46.0" y="652.0" font-size="11" fill="#333333">① 同样一张卡，推理能扛更多并发</text>
+<text x="46.0" y="678.0" font-size="11" fill="#333333">训练要花 3~4 倍参数量的显存在梯度与优化器上；推理把这两份全省下来 → 全部可以给 KV。这就是「部署 7B 模型单卡能跑几十并发」的算术基础。</text>
+<rect x="518.0" y="630.0" width="460.0" height="168.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="524.0" y="644.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="528.0" y="652.0" font-size="11" fill="#333333">② 训练用「重算」换显存，推理用「缓存」换算力</text>
+<text x="528.0" y="678.0" font-size="11" fill="#333333">训练显存紧张 → 重算激活（checkpointing）、切分到多卡；推理算力闲着 → 把历史 K/V 缓存下来（KV cache），拿显存换算力——两者方向相反，因为瓶颈不同。</text>
+<rect x="1000.0" y="630.0" width="460.0" height="168.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="1006.0" y="644.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="1010.0" y="652.0" font-size="11" fill="#333333">③ 推理多了「激活峰值」这个必须量的东西</text>
+<text x="1010.0" y="678.0" font-size="11" fill="#333333">训练不需要精确知道激活峰值（反正都要存）；推理必须先空跑一遍量出峰值，才能算出「还剩多少给 KV」。→ 这就是启动时那次 profile_run 存在的唯一理由。</text>
+<rect x="36.0" y="838.0" width="1424.0" height="96.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="42.0" y="852.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">一句话把训练与推理的显存哲学分开</text>
+<text x="42.0" y="866.85" font-size="10" fill="#333333" font-family="Microsoft YaHei">训练：显存换正确性——存下中间结果，才能算梯度、才能更新。</text>
+<text x="42.0" y="880.35" font-size="11" fill="#333333" font-family="Microsoft YaHei">推理：显存换并发——不存梯度，改成存 KV，让更多请求同时在跑。</text>
+<text x="42.0" y="895.2" font-size="11" fill="#333333" font-family="Microsoft YaHei">于是同一份权重，在两种场景下的「最优显存布局」完全相反。</text>
+<rect x="36.0" y="974.0" width="1424.0" height="46.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="42.0" y="988.0" font-size="10" fill="#333333" font-family="Microsoft YaHei">本页交接：四项里最容易被低估的是「激活」。下一步（⑤）专门讲它——包括一个从 288 MB 涨到 6 GB 的真实算术。</text>
+<rect x="36.0" y="1050.0" width="1424.0" height="112.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="1064.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">代码锚点（想自己去翻的时候用）</text>
+<text x="42.0" y="1078.85" font-size="9" fill="#666666" font-family="Microsoft YaHei">推理的会计口径（非 KV = 权重+非torch+激活峰值+图）：vllm/v1/worker/gpu_worker.py:850-854；日志文案 :873-877</text>
+<text x="42.0" y="1091.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">加权算例（权重 2 GiB + 激活峰值 2 GiB + 非 torch 1 GiB）：vllm/utils/mem_utils.py:242-273</text>
+<text x="42.0" y="1105.85" font-size="11" fill="#333333" font-family="Microsoft YaHei">推理只用推理模式（不建梯度图）：vllm/v1/worker/gpu/model_runner.py:773 等 @torch.inference_mode()</text>
+<text x="42.0" y="1120.6999999999998" font-size="11" fill="#333333" font-family="Microsoft YaHei">「vLLM 是推理专用、没有反向」的原文：vllm/third_party/flash_linear_attention/ops/layernorm_guard.py:514-516</text>
+<text x="42.0" y="1135.5499999999997" font-size="11" fill="#333333" font-family="Microsoft YaHei">训练侧四项系数与 1:1:2 比例：通用知识（仓内无依据）</text>
+<rect x="36.0" y="1196.0" width="1424.0" height="58.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="1210.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">一句话记住这一页：训练显存 = 权重 + 梯度 + 优化器 + 激活账本；推理显存 = 权重 + KV + 激活峰值。少掉的是「为了更新参数而付的钱」，多出来的是「为了服务并发而付的钱」。</text>
+<text x="36.0" y="1302.0" font-size="11" fill="#333333">图例</text>
+<rect x="148.0" y="1285.0" width="120.0" height="26.0" rx="4" fill="#eceff1" stroke="#607d8b"/>
+<text x="154.0" y="1299.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">客户端</text>
+<rect x="276.0" y="1285.0" width="120.0" height="26.0" rx="4" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="282.0" y="1299.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">边端 edge</text>
+<rect x="404.0" y="1285.0" width="120.0" height="26.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="410.0" y="1299.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 P (prefill)</text>
+<rect x="532.0" y="1285.0" width="120.0" height="26.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="538.0" y="1299.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 D (decode)</text>
+<rect x="660.0" y="1285.0" width="120.0" height="26.0" rx="4" fill="#b0e3e6" stroke="#0e8088"/>
+<text x="666.0" y="1299.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">PD Proxy</text>
+<rect x="788.0" y="1285.0" width="120.0" height="26.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="794.0" y="1299.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">中立/通用</text>
+<rect x="916.0" y="1285.0" width="120.0" height="26.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="922.0" y="1299.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">失败/取消</text>
+<rect x="1044.0" y="1285.0" width="240.0" height="26.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="1050.0" y="1299.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">推理独有 / 可利用</text>
+<text x="210.0" y="1336.0" font-size="11" fill="#666666">控制面 ZMQ</text>
+<text x="460.0" y="1336.0" font-size="11" fill="#666666">数据面 UCX·Mooncake</text>
+<text x="710.0" y="1336.0" font-size="11" fill="#666666">HTTP</text>
+<path d="M148.0,1334.0 L204.0,1334.0" fill="none" stroke="#9673a6" marker-end="url(#a)"/>
+<path d="M398.0,1334.0 L454.0,1334.0" fill="none" stroke="#d6b656" marker-end="url(#a)"/>
+<path d="M648.0,1334.0 L704.0,1334.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333333"/></marker></defs>
+</svg></div>
+<div class="concl"><b>一句话结论　</b>训练显存 = 权重 + 梯度 + 优化器状态 + 激活；推理显存 = 权重 + KV cache + 激活峰值。前者「梯度、优化器」两份在推理里根本不存在——这就是同样一张卡推理能扛更多并发的根本原因。</div>
+<details><summary>代码锚点（4 条，可 grep）</summary><pre>推理的会计口径（非 KV = 权重+非torch+激活峰值+图）：vllm/v1/worker/gpu_worker.py:850-854；日志文案 :873-877
+加权算例（权重 2 GiB + 激活峰值 2 GiB + 非 torch 1 GiB）：vllm/utils/mem_utils.py:242-273
+推理只用推理模式（不建梯度图）：vllm/v1/worker/gpu/model_runner.py:773 等 @torch.inference_mode()
+「vLLM 是推理专用、没有反向」的原文：vllm/third_party/flash_linear_attention/ops/layernorm_guard.py:514-516</pre></details>
+</figure>
+<figure id="p4">
+<p class="ptitle">⑤ 激活：训练要留「账本」，推理只要「峰值」</p>
+<p class="psub">一句话：每一层的中间结果（激活）在训练时要留到反向他用，在推理时算完立刻可以扔——所以推理只关心「同时活着的那一批有多大」，这个量必须实测（profile），而它随 token 数线性膨胀。</p>
+<div class="svgwrap"><svg xmlns="http://www.w3.org/2000/svg" width="977"1576" height="797"1286" viewBox="0 0 1576 1286">
+<rect width="1576" height="1286" fill="#ffffff"/>
+<text x="36.0" y="34.0" font-size="11" fill="#333333">⑤ 激活：训练要留「账本」，推理只要「峰值」</text>
+<text x="36.0" y="62.0" font-size="11" fill="#666666">一句话：每一层的中间结果（激活）在训练时要留到反向他用，在推理时算完立刻可以扔——所以推理只关心「同时活着的那一批有多大」，这个量必须实测（profile），而它随 token 数线性膨胀。</text>
+<text x="36.0" y="132.0" font-size="11" fill="#333333">第一步：同一层、同一个中间结果，两种命运</text>
+<rect x="36.0" y="150.0" width="700.0" height="168.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="42.0" y="164.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="46.0" y="172.0" font-size="11" fill="#333333">训练：留下来（账本）</text>
+<text x="46.0" y="198.0" font-size="11" fill="#333333">反向传播要用「这个算子的输入」去算梯度，所以 autograd 默认把前向的中间结果全部驻留。层数 × batch × 序列长度 × 隐藏维度 → 很容易成为显存第一大户。缓解手段：重算（checkpointing）、FlashAttention 式的重算注意力。</text>
+<rect x="796.0" y="150.0" width="664.0" height="168.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="802.0" y="164.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="806.0" y="172.0" font-size="11" fill="#333333">推理：算完就扔（峰值）</text>
+<text x="806.0" y="198.0" font-size="11" fill="#333333">没有反向 → 中间结果用完立刻可释放；所以只需要知道「某一时刻最多同时有多少」= 峰值。这个峰值是实测出来的：启动时用最大 batch 空跑一遍。然后才能算「还剩多少显存给 KV」。</text>
+<text x="36.0" y="340.0" font-size="11" fill="#333333">第二步：为什么峰值不能忽略（一个从 288 MB 涨到 6 GB 的真实算术）</text>
+<rect x="36.0" y="358.0" width="1424.0" height="128.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="42.0" y="372.0" font-size="10" fill="#333333" font-family="Microsoft YaHei">昇腾 attention 的 chunked-prefill workspace 是「按 token 上限 × 头维度」分配的。仓内注释给了两个数：</text>
+<text x="42.0" y="385.5" font-size="11" fill="#333333" font-family="Microsoft YaHei">· 按 576 的头维度、fp16 算 → 约 288 MB；</text>
+<text x="42.0" y="400.35" font-size="11" fill="#333333" font-family="Microsoft YaHei">· 换成 192 的 QK 头维度 × 128 个头 → 同一套公式就变成 约 6 GB。</text>
+<text x="42.0" y="415.20000000000005" font-size="11" fill="#c0392b" font-family="Microsoft YaHei">同一份代码、同一个 token 上限，只因为头配置不同就差 20 倍——所以「激活峰值」必须实测，不能按经验拍。仓内另有一处注释直接写「workspace 显存随这个 token 上限线性增长」。</text>
+<text x="36.0" y="508.0" font-size="11" fill="#333333">第三步：由「峰值」推出的三个实践结论</text>
+<rect x="36.0" y="526.0" width="460.0" height="156.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="42.0" y="540.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="46.0" y="548.0" font-size="11" fill="#333333">① profile_run 存在的唯一理由</text>
+<text x="46.0" y="574.0" font-size="11" fill="#333333">启动时用「最大 batch」空跑一遍前向，记录这一刻的显存峰值，再从可用显存里扣掉。没有这一步，KV 预算就只能猜。</text>
+<rect x="518.0" y="526.0" width="460.0" height="156.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="524.0" y="540.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="528.0" y="548.0" font-size="11" fill="#333333">② 为什么调大 batched tokens 会挤掉 KV</text>
+<text x="528.0" y="574.0" font-size="11" fill="#333333">一步能装的 token 越多，workspace / 激活峰值越大，扣掉之后留给 KV 的就越少。所以「吞吐」与「并发」并不总能同时调高。</text>
+<rect x="1000.0" y="526.0" width="460.0" height="156.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1006.0" y="540.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="1010.0" y="548.0" font-size="11" fill="#333333">③ 为什么 MoE 还要两块 scratch</text>
+<text x="1010.0" y="574.0" font-size="11" fill="#333333">MoE 前向需要一块放 GEMM 输出、一块放激活函数的中间结果，形状按「token 数 × max(N, K)」分配。这也算在峰值里，且随 token 数线性涨。</text>
+<rect x="36.0" y="722.0" width="1424.0" height="96.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="42.0" y="736.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">一句话把两边分开</text>
+<text x="42.0" y="750.85" font-size="10" fill="#333333" font-family="Microsoft YaHei">训练：激活 = 账本，为了算梯度必须留着，显存不够就重算或切分。</text>
+<text x="42.0" y="764.35" font-size="11" fill="#333333" font-family="Microsoft YaHei">推理：激活 = 峰值，只要知道最大值并留出余量，剩下的显存全给 KV cache。</text>
+<text x="42.0" y="779.2" font-size="11" fill="#333333" font-family="Microsoft YaHei">所以「推理为什么能开很多并发」的答案之一就藏在这句话里。</text>
+<rect x="36.0" y="858.0" width="1424.0" height="46.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="42.0" y="872.0" font-size="10" fill="#333333" font-family="Microsoft YaHei">本页交接：激活讲完，显存四项就齐了。下一步（⑥）讲精度——为什么推理能整份用低精度，而训练必须留一份高精度。</text>
+<rect x="36.0" y="934.0" width="1424.0" height="128.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="948.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">代码锚点（想自己去翻的时候用）</text>
+<text x="42.0" y="962.85" font-size="9" fill="#666666" font-family="Microsoft YaHei">推理只量峰值：vllm/v1/worker/gpu_worker.py:850-854（non_kv = 权重+非torch+激活峰值+图）；算例 vllm/utils/mem_utils.py:242-273</text>
+<text x="42.0" y="975.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">workspace 算术（288 MB → 6 GB）：vllm-ascend/vllm_ascend/attention/utils.py:256-281（注释 :261-273）</text>
+<text x="42.0" y="989.85" font-size="11" fill="#333333" font-family="Microsoft YaHei">workspace 随 token 上限线性增长：vllm-ascend/vllm_ascend/ascend_config.py:590-597</text>
+<text x="42.0" y="1004.7" font-size="11" fill="#333333" font-family="Microsoft YaHei">MoE 两块 scratch：vllm/model_executor/layers/fused_moe/modular_kernel.py:960-963</text>
+<text x="42.0" y="1019.5500000000001" font-size="11" fill="#333333" font-family="Microsoft YaHei">显存不够先牺牲 workspace 的实例：vllm-ascend/vllm_ascend/_310p/worker_310p.py:130、:150（日志 halved for workspace）</text>
+<text x="42.0" y="1034.4" font-size="11" fill="#333333" font-family="Microsoft YaHei">训练侧「留到反向他用」：通用知识（仓内仅有 activation checkpointing 的说明性文档串，phi4mm_audio.py:114-124）</text>
+<rect x="36.0" y="1096.0" width="1424.0" height="58.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="1110.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">一句话记住这一页：推理只关心激活的峰值，且这个峰值随 token 上限线性涨；它先被扣掉、剩下的才是 KV；所以「调大吞吐参数」和「调高并发」经常是互相拆台的。</text>
+<text x="36.0" y="1202.0" font-size="11" fill="#333333">图例</text>
+<rect x="148.0" y="1185.0" width="120.0" height="26.0" rx="4" fill="#eceff1" stroke="#607d8b"/>
+<text x="154.0" y="1199.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">客户端</text>
+<rect x="276.0" y="1185.0" width="120.0" height="26.0" rx="4" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="282.0" y="1199.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">边端 edge</text>
+<rect x="404.0" y="1185.0" width="120.0" height="26.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="410.0" y="1199.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 P (prefill)</text>
+<rect x="532.0" y="1185.0" width="120.0" height="26.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="538.0" y="1199.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 D (decode)</text>
+<rect x="660.0" y="1185.0" width="120.0" height="26.0" rx="4" fill="#b0e3e6" stroke="#0e8088"/>
+<text x="666.0" y="1199.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">PD Proxy</text>
+<rect x="788.0" y="1185.0" width="120.0" height="26.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="794.0" y="1199.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">中立/通用</text>
+<rect x="916.0" y="1185.0" width="120.0" height="26.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="922.0" y="1199.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">失败/取消</text>
+<rect x="1044.0" y="1185.0" width="240.0" height="26.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="1050.0" y="1199.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">推理可释放的中间结果</text>
+<text x="210.0" y="1236.0" font-size="11" fill="#666666">控制面 ZMQ</text>
+<text x="460.0" y="1236.0" font-size="11" fill="#666666">数据面 UCX·Mooncake</text>
+<text x="710.0" y="1236.0" font-size="11" fill="#666666">HTTP</text>
+<path d="M148.0,1234.0 L204.0,1234.0" fill="none" stroke="#9673a6" marker-end="url(#a)"/>
+<path d="M398.0,1234.0 L454.0,1234.0" fill="none" stroke="#d6b656" marker-end="url(#a)"/>
+<path d="M648.0,1234.0 L704.0,1234.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333333"/></marker></defs>
+</svg></div>
+<div class="concl"><b>一句话结论　</b>每一层的中间结果（激活）在训练时要留到反向他用，在推理时算完立刻可以扔——所以推理只关心「同时活着的那一批有多大」，这个量必须实测（profile），而它随 token 数线性膨胀。</div>
+<details><summary>代码锚点（6 条，可 grep）</summary><pre>推理只量峰值：vllm/v1/worker/gpu_worker.py:850-854（non_kv = 权重+非torch+激活峰值+图）；算例 vllm/utils/mem_utils.py:242-273
+workspace 算术（288 MB → 6 GB）：vllm-ascend/vllm_ascend/attention/utils.py:256-281（注释 :261-273）
+workspace 随 token 上限线性增长：vllm-ascend/vllm_ascend/ascend_config.py:590-597
+MoE 两块 scratch：vllm/model_executor/layers/fused_moe/modular_kernel.py:960-963
+显存不够先牺牲 workspace 的实例：vllm-ascend/vllm_ascend/_310p/worker_310p.py:130、:150（日志 halved for workspace）
+训练侧「留到反向他用」：通用知识（仓内仅有 activation checkpointing 的说明性文档串，phi4mm_audio.py:114-124）</pre></details>
+</figure>
+<figure id="p5">
+<p class="ptitle">⑥ 精度：推理为什么能整份用 bf16，而训练必须留一份高精度</p>
+<p class="psub">一句话：训练要更新参数，所以需要高精度的主权重来累积微小变化；推理只读不写，整份用 bf16 就够——只有 logits 这一步被特意提到 fp32，因为它要和训练侧算出的概率对齐。</p>
+<div class="svgwrap"><svg xmlns="http://www.w3.org/2000/svg" width="977"1576" height="858"1384" viewBox="0 0 1576 1384">
+<rect width="1576" height="1384" fill="#ffffff"/>
+<text x="36.0" y="34.0" font-size="11" fill="#333333">⑥ 精度：推理为什么能整份用 bf16，而训练必须留一份高精度</text>
+<text x="36.0" y="62.0" font-size="11" fill="#666666">一句话：训练要更新参数，所以需要高精度的主权重来累积微小变化；推理只读不写，整份用 bf16 就够——只有 logits 这一步被特意提到 fp32，因为它要和训练侧算出的概率对齐。</text>
+<text x="36.0" y="132.0" font-size="11" fill="#333333">第一步：三种精度的取舍（训练 vs 推理）</text>
+<rect x="36.0" y="150.0" width="130.0" height="40.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="42.0" y="164.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">精度</text>
+<rect x="166.0" y="150.0" width="420.0" height="40.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="172.0" y="164.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">特点</text>
+<rect x="586.0" y="150.0" width="420.0" height="40.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="592.0" y="164.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">谁在用</text>
+<rect x="1006.0" y="150.0" width="454.0" height="40.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="1012.0" y="164.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">注意</text>
+<rect x="36.0" y="190.0" width="130.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="204.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">fp32</text>
+<rect x="166.0" y="190.0" width="420.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="172.0" y="204.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">4 字节，范围和精度都够</text>
+<rect x="586.0" y="190.0" width="420.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="592.0" y="204.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">主权重、优化器状态、logits</text>
+<rect x="1006.0" y="190.0" width="454.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1012.0" y="204.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">太占显存与带宽，不用于主体计算</text>
+<rect x="36.0" y="230.0" width="130.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="244.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">bf16</text>
+<rect x="166.0" y="230.0" width="420.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="172.0" y="244.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">2 字节，范围大、尾数少</text>
+<rect x="586.0" y="230.0" width="420.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="592.0" y="244.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">训练与推理的默认计算精度</text>
+<rect x="1006.0" y="230.0" width="454.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1012.0" y="244.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">精度略低但很少溢出</text>
+<rect x="36.0" y="270.0" width="130.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="284.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">fp16</text>
+<rect x="166.0" y="270.0" width="420.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="172.0" y="284.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">2 字节，尾数比 bf16 多、范围小</text>
+<rect x="586.0" y="270.0" width="420.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="592.0" y="284.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">老模型 / 部分推理场景</text>
+<rect x="1006.0" y="270.0" width="454.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1012.0" y="284.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">容易溢出，某些模型仓内直接建议别用</text>
+<rect x="36.0" y="310.0" width="130.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="324.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">int8 / fp8</text>
+<rect x="166.0" y="310.0" width="420.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="172.0" y="324.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">1 字节</text>
+<rect x="586.0" y="310.0" width="420.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="592.0" y="324.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">量化推理（见 ⑦）</text>
+<rect x="1006.0" y="310.0" width="454.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1012.0" y="324.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">需要量化产物，不能直接训练</text>
+<text x="36.0" y="372.0" font-size="11" fill="#333333">第二步：仓内 dtype 的四条规则（都是自动的，不需要你操心）</text>
+<rect x="36.0" y="390.0" width="700.0" height="168.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="404.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="46.0" y="412.0" font-size="11" fill="#333333">① auto 的含义</text>
+<text x="46.0" y="438.0" font-size="11" fill="#333333">看到 fp32/fp16 的模型 → 用 fp16；看到 bf16 的模型 → 用 bf16。也就是说「权重文件里是什么精度，我就用什么精度跑」。</text>
+<rect x="796.0" y="390.0" width="664.0" height="168.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="802.0" y="404.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="806.0" y="412.0" font-size="11" fill="#333333">② 哪些转换允许、哪些只警告</text>
+<text x="806.0" y="438.0" font-size="11" fill="#333333">升精度（fp32 上采）允许并打 info；降精度到 fp16/bf16 也允许；fp16 ↔ bf16 互转只给 warning——因为两者都「合法」但可能改变数值行为。</text>
+<rect x="36.0" y="598.0" width="700.0" height="148.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="42.0" y="612.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="46.0" y="620.0" font-size="11" fill="#333333">③ 有些模型被写死「别用 fp16」</text>
+<text x="46.0" y="646.0" font-size="11" fill="#333333">仓内有一张名单（gemma2 / gemma3 / glm4 等），注释直接写「数值不稳定，请用 bf16 或 fp32」。原因：fp16 的动态范围小，这些模型的激活容易溢出。</text>
+<rect x="796.0" y="598.0" width="664.0" height="148.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="802.0" y="612.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="806.0" y="620.0" font-size="11" fill="#333333">④ KV cache 有它自己的精度旋钮</text>
+<text x="806.0" y="646.0" font-size="11" fill="#333333">KV cache 可以用更低精度存（例如 fp8），与权重精度分开配置。这是推理独有的优化：KV 占显存大头，压它收益最大。（量化细节见 ⑦；本仓只有一个包显式用了 indexer 侧的 int8）</text>
+<rect x="36.0" y="786.0" width="1424.0" height="130.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="42.0" y="800.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">第三步：那个「专门为训练-推理一致性存在的 fp32 头」（本仓注释原话）</text>
+<text x="42.0" y="814.85" font-size="10" fill="#333333" font-family="Microsoft YaHei">lm_head 默认跟着主体精度；但仓内提供了把输出头单独提到 fp32 的开关，注释写明：an fp32 head is required for RL training-inference consistency。</text>
+<text x="42.0" y="828.35" font-size="11" fill="#333333" font-family="Microsoft YaHei">为什么：强化学习用推理引擎算 log 概率作为训练信号，如果推理侧的概率与训练侧算出来的不一致，训练就会被带偏 → 所以把这一步算到 fp32 并保持两侧一致。</text>
+<text x="42.0" y="843.2" font-size="11" fill="#c0392b" font-family="Microsoft YaHei">这是本套图里「训练与推理必须数值对齐」的唯一硬证据。</text>
+<rect x="36.0" y="956.0" width="1424.0" height="46.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="42.0" y="970.0" font-size="10" fill="#333333" font-family="Microsoft YaHei">本页交接：精度讲完。下一步（⑦）进入量化——它是「整份用低精度」这条路的极端版本，也是本仓唯一一个有真实部署配置的精度话题。</text>
+<rect x="36.0" y="1032.0" width="1424.0" height="128.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="1046.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">代码锚点（想自己去翻的时候用）</text>
+<text x="42.0" y="1060.85" font-size="9" fill="#666666" font-family="Microsoft YaHei">dtype 配置与 auto 语义：vllm/config/model.py:170-179</text>
+<text x="42.0" y="1073.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">字符串→dtype 映射：vllm/config/model.py:2238-2244；合法取值 :100</text>
+<text x="42.0" y="1087.85" font-size="11" fill="#333333" font-family="Microsoft YaHei">转换规则（升/降/互转只警告）：vllm/config/model.py:2355-2364</text>
+<text x="42.0" y="1102.6999999999998" font-size="11" fill="#333333" font-family="Microsoft YaHei">fp16 不稳定模型名单：vllm/config/model.py:2251-2257（_FLOAT16_NOT_SUPPORTED_MODELS）</text>
+<text x="42.0" y="1117.5499999999997" font-size="11" fill="#333333" font-family="Microsoft YaHei">fp32 头与训练-推理一致性（原文）：vllm/model_executor/layers/logits_processor.py:92-96；实现 :163-170</text>
+<text x="42.0" y="1132.3999999999996" font-size="11" fill="#333333" font-family="Microsoft YaHei">KV cache 精度（推理独有）：vllm/config/cache.py:111-120、取值域 :39-58</text>
+<text x="42.0" y="1147.2499999999995" font-size="11" fill="#333333" font-family="Microsoft YaHei">训练侧主权重 / loss scaling：通用知识（仓内无实现）</text>
+<rect x="36.0" y="1194.0" width="1424.0" height="58.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="1208.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">一句话记住这一页：训练要留高精度主权重是为了「能累积微小更新」，推理整份低精度是因为「只读不写」；唯一被特意提回 fp32 的是输出头——因为要跟训练侧的概率对齐。</text>
+<text x="36.0" y="1300.0" font-size="11" fill="#333333">图例</text>
+<rect x="148.0" y="1283.0" width="120.0" height="26.0" rx="4" fill="#eceff1" stroke="#607d8b"/>
+<text x="154.0" y="1297.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">客户端</text>
+<rect x="276.0" y="1283.0" width="120.0" height="26.0" rx="4" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="282.0" y="1297.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">边端 edge</text>
+<rect x="404.0" y="1283.0" width="120.0" height="26.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="410.0" y="1297.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 P (prefill)</text>
+<rect x="532.0" y="1283.0" width="120.0" height="26.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="538.0" y="1297.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 D (decode)</text>
+<rect x="660.0" y="1283.0" width="120.0" height="26.0" rx="4" fill="#b0e3e6" stroke="#0e8088"/>
+<text x="666.0" y="1297.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">PD Proxy</text>
+<rect x="788.0" y="1283.0" width="120.0" height="26.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="794.0" y="1297.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">中立/通用</text>
+<rect x="916.0" y="1283.0" width="120.0" height="26.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="922.0" y="1297.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">失败/取消</text>
+<text x="210.0" y="1334.0" font-size="11" fill="#666666">控制面 ZMQ</text>
+<text x="460.0" y="1334.0" font-size="11" fill="#666666">数据面 UCX·Mooncake</text>
+<text x="710.0" y="1334.0" font-size="11" fill="#666666">HTTP</text>
+<path d="M148.0,1332.0 L204.0,1332.0" fill="none" stroke="#9673a6" marker-end="url(#a)"/>
+<path d="M398.0,1332.0 L454.0,1332.0" fill="none" stroke="#d6b656" marker-end="url(#a)"/>
+<path d="M648.0,1332.0 L704.0,1332.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333333"/></marker></defs>
+</svg></div>
+<div class="concl"><b>一句话结论　</b>训练要更新参数，所以需要高精度的主权重来累积微小变化；推理只读不写，整份用 bf16 就够——只有 logits 这一步被特意提到 fp32，因为它要和训练侧算出的概率对齐。</div>
+<details><summary>代码锚点（6 条，可 grep）</summary><pre>dtype 配置与 auto 语义：vllm/config/model.py:170-179
+字符串→dtype 映射：vllm/config/model.py:2238-2244；合法取值 :100
+转换规则（升/降/互转只警告）：vllm/config/model.py:2355-2364
+fp16 不稳定模型名单：vllm/config/model.py:2251-2257（_FLOAT16_NOT_SUPPORTED_MODELS）
+fp32 头与训练-推理一致性（原文）：vllm/model_executor/layers/logits_processor.py:92-96；实现 :163-170
+KV cache 精度（推理独有）：vllm/config/cache.py:111-120、取值域 :39-58</pre></details>
+</figure>
+<figure id="p6">
+<p class="ptitle">⑦ 量化：从「2 字节一个数」到「1 字节 + 一把尺子」</p>
+<p class="psub">一句话：量化 = 把每个数换成更少的位 + 一个尺度（scale）；粒度越细越准、但尺子越多。本仓全部是训练后量化（PTQ）的产物——仓库只负责「按描述文件正确加载」，不做量化本身。</p>
+<div class="svgwrap"><svg xmlns="http://www.w3.org/2000/svg" width="977"1576" height="952"1536" viewBox="0 0 1576 1536">
+<rect width="1576" height="1536" fill="#ffffff"/>
+<text x="36.0" y="34.0" font-size="11" fill="#333333">⑦ 量化：从「2 字节一个数」到「1 字节 + 一把尺子」</text>
+<text x="36.0" y="62.0" font-size="11" fill="#666666">一句话：量化 = 把每个数换成更少的位 + 一个尺度（scale）；粒度越细越准、但尺子越多。本仓全部是训练后量化（PTQ）的产物——仓库只负责「按描述文件正确加载」，不做量化本身。</text>
+<text x="36.0" y="130.0" font-size="11" fill="#333333">第一步：四种量化粒度（仓内有严格判据，不是随口叫的）</text>
+<rect x="36.0" y="148.0" width="220.0" height="36.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="42.0" y="162.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">粒度</text>
+<rect x="256.0" y="148.0" width="420.0" height="36.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="262.0" y="162.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">尺度按什么分</text>
+<rect x="676.0" y="148.0" width="340.0" height="36.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="682.0" y="162.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">scale 个数</text>
+<rect x="1016.0" y="148.0" width="444.0" height="36.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="1022.0" y="162.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">特点</text>
+<rect x="36.0" y="184.0" width="220.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="198.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">per-tensor</text>
+<rect x="256.0" y="184.0" width="420.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="262.0" y="198.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">整个张量一个尺度</text>
+<rect x="676.0" y="184.0" width="340.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="682.0" y="198.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">1 个</text>
+<rect x="1016.0" y="184.0" width="444.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1022.0" y="198.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">最省额外开销，最不准</text>
+<rect x="36.0" y="220.0" width="220.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="234.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">per-channel</text>
+<rect x="256.0" y="220.0" width="420.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="262.0" y="234.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">每个输出通道一个</text>
+<rect x="676.0" y="220.0" width="340.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="682.0" y="234.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">输出通道数</text>
+<rect x="1016.0" y="220.0" width="444.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1022.0" y="234.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">权重常用（仓内 w8a8 的权重）</text>
+<rect x="36.0" y="256.0" width="220.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="270.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">per-token</text>
+<rect x="256.0" y="256.0" width="420.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="262.0" y="270.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">每个 token 一个</text>
+<rect x="676.0" y="256.0" width="340.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="682.0" y="270.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">token 数</text>
+<rect x="1016.0" y="256.0" width="444.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1022.0" y="270.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">激活常用（动态量化）</text>
+<rect x="36.0" y="292.0" width="220.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="306.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">per-group</text>
+<rect x="256.0" y="292.0" width="420.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="262.0" y="306.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">每 N 个元素一组</text>
+<rect x="676.0" y="292.0" width="340.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="682.0" y="306.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">元素数 ÷ 组大小</text>
+<rect x="1016.0" y="292.0" width="444.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1022.0" y="306.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">最准；scale 元数据约增 3%</text>
+<text x="36.0" y="348.0" font-size="11" fill="#333333">第二步：昇腾侧的实际方案（每个的名字就说明了粒度组合）</text>
+<rect x="36.0" y="366.0" width="260.0" height="36.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="42.0" y="380.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">方案</text>
+<rect x="296.0" y="366.0" width="620.0" height="36.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="302.0" y="380.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">粒度组合</text>
+<rect x="916.0" y="366.0" width="544.0" height="36.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="922.0" y="380.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">适用</text>
+<rect x="36.0" y="402.0" width="260.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="416.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">W8A8（静态）</text>
+<rect x="296.0" y="402.0" width="620.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="302.0" y="416.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">权重 per-channel int8；激活 静态 per-tensor</text>
+<rect x="916.0" y="402.0" width="544.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="922.0" y="416.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">精度优先，需要校准数据</text>
+<rect x="36.0" y="438.0" width="260.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="452.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">W8A8_DYNAMIC</text>
+<rect x="296.0" y="438.0" width="620.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="302.0" y="452.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">权重 per-channel int8；激活 逐 token 动态</text>
+<rect x="916.0" y="438.0" width="544.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="922.0" y="452.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">最常用（本仓 w8a8 主干）</text>
+<rect x="36.0" y="474.0" width="260.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="488.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">W8A8_MXFP8</text>
+<rect x="296.0" y="474.0" width="620.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="302.0" y="488.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">fp8 + per-group 尺度（组大小默认 32）</text>
+<rect x="916.0" y="474.0" width="544.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="922.0" y="488.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">更省、更依赖硬件支持</text>
+<rect x="36.0" y="510.0" width="260.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="524.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">W4A16 / W4A8</text>
+<rect x="296.0" y="510.0" width="620.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="302.0" y="524.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">权重压到 4 bit，激活保留 bf16 / int8</text>
+<rect x="916.0" y="510.0" width="544.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="922.0" y="524.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">权重更小，适合带宽瓶颈</text>
+<text x="36.0" y="566.0" font-size="11" fill="#333333">第三步：加载一个量化 checkpoint 时会发生的四件事</text>
+<rect x="36.0" y="584.0" width="1424.0" height="132.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="598.0" font-size="10" fill="#333333" font-family="Microsoft YaHei">① 读描述文件：模型目录里有一份「每层用哪个方案」的清单，加载器按它逐层选实现（找不到就直接报错，并说明「你加了这个参数但目录不是量化产物」）。</text>
+<text x="42.0" y="611.5" font-size="11" fill="#333333" font-family="Microsoft YaHei">② 声明额外张量：除了权重，还要为 scale / offset / bias 分配参数；其中一部分不从文件读、而是加载后算出来（仓内有一份「算出来」的名字名单）。</text>
+<text x="42.0" y="626.35" font-size="11" fill="#333333" font-family="Microsoft YaHei">③ 格式重排：昇腾的矩阵算子只吃 NZ（分形）布局，所以要把权重就地重排（见 ⑧ 的耗时）。</text>
+<text x="42.0" y="641.2" font-size="11" fill="#333333" font-family="Microsoft YaHei">④ 决定是否反量化：默认保持低精度，反量化在算子内部完成；只有原生 fp8 产物在某些硬件上会被摊成 bf16（代价：显存约翻倍）。</text>
+<rect x="36.0" y="756.0" width="700.0" height="152.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="42.0" y="770.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="46.0" y="778.0" font-size="11" fill="#333333">为什么量化在推理侧特别划算</text>
+<text x="46.0" y="804.0" font-size="11" fill="#333333">decode 是带宽瓶颈：每步都要把全部权重从显存读一遍（入门套 ⑤）。位宽减半 → 要搬的字节减半 → 单步时间近似减半。省的不只是容量，更是每步的搬运量——这才是量化的主收益。</text>
+<rect x="796.0" y="756.0" width="664.0" height="152.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="802.0" y="770.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="806.0" y="778.0" font-size="11" fill="#333333">为什么训练侧不能直接这么干</text>
+<text x="806.0" y="804.0" font-size="11" fill="#333333">训练要更新参数：梯度是「微小的增量」，低精度会把增量抹掉；所以训练必须留高精度主权重（这是 QAT 存在的理由之一）。→ 量化基本是「训练完之后」的动作，所以叫训练后量化（PTQ）。</text>
+<rect x="36.0" y="948.0" width="1424.0" height="108.0" rx="4" fill="#fff2cc" stroke="#d6b656"/>
+<text x="42.0" y="962.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">本仓实测：十个部署包里只有一个包用量化</text>
+<text x="42.0" y="976.85" font-size="10" fill="#333333" font-family="Microsoft YaHei">· 两个脚本（P 侧与 D 侧）带 --quantization ascend，模型目录名里直接写着 w8a8；</text>
+<text x="42.0" y="990.35" font-size="9" fill="#333333" font-family="Microsoft YaHei">· 只有 D/P 的那个包显式给了 indexer_kv_dtype: int8；</text>
+<text x="42.0" y="1002.5" font-size="9" fill="#c0392b" font-family="Microsoft YaHei">· 没有任何包设置 --kv-cache-dtype→ 其余包的 KV cache 仍是模型精度（bf16）。也就是说：那个包省的是「索引器侧的小 K cache」，主 KV 容量没变。</text>
+<rect x="36.0" y="1096.0" width="1424.0" height="46.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="42.0" y="1110.0" font-size="10" fill="#333333" font-family="Microsoft YaHei">本页交接：量化只是「权重文件形态」的一种。下一步（⑧）回到权重本身——顺便把训练产出的其他文件（优化器状态等）为什么被丢弃讲清。</text>
+<text x="36.0" y="1162.0" font-size="11" fill="#666666">注：本页「训练侧不能直接低精度更新」与 PTQ/QAT 的划分属通用知识；仓内没有任何 QAT（伪量化）实现，只有 PTQ 产物的加载。</text>
+<rect x="36.0" y="1188.0" width="1424.0" height="124.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="1202.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">代码锚点（想自己去翻的时候用）</text>
+<text x="42.0" y="1216.85" font-size="9" fill="#666666" font-family="Microsoft YaHei">粒度判据：vllm/model_executor/layers/quantization/utils/quant_utils.py:111-137（per-tensor :122 / per-token :125 / per-channel :128 / per-group :131）</text>
+<text x="42.0" y="1229.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">昇腾方案注册：(quant_type, layer_type) → class：vllm-ascend/vllm_ascend/quantization/methods/registry.py:21-52</text>
+<text x="42.0" y="1243.85" font-size="11" fill="#333333" font-family="Microsoft YaHei">W8A8 静态与动态的粒度原文：w8a8/w8a8_static.py:34-39、w8a8/w8a8_dynamic.py:61-66；MXFP8 :55-61（per-group，组大小 32）</text>
+<text x="42.0" y="1258.6999999999998" font-size="11" fill="#333333" font-family="Microsoft YaHei">额外张量声明：methods/.../method_adapters.py:100-191；「算出来而非读文件」名单 :197-207</text>
+<text x="42.0" y="1273.5499999999997" font-size="11" fill="#333333" font-family="Microsoft YaHei">描述文件与分派：configs/modelslim_config.py:109（文件名）、:911-918（读取）、:660-771（get_quant_method）</text>
+<text x="42.0" y="1288.3999999999996" font-size="11" fill="#333333" font-family="Microsoft YaHei">本仓实测：assets/c_home/bash/pds/fix_1120/prefill.sh:113-115、decode.sh:113-115</text>
+<rect x="36.0" y="1346.0" width="1424.0" height="58.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="1360.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">一句话记住这一页：量化 = 更少的位 + 一把尺子；粒度决定「尺子多不多」，本仓只负责按描述文件正确加载 PTQ 产物。它省的主要不是容量，而是 decode 每一步要搬的字节数。</text>
+<text x="36.0" y="1452.0" font-size="11" fill="#333333">图例</text>
+<rect x="148.0" y="1435.0" width="120.0" height="26.0" rx="4" fill="#eceff1" stroke="#607d8b"/>
+<text x="154.0" y="1449.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">客户端</text>
+<rect x="276.0" y="1435.0" width="120.0" height="26.0" rx="4" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="282.0" y="1449.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">边端 edge</text>
+<rect x="404.0" y="1435.0" width="120.0" height="26.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="410.0" y="1449.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 P (prefill)</text>
+<rect x="532.0" y="1435.0" width="120.0" height="26.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="538.0" y="1449.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 D (decode)</text>
+<rect x="660.0" y="1435.0" width="120.0" height="26.0" rx="4" fill="#b0e3e6" stroke="#0e8088"/>
+<text x="666.0" y="1449.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">PD Proxy</text>
+<rect x="788.0" y="1435.0" width="120.0" height="26.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="794.0" y="1449.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">中立/通用</text>
+<rect x="916.0" y="1435.0" width="120.0" height="26.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="922.0" y="1449.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">失败/取消</text>
+<rect x="1044.0" y="1435.0" width="240.0" height="26.0" rx="4" fill="#fff2cc" stroke="#d6b656"/>
+<text x="1050.0" y="1449.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">量化产物/数据面</text>
+<text x="210.0" y="1486.0" font-size="11" fill="#666666">控制面 ZMQ</text>
+<text x="460.0" y="1486.0" font-size="11" fill="#666666">数据面 UCX·Mooncake</text>
+<text x="710.0" y="1486.0" font-size="11" fill="#666666">HTTP</text>
+<path d="M148.0,1484.0 L204.0,1484.0" fill="none" stroke="#9673a6" marker-end="url(#a)"/>
+<path d="M398.0,1484.0 L454.0,1484.0" fill="none" stroke="#d6b656" marker-end="url(#a)"/>
+<path d="M648.0,1484.0 L704.0,1484.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333333"/></marker></defs>
+</svg></div>
+<div class="concl"><b>一句话结论　</b>量化 = 把每个数换成更少的位 + 一个尺度（scale）；粒度越细越准、但尺子越多。本仓全部是训练后量化（PTQ）的产物——仓库只负责「按描述文件正确加载」，不做量化本身。</div>
+<details><summary>代码锚点（5 条，可 grep）</summary><pre>粒度判据：vllm/model_executor/layers/quantization/utils/quant_utils.py:111-137（per-tensor :122 / per-token :125 / per-channel :128 / per-group :131）
+昇腾方案注册：(quant_type, layer_type) → class：vllm-ascend/vllm_ascend/quantization/methods/registry.py:21-52
+W8A8 静态与动态的粒度原文：w8a8/w8a8_static.py:34-39、w8a8/w8a8_dynamic.py:61-66；MXFP8 :55-61（per-group，组大小 32）
+额外张量声明：methods/.../method_adapters.py:100-191；「算出来而非读文件」名单 :197-207
+描述文件与分派：configs/modelslim_config.py:109（文件名）、:911-918（读取）、:660-771（get_quant_method）</pre></details>
+</figure>
+<figure id="p7">
+<p class="ptitle">⑧ MTP 的头：训练期学「往后看几步」，推理期当「便宜的起草者」</p>
+<p class="psub">一句话：MTP 头在训练时被一个额外的预测损失训练出来；训练完之后，它的用途变成推理时的 draft。所以「MTP」既是训练概念，也是推理概念——本页把两半接起来。</p>
+<div class="svgwrap"><svg xmlns="http://www.w3.org/2000/svg" width="977"1576" height="792"1278" viewBox="0 0 1576 1278">
+<rect width="1576" height="1278" fill="#ffffff"/>
+<text x="36.0" y="34.0" font-size="11" fill="#333333">⑧ MTP 的头：训练期学「往后看几步」，推理期当「便宜的起草者」</text>
+<text x="36.0" y="62.0" font-size="11" fill="#666666">一句话：MTP 头在训练时被一个额外的预测损失训练出来；训练完之后，它的用途变成推理时的 draft。所以「MTP」既是训练概念，也是推理概念——本页把两半接起来。</text>
+<text x="36.0" y="132.0" font-size="11" fill="#333333">第一步：MTP 层的结构（这些全都能在仓里查到）</text>
+<rect x="36.0" y="150.0" width="1424.0" height="128.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="42.0" y="164.0" font-size="10" fill="#333333" font-family="Microsoft YaHei">输入：① 上一层（或上一个深度）的 hidden states；② 下一个位置的 token embedding</text>
+<text x="42.0" y="177.5" font-size="11" fill="#333333" font-family="Microsoft YaHei">处理：两份各自过一层归一化 → 拼接（维度翻倍）→ 一个线性层压回 hidden 维度</text>
+<text x="42.0" y="192.35" font-size="11" fill="#333333" font-family="Microsoft YaHei">输出：走共享的 lm_head（与主模型同一个输出头）得到词表分布</text>
+<text x="42.0" y="207.2" font-size="11" fill="#c0392b" font-family="Microsoft YaHei">关键点：它不复制 embedding 与 lm_head，而是复用主模型的——所以额外参数很少（这是「MTP 省显存」的根本原因）。</text>
+<text x="36.0" y="300.0" font-size="11" fill="#333333">第二步：同一个头，训练与推理两个用途</text>
+<rect x="36.0" y="318.0" width="700.0" height="190.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="42.0" y="332.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="46.0" y="340.0" font-size="11" fill="#333333">训练期：多 token 预测（多一个损失）</text>
+<text x="46.0" y="366.0" font-size="11" fill="#333333">主模型照常预测下一个词（第 1 个）；MTP 头被训练去预测「再往后一个」（第 2 个）。所以它的损失是「用它算的 log 概率，对正确答案取负」，再乘一个权重加到总损失上。这个权重字段就在 config 里，注释明写：训练期用、推理期不用。（具体的目标函数形式与常见权重取值属通用知识；仓内只证明「存在这样一个权重字段」，不实现这个损失。）</text>
+<rect x="796.0" y="318.0" width="664.0" height="190.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="802.0" y="332.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="806.0" y="340.0" font-size="11" fill="#333333">推理期：当 draft（投机解码的起草者）</text>
+<text x="806.0" y="366.0" font-size="11" fill="#333333">权重冻结后，MTP 头就变成一个「便宜的下一步预测器」：吃主模型的 hidden，猜出接下来 K 个 token；主模型再一次前向验证。此时它不再产生损失，只产生候选。→ 这就是 MTP 套 ⑧ 讲的「draft 走 eager、target 走图」。</text>
+<text x="36.0" y="530.0" font-size="11" fill="#333333">第三步：一个很实用的细节——MTP 头在权重文件里长什么样</text>
+<rect x="36.0" y="548.0" width="1424.0" height="118.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="562.0" font-size="10" fill="#333333" font-family="Microsoft YaHei">· 有的 checkpoint 把它写成独立的 mtp.{i}.* 前缀；有的写成 model.layers.{总层数+i}.*（假装它是主干之后的第几层）。</text>
+<text x="42.0" y="575.5" font-size="11" fill="#333333" font-family="Microsoft YaHei">· 加载器因此要做两件事：① 把 `mtp.` 重映射到「主干层号之后」；② 让主模型在加载时主动跳过这些层（否则会报「意外的权重」）。</text>
+<text x="42.0" y="590.35" font-size="11" fill="#333333" font-family="Microsoft YaHei">· 仓内把「映射到 None 就表示丢弃这个键」作为通用机制——所以主模型对 `mtp.` 的处理就是一句「前缀→None」。</text>
+<text x="42.0" y="605.2" font-size="11" fill="#c0392b" font-family="Microsoft YaHei">这也解释了为什么有些模型目录里「多出来一堆 mtp 权重」却能正常加载。</text>
+<rect x="36.0" y="706.0" width="1424.0" height="96.0" rx="4" fill="#fff2cc" stroke="#d6b656"/>
+<text x="42.0" y="720.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">为什么「训练期的损失权重」在推理侧完全用不到</text>
+<text x="42.0" y="734.85" font-size="10" fill="#c0392b" font-family="Microsoft YaHei">那个权重只决定「训练时 MTP 的误差对总梯度的贡献有多大」，而推理时不更新任何参数 → 与它无关。它在 config 里被保留下来，只是因为 config.json 是一份跨阶段共享的文件：训练写进去，推理读进来但忽略。这也是「训练期字段被带进推理配置」的典型例子。</text>
+<rect x="36.0" y="842.0" width="1424.0" height="46.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="42.0" y="856.0" font-size="10" fill="#333333" font-family="Microsoft YaHei">本页交接：MTP 的两半接上了。下一步（⑨）回到加载器视角——看它如何在同一个目录里只挑它要的文件。</text>
+<rect x="36.0" y="918.0" width="1424.0" height="136.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="932.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">代码锚点（想自己去翻的时候用）</text>
+<text x="42.0" y="946.85" font-size="9" fill="#666666" font-family="Microsoft YaHei">MTP 层结构（enorm/hnorm/eh_proj/共享 lm_head）：vllm/model_executor/models/deepseek_mtp.py:80-124、:136-147</text>
+<text x="42.0" y="959.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">「训练期字段、推理不用」原文：vllm/transformers_utils/configs/hy_v4.py:53-54；默认值 :130-131</text>
+<text x="42.0" y="973.85" font-size="11" fill="#333333" font-family="Microsoft YaHei">另一处同类字段（MoE 的辅助损失开关）：vllm/transformers_utils/configs/hy_v3.py:84-87</text>
+<text x="42.0" y="988.7" font-size="11" fill="#333333" font-family="Microsoft YaHei">checkpoint 键名重映射 mtp.{i}.* → model.layers.{N+i}.*：vllm/models/deepseek_v4/nvidia/mtp.py:392-398；识别与跳过 vllm/model_executor/models/utils.py:543-568、:571-587</text>
+<text x="42.0" y="1003.5500000000001" font-size="11" fill="#333333" font-family="Microsoft YaHei">主模型对 mtp. 前缀的丢弃：vllm/model_executor/models/qwen3_next.py:810 等（WeightsMapper(orig_to_new_prefix={'mtp.': None})）</text>
+<text x="42.0" y="1018.4000000000001" font-size="11" fill="#333333" font-family="Microsoft YaHei">WeightsMapper 的「映射成 None 即忽略」机制：vllm/model_executor/models/utils.py:46-57</text>
+<rect x="36.0" y="1088.0" width="1424.0" height="58.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="1102.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">一句话记住这一页：MTP 头 = 训练期多学一个「往后看」的目标、推理期当便宜的起草者；它的损失权重只影响训练，而它的权重在文件里可能写成 `mtp.*` 或「主干之后的层」——加载器靠「映射成 None 就丢弃」把两半分开。</text>
+<text x="36.0" y="1194.0" font-size="11" fill="#333333">图例</text>
+<rect x="148.0" y="1177.0" width="120.0" height="26.0" rx="4" fill="#eceff1" stroke="#607d8b"/>
+<text x="154.0" y="1191.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">客户端</text>
+<rect x="276.0" y="1177.0" width="120.0" height="26.0" rx="4" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="282.0" y="1191.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">边端 edge</text>
+<rect x="404.0" y="1177.0" width="120.0" height="26.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="410.0" y="1191.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 P (prefill)</text>
+<rect x="532.0" y="1177.0" width="120.0" height="26.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="538.0" y="1191.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 D (decode)</text>
+<rect x="660.0" y="1177.0" width="120.0" height="26.0" rx="4" fill="#b0e3e6" stroke="#0e8088"/>
+<text x="666.0" y="1191.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">PD Proxy</text>
+<rect x="788.0" y="1177.0" width="120.0" height="26.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="794.0" y="1191.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">中立/通用</text>
+<rect x="916.0" y="1177.0" width="120.0" height="26.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="922.0" y="1191.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">失败/取消</text>
+<rect x="1044.0" y="1177.0" width="240.0" height="26.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="1050.0" y="1191.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">训练期语义（多为通用知识）</text>
+<text x="210.0" y="1228.0" font-size="11" fill="#666666">控制面 ZMQ</text>
+<text x="460.0" y="1228.0" font-size="11" fill="#666666">数据面 UCX·Mooncake</text>
+<text x="710.0" y="1228.0" font-size="11" fill="#666666">HTTP</text>
+<path d="M148.0,1226.0 L204.0,1226.0" fill="none" stroke="#9673a6" marker-end="url(#a)"/>
+<path d="M398.0,1226.0 L454.0,1226.0" fill="none" stroke="#d6b656" marker-end="url(#a)"/>
+<path d="M648.0,1226.0 L704.0,1226.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333333"/></marker></defs>
+</svg></div>
+<div class="concl"><b>一句话结论　</b>MTP 头在训练时被一个额外的预测损失训练出来；训练完之后，它的用途变成推理时的 draft。所以「MTP」既是训练概念，也是推理概念——本页把两半接起来。</div>
+<details><summary>代码锚点（6 条，可 grep）</summary><pre>MTP 层结构（enorm/hnorm/eh_proj/共享 lm_head）：vllm/model_executor/models/deepseek_mtp.py:80-124、:136-147
+「训练期字段、推理不用」原文：vllm/transformers_utils/configs/hy_v4.py:53-54；默认值 :130-131
+另一处同类字段（MoE 的辅助损失开关）：vllm/transformers_utils/configs/hy_v3.py:84-87
+checkpoint 键名重映射 mtp.{i}.* → model.layers.{N+i}.*：vllm/models/deepseek_v4/nvidia/mtp.py:392-398；识别与跳过 vllm/model_executor/models/utils.py:543-568、:571-587
+主模型对 mtp. 前缀的丢弃：vllm/model_executor/models/qwen3_next.py:810 等（WeightsMapper(orig_to_new_prefix={&#x27;mtp.&#x27;: None})）
+WeightsMapper 的「映射成 None 即忽略」机制：vllm/model_executor/models/utils.py:46-57</pre></details>
+</figure>
+<figure id="p8">
+<p class="ptitle">⑨ 训练目录 → 推理加载：五个文件被明确丢弃</p>
+<p class="psub">一句话：训练产出的目录里通常有权重 + 优化器状态 + 调度器状态 + 缩放器状态 + 训练参数；推理只吃权重，其余五个在加载时被按文件名直接过滤掉——这一条在仓里写得很清楚。</p>
+<div class="svgwrap"><svg xmlns="http://www.w3.org/2000/svg" width="977"1576" height="825"1332" viewBox="0 0 1576 1332">
+<rect width="1576" height="1332" fill="#ffffff"/>
+<text x="36.0" y="34.0" font-size="11" fill="#333333">⑨ 训练目录 → 推理加载：五个文件被明确丢弃</text>
+<text x="36.0" y="62.0" font-size="11" fill="#666666">一句话：训练产出的目录里通常有权重 + 优化器状态 + 调度器状态 + 缩放器状态 + 训练参数；推理只吃权重，其余五个在加载时被按文件名直接过滤掉——这一条在仓里写得很清楚。</text>
+<text x="36.0" y="130.0" font-size="11" fill="#333333">第一步：一个训练产出的目录（左：推理要的；右：推理丢的）</text>
+<rect x="36.0" y="148.0" width="690.0" height="208.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="42.0" y="162.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">推理要的</text>
+<text x="42.0" y="176.85" font-size="10" fill="#333333" font-family="Microsoft YaHei">· model-*.safetensors（分片权重）</text>
+<text x="42.0" y="190.35" font-size="11" fill="#333333" font-family="Microsoft YaHei">· *.safetensors.index.json（哪个张量在哪个分片）</text>
+<text x="42.0" y="205.2" font-size="11" fill="#333333" font-family="Microsoft YaHei">· config.json（结构参数）</text>
+<text x="42.0" y="220.04999999999998" font-size="11" fill="#333333" font-family="Microsoft YaHei">· tokenizer 相关文件（分词器与模板）</text>
+<text x="42.0" y="234.89999999999998" font-size="11" fill="#333333" font-family="Microsoft YaHei">· （若量化）量化描述文件：每层用哪个量化方案</text>
+<rect x="766.0" y="148.0" width="694.0" height="208.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="772.0" y="162.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">推理明确丢弃的五个</text>
+<text x="772.0" y="176.85" font-size="10" fill="#333333" font-family="Microsoft YaHei">· optimizer.bin / optimizer.pt（Adam 动量与方差）</text>
+<text x="772.0" y="190.35" font-size="11" fill="#333333" font-family="Microsoft YaHei">· scheduler.pt（学习率调度状态）</text>
+<text x="772.0" y="205.2" font-size="11" fill="#333333" font-family="Microsoft YaHei">· scaler.pt（fp16 梯度缩放器状态）</text>
+<text x="772.0" y="220.04999999999998" font-size="11" fill="#333333" font-family="Microsoft YaHei">· training_args.bin（训练参数快照）</text>
+<text x="772.0" y="234.89999999999998" font-size="11" fill="#c0392b" font-family="Microsoft YaHei">仓内有一份黑名单函数，就按这五个文件名过滤——这是「推理不关心训练状态」最直接的代码证据。</text>
+<text x="36.0" y="378.0" font-size="11" fill="#333333">第二步：加载器只挑权重时的六步</text>
+<rect x="36.0" y="396.0" width="224.0" height="88.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="42.0" y="410.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">① 过滤文件</text>
+<text x="42.0" y="424.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">黑名单剔掉五个训练文件</text>
+<rect x="272.0" y="396.0" width="224.0" height="88.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="278.0" y="410.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">② 按扩展名白名单</text>
+<text x="278.0" y="424.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">只取 safetensors / bin</text>
+<rect x="508.0" y="396.0" width="224.0" height="88.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="514.0" y="410.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">③ 校验分片完整</text>
+<text x="514.0" y="424.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">索引里列的文件必须都在</text>
+<rect x="744.0" y="396.0" width="224.0" height="88.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="750.0" y="410.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">④ 逐张量读盘</text>
+<text x="750.0" y="424.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">读成 CPU 张量，不占设备显存</text>
+<rect x="980.0" y="396.0" width="224.0" height="88.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="986.0" y="410.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">⑤ 名字映射</text>
+<text x="986.0" y="424.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">改名 / 合并（q,k,v → qkv）/ 丢弃（None）</text>
+<rect x="1216.0" y="396.0" width="224.0" height="88.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="1222.0" y="410.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">⑥ 写进参数</text>
+<text x="1222.0" y="424.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">按 TP 切片后 copy_ 到设备</text>
+<text x="36.0" y="506.0" font-size="11" fill="#333333">第三步：第 ⑤ 步里的三种操作（第三种是本套反复出现的关键机制）</text>
+<rect x="36.0" y="524.0" width="160.0" height="36.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="42.0" y="538.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">操作</text>
+<rect x="196.0" y="524.0" width="500.0" height="36.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="202.0" y="538.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">什么时候用</text>
+<rect x="696.0" y="524.0" width="420.0" height="36.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="702.0" y="538.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">怎么实现</text>
+<rect x="1116.0" y="524.0" width="344.0" height="36.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="1122.0" y="538.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">备注</text>
+<rect x="36.0" y="560.0" width="160.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="574.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">改名</text>
+<rect x="196.0" y="560.0" width="500.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="202.0" y="574.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">文件里的名字与代码里的名字不同（例如加前缀）</text>
+<rect x="696.0" y="560.0" width="420.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="702.0" y="574.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">一张「旧名 → 新名」的映射表</text>
+<rect x="1116.0" y="560.0" width="344.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1122.0" y="574.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">普通过滤</text>
+<rect x="36.0" y="596.0" width="160.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="610.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">合并</text>
+<rect x="196.0" y="596.0" width="500.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="202.0" y="610.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">文件里 q/k/v 三个权重，代码里是一个融合层</text>
+<rect x="696.0" y="596.0" width="420.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="702.0" y="610.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">把三份拼成一份</text>
+<rect x="1116.0" y="596.0" width="344.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1122.0" y="610.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">形状变化</text>
+<rect x="36.0" y="632.0" width="160.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="646.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">丢弃</text>
+<rect x="196.0" y="632.0" width="500.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="202.0" y="646.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">映射成「空」（None）</text>
+<rect x="696.0" y="632.0" width="420.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="702.0" y="646.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">这个键直接不加载</text>
+<rect x="1116.0" y="632.0" width="344.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1122.0" y="646.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">MTP 层、训练遗留张量都靠它</text>
+<rect x="36.0" y="704.0" width="700.0" height="160.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="42.0" y="718.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="46.0" y="726.0" font-size="11" fill="#333333">① 训练框架遗留的张量也会被丢掉</text>
+<text x="46.0" y="752.0" font-size="11" fill="#333333">有些早期训练框架（或某些量化工具）会在权重文件里多写几个旋转位置编码的缓存张量，推理根本不用它们 → 仓内用同一套「映射成 None」的机制丢弃。否则会报「意外的键」。</text>
+<rect x="796.0" y="704.0" width="664.0" height="160.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="802.0" y="718.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="806.0" y="726.0" font-size="11" fill="#333333">② 训练中期就能热更新权重</text>
+<text x="806.0" y="752.0" font-size="11" fill="#333333">仓内支持「按层热加载」：不重启引擎，把新权重逐层换进去；并且特意保持张量地址不变——因为图捕获记录的是地址，换地址会让图失效。→ 这是给强化学习训练循环用的（见 ⑩）。</text>
+<rect x="36.0" y="904.0" width="1424.0" height="46.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="42.0" y="918.0" font-size="10" fill="#333333" font-family="Microsoft YaHei">本页交接：加载器告诉我们「推理只吃权重」。反过来问：训练真的一直在改权重，那推理怎么跟上？下一步（⑩）就是这个接口。</text>
+<rect x="36.0" y="980.0" width="1424.0" height="128.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="994.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">代码锚点（想自己去翻的时候用）</text>
+<text x="42.0" y="1008.85" font-size="9" fill="#666666" font-family="Microsoft YaHei">五个被丢弃的文件（黑名单函数原文）：vllm/model_executor/model_loader/weight_utils.py:639-655；调用点 default_loader.py:254</text>
+<text x="42.0" y="1021.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">扩展名白名单（allow_patterns）：vllm/model_executor/model_loader/default_loader.py:184-208</text>
+<text x="42.0" y="1035.85" font-size="11" fill="#333333" font-family="Microsoft YaHei">索引与分片校验：vllm/model_executor/model_loader/weight_utils.py:625-635</text>
+<text x="42.0" y="1050.6999999999998" font-size="11" fill="#333333" font-family="Microsoft YaHei">名字映射与「映射成 None 即丢弃」：vllm/model_executor/models/utils.py:46-57；训练遗留张量的丢弃 :215-224</text>
+<text x="42.0" y="1065.5499999999997" font-size="11" fill="#333333" font-family="Microsoft YaHei">逐张量加载与 TP 切片：weight_utils.py:1253-1271（default_weight_loader）</text>
+<text x="42.0" y="1080.3999999999996" font-size="11" fill="#333333" font-family="Microsoft YaHei">按层热加载：vllm/model_executor/model_loader/reload/layerwise.py:84；保地址的原因 vllm/model_executor/utils.py:94-99（图捕获需要地址不变）</text>
+<rect x="36.0" y="1142.0" width="1424.0" height="58.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="1156.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">一句话记住这一页：加载器只挑权重：五个训练状态文件按文件名丢弃、多余的键按「映射成空」丢弃、分片按索引校验；它唯一在意的兼容性是「名字对得上、形状对得上、地址能稳定」。</text>
+<text x="36.0" y="1248.0" font-size="11" fill="#333333">图例</text>
+<rect x="148.0" y="1231.0" width="120.0" height="26.0" rx="4" fill="#eceff1" stroke="#607d8b"/>
+<text x="154.0" y="1245.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">客户端</text>
+<rect x="276.0" y="1231.0" width="120.0" height="26.0" rx="4" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="282.0" y="1245.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">边端 edge</text>
+<rect x="404.0" y="1231.0" width="120.0" height="26.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="410.0" y="1245.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 P (prefill)</text>
+<rect x="532.0" y="1231.0" width="120.0" height="26.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="538.0" y="1245.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 D (decode)</text>
+<rect x="660.0" y="1231.0" width="120.0" height="26.0" rx="4" fill="#b0e3e6" stroke="#0e8088"/>
+<text x="666.0" y="1245.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">PD Proxy</text>
+<rect x="788.0" y="1231.0" width="120.0" height="26.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="794.0" y="1245.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">中立/通用</text>
+<rect x="916.0" y="1231.0" width="120.0" height="26.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="922.0" y="1245.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">失败/取消</text>
+<rect x="1044.0" y="1231.0" width="240.0" height="26.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="1050.0" y="1245.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">被丢弃的训练状态</text>
+<text x="210.0" y="1282.0" font-size="11" fill="#666666">控制面 ZMQ</text>
+<text x="460.0" y="1282.0" font-size="11" fill="#666666">数据面 UCX·Mooncake</text>
+<text x="710.0" y="1282.0" font-size="11" fill="#666666">HTTP</text>
+<path d="M262.0,440.0 L270.0,440.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<path d="M498.0,440.0 L506.0,440.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<path d="M734.0,440.0 L742.0,440.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<path d="M970.0,440.0 L978.0,440.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<path d="M1206.0,440.0 L1214.0,440.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<path d="M148.0,1280.0 L204.0,1280.0" fill="none" stroke="#9673a6" marker-end="url(#a)"/>
+<path d="M398.0,1280.0 L454.0,1280.0" fill="none" stroke="#d6b656" marker-end="url(#a)"/>
+<path d="M648.0,1280.0 L704.0,1280.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333333"/></marker></defs>
+</svg></div>
+<div class="concl"><b>一句话结论　</b>训练产出的目录里通常有权重 + 优化器状态 + 调度器状态 + 缩放器状态 + 训练参数；推理只吃权重，其余五个在加载时被按文件名直接过滤掉——这一条在仓里写得很清楚。</div>
+<details><summary>代码锚点（6 条，可 grep）</summary><pre>五个被丢弃的文件（黑名单函数原文）：vllm/model_executor/model_loader/weight_utils.py:639-655；调用点 default_loader.py:254
+扩展名白名单（allow_patterns）：vllm/model_executor/model_loader/default_loader.py:184-208
+索引与分片校验：vllm/model_executor/model_loader/weight_utils.py:625-635
+名字映射与「映射成 None 即丢弃」：vllm/model_executor/models/utils.py:46-57；训练遗留张量的丢弃 :215-224
+逐张量加载与 TP 切片：weight_utils.py:1253-1271（default_weight_loader）
+按层热加载：vllm/model_executor/model_loader/reload/layerwise.py:84；保地址的原因 vllm/model_executor/utils.py:94-99（图捕获需要地址不变）</pre></details>
+</figure>
+<figure id="p9">
+<p class="ptitle">⑩ 真实接口：训练框架把 vLLM 当成「会改权重的推理后端」</p>
+<p class="psub">一句话：强化学习需要「用当前策略采样 → 训练 → 更新策略 → 再采样」，而采样这一步就是推理。于是 vLLM 提供了权重同步、暂停/继续、逐层热更新、休眠让卡这些为训练准备的能力——这是训练与推理唯一真实的耦合面。</p>
+<div class="svgwrap"><svg xmlns="http://www.w3.org/2000/svg" width="977"1576" height="947"1528" viewBox="0 0 1576 1528">
+<rect width="1576" height="1528" fill="#ffffff"/>
+<text x="36.0" y="34.0" font-size="11" fill="#333333">⑩ 真实接口：训练框架把 vLLM 当成「会改权重的推理后端」</text>
+<text x="36.0" y="62.0" font-size="11" fill="#666666">一句话：强化学习需要「用当前策略采样 → 训练 → 更新策略 → 再采样」，而采样这一步就是推理。于是 vLLM 提供了权重同步、暂停/继续、逐层热更新、休眠让卡这些为训练准备的能力——这是训练与推理唯一真实的耦合面。</text>
+<text x="36.0" y="130.0" font-size="11" fill="#333333">第一步：RL 训练的一个回合（vLLM 在「采样」这一格）</text>
+<rect x="36.0" y="148.0" width="274.0" height="92.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="42.0" y="162.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">① 采样</text>
+<text x="42.0" y="176.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">用当前权重跑推理，生成回答并记录概率</text>
+<rect x="321.0" y="148.0" width="274.0" height="92.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="327.0" y="162.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">② 打分</text>
+<text x="327.0" y="176.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">奖励模型 / 规则给每个回答打分</text>
+<rect x="606.0" y="148.0" width="274.0" height="92.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="612.0" y="162.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">③ 训练</text>
+<text x="612.0" y="176.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">按优势算策略梯度，更新权重</text>
+<rect x="891.0" y="148.0" width="274.0" height="92.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="897.0" y="162.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">④ 同步</text>
+<text x="897.0" y="176.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">把新权重推给正在服务的推理引擎</text>
+<rect x="1176.0" y="148.0" width="274.0" height="92.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1182.0" y="162.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">⑤ 回到 ①</text>
+<text x="1182.0" y="176.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">下一回合用新权重继续采样</text>
+<text x="36.0" y="262.0" font-size="11" fill="#333333">第二步：为此 vLLM 提供了四件东西（都在仓里能查到）</text>
+<rect x="36.0" y="280.0" width="460.0" height="196.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="42.0" y="294.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="46.0" y="302.0" font-size="11" fill="#333333">① 权重同步通道</text>
+<text x="46.0" y="328.0" font-size="11" fill="#333333">训练进程侧有一个「发送端」引擎，推理侧有一个「接收端」；中间可以走 NCCL、共享内存、分片传输等多种后端。还配了一组 HTTP 控制路由（暂停采样 / 初始化 / 开始更新 / 结束）。</text>
+<rect x="518.0" y="280.0" width="460.0" height="196.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="524.0" y="294.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="528.0" y="302.0" font-size="11" fill="#333333">② 暂停 / 继续</text>
+<text x="528.0" y="328.0" font-size="11" fill="#333333">更新权重时不能让引擎正在生成 → 先暂停（把在跑的请求收尾），更新完再继续。这样训练与推理可以共用同一批卡。</text>
+<rect x="1000.0" y="280.0" width="460.0" height="196.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="1006.0" y="294.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="1010.0" y="302.0" font-size="11" fill="#333333">③ 逐层热更新</text>
+<text x="1010.0" y="328.0" font-size="11" fill="#333333">更细的做法：按层加载新权重，不重启引擎。并且保持张量地址不变——否则已捕获的图会失效（图捕获 ④ 的约束二）。代价：更新期间该层算出的结果可能新旧混用，所以必须暂停。</text>
+<text x="36.0" y="498.0" font-size="11" fill="#333333">第三步：两个很容易被忽略、但对 RL 很关键的能力</text>
+<rect x="36.0" y="516.0" width="700.0" height="170.0" rx="4" fill="#fff2cc" stroke="#d6b656"/>
+<text x="42.0" y="530.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="46.0" y="538.0" font-size="11" fill="#333333">休眠（让出显存给训练）</text>
+<text x="46.0" y="564.0" font-size="11" fill="#333333">训练要占大量显存（梯度+优化器），与推理抢卡；所以推理引擎支持「睡下去」把显存还回去，训练完再「醒来」。可以只回权重（保留 KV 结构）或全放。</text>
+<rect x="796.0" y="516.0" width="664.0" height="170.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="802.0" y="530.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="806.0" y="538.0" font-size="11" fill="#333333">采样掩码 / 路由复现（一致性）</text>
+<text x="806.0" y="564.0" font-size="11" fill="#333333">RL 要保证「推理时算的概率」与「训练时假设的概率」一致：① 把 top-k/top-p 实际保留下来的词集合返回给训练侧；② 把 MoE 的路由选择也返回；③ 输出头用 fp32 算（⑥ 页那条）——三者都是为同一件事。</text>
+<text x="36.0" y="708.0" font-size="11" fill="#333333">第四步：这条链上「谁负责什么」（避免把它们当成同一个东西）</text>
+<rect x="36.0" y="726.0" width="520.0" height="36.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="42.0" y="740.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">角色</text>
+<rect x="556.0" y="726.0" width="520.0" height="36.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="562.0" y="740.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">职责</text>
+<rect x="1076.0" y="726.0" width="384.0" height="36.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="1082.0" y="740.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">在哪</text>
+<rect x="36.0" y="762.0" width="520.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="776.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">训练框架（verl / TRL / OpenRLHF …）</text>
+<rect x="556.0" y="762.0" width="520.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="562.0" y="776.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">算策略梯度、决定权重怎么变</text>
+<rect x="1076.0" y="762.0" width="384.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1082.0" y="776.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">仓外</text>
+<rect x="36.0" y="798.0" width="520.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="812.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">训练进程侧的同步客户端</text>
+<rect x="556.0" y="798.0" width="520.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="562.0" y="812.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">把新权重推过去、发暂停/更新指令</text>
+<rect x="1076.0" y="798.0" width="384.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1082.0" y="812.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">仓内（不在训练循环里）</text>
+<rect x="36.0" y="834.0" width="520.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="848.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">vLLM 引擎</text>
+<rect x="556.0" y="834.0" width="520.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="562.0" y="848.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">用当前权重采样、返回概率与统计</text>
+<rect x="1076.0" y="834.0" width="384.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1082.0" y="848.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">仓内</text>
+<rect x="36.0" y="870.0" width="520.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="884.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">训练脚本</text>
+<rect x="556.0" y="870.0" width="520.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="562.0" y="884.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">决定 K、温度、批次等采样参数</text>
+<rect x="1076.0" y="870.0" width="384.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1082.0" y="884.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">仓外</text>
+<rect x="36.0" y="940.0" width="1424.0" height="96.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="954.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">三句话总结本套</text>
+<text x="42.0" y="968.85" font-size="10" fill="#333333" font-family="Microsoft YaHei">① 训练：靠梯度改权重，显存花在梯度/优化器/激活上，产出 checkpoint。</text>
+<text x="42.0" y="982.35" font-size="11" fill="#333333" font-family="Microsoft YaHei">② 推理：只读权重，显存花在 KV 上，靠调度/图/量化/投机把每个 token 变便宜。</text>
+<text x="42.0" y="997.2" font-size="11" fill="#c0392b" font-family="Microsoft YaHei">③ 两者的接口只有三处：权重文件（含量化描述）、配置字段（训练期字段被忽略）、以及 RL 场景下的运行时权重同步。除此之外它们几乎不重叠——这就是为什么读 vLLM 时找不到训练代码，却处处能看到「为训练准备」的开关。</text>
+<rect x="36.0" y="1076.0" width="1424.0" height="46.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="42.0" y="1090.0" font-size="10" fill="#333333" font-family="Microsoft YaHei">本页交接：训练侧到此闭合。回到 `学习地图.md`，这一套应插在「Transformer 与模型文件结构」之后、「入门」之前读——它解释的是「权重从哪来」，而入门套解释的是「系统为什么这么设计」。</text>
+<rect x="36.0" y="1152.0" width="1424.0" height="152.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="1166.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">代码锚点（想自己去翻的时候用）</text>
+<text x="42.0" y="1180.85" font-size="9" fill="#666666" font-family="Microsoft YaHei">权重同步配置（文档串明写 RL training）：vllm/config/weight_transfer.py:8-15</text>
+<text x="42.0" y="1193.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">训练侧引擎「跑在训练进程里」：vllm/distributed/weight_transfer/base.py:554-583</text>
+<text x="42.0" y="1207.85" font-size="11" fill="#333333" font-family="Microsoft YaHei">推理侧引擎与初始化时机：同文件 :465-479、:528-535</text>
+<text x="42.0" y="1222.6999999999998" font-size="11" fill="#333333" font-family="Microsoft YaHei">四种同步后端注册表：vllm/distributed/weight_transfer/factory.py:244-266</text>
+<text x="42.0" y="1237.5499999999997" font-size="11" fill="#333333" font-family="Microsoft YaHei">RLHF HTTP 控制路由（暂停/初始化/开始/结束/更新）：vllm/entrypoints/serve/dev/rlhf/api_router.py:29、:157、:175、:187、:205</text>
+<text x="42.0" y="1252.3999999999996" font-size="11" fill="#333333" font-family="Microsoft YaHei">「给 RL 训练用」的推理开关：vllm/config/model.py:1965-1978（head_dtype fp32，原文 required for RL training-inference consistency）、:250-253（return_sampling_mask / routed_experts）</text>
+<text x="42.0" y="1267.2499999999995" font-size="11" fill="#333333" font-family="Microsoft YaHei">休眠/唤醒：vllm/docs/features/sleep_mode.md:3、:60-64</text>
+<text x="42.0" y="1282.0999999999995" font-size="11" fill="#333333" font-family="Microsoft YaHei">仓内 verl 的痕迹：vllm/distributed/parallel_state.py:2075-2077（注释提到 verl integration）</text>
+<text x="42.0" y="1296.9499999999994" font-size="11" fill="#333333" font-family="Microsoft YaHei">训练生态清单：vllm/docs/training/rlhf.md:5-17</text>
+<rect x="36.0" y="1338.0" width="1424.0" height="58.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="1352.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">一句话记住这一页：训练与推理的运行时接口只在 RL 场景显形——「采样用 vLLM，训练完把权重同步回来」；那套同步/暂停/热更新/休眠的代码就在 vLLM 仓里，但它本身仍然不是训练框架。</text>
+<text x="36.0" y="1444.0" font-size="11" fill="#333333">图例</text>
+<rect x="148.0" y="1427.0" width="120.0" height="26.0" rx="4" fill="#eceff1" stroke="#607d8b"/>
+<text x="154.0" y="1441.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">客户端</text>
+<rect x="276.0" y="1427.0" width="120.0" height="26.0" rx="4" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="282.0" y="1441.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">边端 edge</text>
+<rect x="404.0" y="1427.0" width="120.0" height="26.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="410.0" y="1441.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 P (prefill)</text>
+<rect x="532.0" y="1427.0" width="120.0" height="26.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="538.0" y="1441.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 D (decode)</text>
+<rect x="660.0" y="1427.0" width="120.0" height="26.0" rx="4" fill="#b0e3e6" stroke="#0e8088"/>
+<text x="666.0" y="1441.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">PD Proxy</text>
+<rect x="788.0" y="1427.0" width="120.0" height="26.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="794.0" y="1441.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">中立/通用</text>
+<rect x="916.0" y="1427.0" width="120.0" height="26.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="922.0" y="1441.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">失败/取消</text>
+<rect x="1044.0" y="1427.0" width="240.0" height="26.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="1050.0" y="1441.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">运行时同步/权重更新</text>
+<text x="210.0" y="1478.0" font-size="11" fill="#666666">控制面 ZMQ</text>
+<text x="460.0" y="1478.0" font-size="11" fill="#666666">数据面 UCX·Mooncake</text>
+<text x="710.0" y="1478.0" font-size="11" fill="#666666">HTTP</text>
+<path d="M312.0,194.0 L320.0,194.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<path d="M597.0,194.0 L605.0,194.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<path d="M882.0,194.0 L890.0,194.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<path d="M1167.0,194.0 L1175.0,194.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<path d="M148.0,1476.0 L204.0,1476.0" fill="none" stroke="#9673a6" marker-end="url(#a)"/>
+<path d="M398.0,1476.0 L454.0,1476.0" fill="none" stroke="#d6b656" marker-end="url(#a)"/>
+<path d="M648.0,1476.0 L704.0,1476.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333333"/></marker></defs>
+</svg></div>
+<div class="concl"><b>一句话结论　</b>强化学习需要「用当前策略采样 → 训练 → 更新策略 → 再采样」，而采样这一步就是推理。于是 vLLM 提供了权重同步、暂停/继续、逐层热更新、休眠让卡这些为训练准备的能力——这是训练与推理唯一真实的耦合面。</div>
+<details><summary>代码锚点（8 条，可 grep）</summary><pre>权重同步配置（文档串明写 RL training）：vllm/config/weight_transfer.py:8-15
+训练侧引擎「跑在训练进程里」：vllm/distributed/weight_transfer/base.py:554-583
+四种同步后端注册表：vllm/distributed/weight_transfer/factory.py:244-266
+RLHF HTTP 控制路由（暂停/初始化/开始/结束/更新）：vllm/entrypoints/serve/dev/rlhf/api_router.py:29、:157、:175、:187、:205
+「给 RL 训练用」的推理开关：vllm/config/model.py:1965-1978（head_dtype fp32，原文 required for RL training-inference consistency）、:250-253（return_sampling_mask / routed_experts）
+休眠/唤醒：vllm/docs/features/sleep_mode.md:3、:60-64
+仓内 verl 的痕迹：vllm/distributed/parallel_state.py:2075-2077（注释提到 verl integration）
+训练生态清单：vllm/docs/training/rlhf.md:5-17</pre></details>
+</figure></body></html>

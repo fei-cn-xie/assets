@@ -1,0 +1,1257 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>站8 同时打开时会怎样 · 10 页</title><style>
+:root { --ink:#1f2328; --dim:#57606a; --line:#d0d7de; --bg:#ffffff;
+        --soft:#f6f8fa; --accent:#0969da; }
+* { box-sizing: border-box; }
+body { margin:0; padding:0 20px 80px; background:var(--bg); color:var(--ink);
+       font:15px/1.7 "Microsoft YaHei","PingFang SC",system-ui,sans-serif; }
+nav.top { position:sticky; top:0; z-index:9; background:rgba(255,255,255,.94);
+          backdrop-filter:blur(6px); border-bottom:1px solid var(--line);
+          padding:10px 0; margin-bottom:24px; font-size:13px; }
+nav.top a { color:var(--accent); text-decoration:none; margin-right:14px; }
+nav.top a:hover { text-decoration:underline; }
+h1 { font-size:24px; margin:18px 0 6px; }
+h2 { font-size:19px; margin:34px 0 8px; padding-top:10px;
+     border-top:1px solid var(--line); }
+.lead { color:var(--dim); margin:0 0 18px; }
+figure { margin:0 0 34px; }
+figcaption { font-size:14px; color:var(--dim); margin:8px 0 0; }
+.svgwrap { overflow-x:auto; border:1px solid var(--line); border-radius:8px;
+           background:#fff; padding:6px; }
+.svgwrap svg { display:block; height:auto; max-width:100%; }
+.ptitle { font-size:16px; font-weight:700; margin:0 0 4px; }
+.psub { color:var(--dim); font-size:13px; margin:0 0 10px; }
+.concl { background:var(--soft); border-left:4px solid var(--accent);
+         padding:10px 14px; margin:12px 0 0; font-size:14px; border-radius:0 6px 6px 0; }
+.concl b { color:var(--ink); }
+details { margin-top:10px; }
+summary { cursor:pointer; color:var(--accent); font-size:13px; }
+pre { background:var(--soft); padding:10px 12px; border-radius:6px;
+      white-space:pre-wrap; word-break:break-word; font-size:12.5px;
+      line-height:1.65; margin:8px 0 0; }
+.cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr));
+         gap:14px; margin:18px 0 10px; }
+.card { border:1px solid var(--line); border-radius:10px; padding:14px 16px;
+        text-decoration:none; color:inherit; display:block; }
+.card:hover { border-color:var(--accent); background:var(--soft); }
+.card .k { color:var(--dim); font-size:12px; letter-spacing:.05em; }
+.card .t { font-size:15px; font-weight:700; margin:2px 0 4px; }
+.card .d { color:var(--dim); font-size:13px; }
+.tag { display:inline-block; font-size:12px; color:var(--dim);
+       border:1px solid var(--line); border-radius:99px; padding:1px 9px; margin-left:6px; }
+</style></head><body><nav class="top"> <a href="index.html">总目录</a> <a href="../学习地图.md">学习地图.md</a></nav><h1>站8　同时打开时会怎样 · 10 页</h1>
+<p class="lead">K×桶、显存三链、调度推导链、PD 硬约束、两个 eager、五套配方</p>
+<p class="lead">本页 10 张图；点击编号跳转：<a href="#p0">1</a> <a href="#p1">2</a> <a href="#p2">3</a> <a href="#p3">4</a> <a href="#p4">5</a> <a href="#p5">6</a> <a href="#p6">7</a> <a href="#p7">8</a> <a href="#p8">9</a> <a href="#p9">10</a></p>
+<figure id="p0">
+<p class="ptitle">① 四个机制一起开时，它们其实在抢同四样东西</p>
+<p class="psub">一句话：PD 分离、Mooncake 搬 KV、图捕获、MTP 投机解码——这四个机制各自的收益写在不同的指标上，但它们花的是同一份显存、同一份算力、同一份启动时间和同一份「形状自由度」。</p>
+<div class="svgwrap"><svg xmlns="http://www.w3.org/2000/svg" width="977"1576" height="705"1138" viewBox="0 0 1576 1138">
+<rect width="1576" height="1138" fill="#ffffff"/>
+<text x="36.0" y="34.0" font-size="11" fill="#333333">① 四个机制一起开时，它们其实在抢同四样东西</text>
+<text x="36.0" y="62.0" font-size="11" fill="#666666">一句话：PD 分离、Mooncake 搬 KV、图捕获、MTP 投机解码——这四个机制各自的收益写在不同的指标上，但它们花的是同一份显存、同一份算力、同一份启动时间和同一份「形状自由度」。</text>
+<text x="36.0" y="132.0" font-size="11" fill="#333333">第一步：每个机制「买」什么、「付」什么</text>
+<rect x="36.0" y="152.0" width="220.0" height="46.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="42.0" y="166.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">机制</text>
+<rect x="256.0" y="152.0" width="620.0" height="46.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="262.0" y="166.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">买到什么</text>
+<rect x="876.0" y="152.0" width="580.0" height="46.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="882.0" y="166.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">付出什么</text>
+<rect x="36.0" y="198.0" width="220.0" height="46.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="212.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">PD 分离</text>
+<rect x="256.0" y="198.0" width="620.0" height="46.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="262.0" y="212.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">把算力密集（prefill）与带宽密集（decode）分到不同实例，各用各的卡</text>
+<rect x="876.0" y="198.0" width="580.0" height="46.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="882.0" y="212.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">整机数量翻倍；KV 要跨机搬；调度的尾段要对齐</text>
+<rect x="36.0" y="244.0" width="220.0" height="46.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="258.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">Mooncake 搬 KV</text>
+<rect x="256.0" y="244.0" width="620.0" height="46.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="262.0" y="258.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">把 decode 侧的 KV 从 P 侧拉过来，省掉重算</text>
+<rect x="876.0" y="244.0" width="580.0" height="46.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="882.0" y="258.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">带宽与延迟；额外的传输缓冲；失败要兜底（fail-closed）</text>
+<rect x="36.0" y="290.0" width="220.0" height="46.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="304.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">图捕获（CUDA/ACL Graph）</text>
+<rect x="256.0" y="290.0" width="620.0" height="46.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="262.0" y="304.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">削减每步的 CPU 提交开销 → TPOT 下降</text>
+<rect x="876.0" y="290.0" width="580.0" height="46.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="882.0" y="304.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">显存（进程级图池）；启动时间（5~20 s）；形状必须固定</text>
+<rect x="36.0" y="336.0" width="220.0" height="46.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="350.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">MTP / 投机解码</text>
+<rect x="256.0" y="336.0" width="620.0" height="46.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="262.0" y="350.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">一次前向多产出几个 token → 单请求更快</text>
+<rect x="876.0" y="336.0" width="580.0" height="46.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="882.0" y="350.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">显存（draft 权重 + lookahead 槽）；算力（被拒的草案白算）；形状变成 1+K</text>
+<text x="36.0" y="402.0" font-size="11" fill="#333333">第二步：四样稀缺资源——冲突都发生在这里</text>
+<rect x="36.0" y="422.0" width="340.0" height="118.0" rx="4" fill="#fff2cc" stroke="#d6b656"/>
+<text x="42.0" y="436.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="46.0" y="444.0" font-size="11" fill="#333333">显存</text>
+<text x="46.0" y="466.0" font-size="11" fill="#333333">权重 / KV / 激活峰值 / 图池 / draft。这五个抽屉总和固定，谁多谁少。</text>
+<rect x="388.0" y="422.0" width="340.0" height="118.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="394.0" y="436.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="398.0" y="444.0" font-size="11" fill="#333333">算力</text>
+<text x="398.0" y="466.0" font-size="11" fill="#333333">decode 本来就闲着；MTP 把闲着的算力换成 token，但被拒的草案是纯浪费。</text>
+<rect x="740.0" y="422.0" width="340.0" height="118.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="746.0" y="436.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="750.0" y="444.0" font-size="11" fill="#333333">带宽</text>
+<text x="750.0" y="466.0" font-size="11" fill="#333333">decode 卡在显存带宽；跨机搬 KV 又吃网络带宽。两条带宽不是同一根管子，但都稀缺。</text>
+<rect x="1092.0" y="422.0" width="340.0" height="118.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="1098.0" y="436.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="1102.0" y="444.0" font-size="11" fill="#333333">形状自由度</text>
+<text x="1102.0" y="466.0" font-size="11" fill="#333333">图捕获要求形状固定；MTP 把 1 变成 1+K；chunked prefill 让形状每步都变。三者互相拉扯。</text>
+<rect x="36.0" y="580.0" width="1424.0" height="116.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="42.0" y="594.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="46.0" y="602.0" font-size="11" fill="#333333">为什么「同时开」比「一个个开」难得多</text>
+<text x="46.0" y="628.0" font-size="11" fill="#333333">单独读每个机制的文档，你都会觉得它很合理；但它们的约束会互相冲突：MTP 要形状 1+K，图捕获要形状固定，chunked prefill 要形状可变，PD 又要两边形状对齐。而且冲突的表现方式几乎都不是「报错」，而是「某条优化静默失效」——你会看到性能没达到预期，却没有任何日志提示。所以这一套图的目的是：把「改一个参数会连累谁」显式画出来，而不是给出万能配方。</text>
+<rect x="36.0" y="736.0" width="1424.0" height="46.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="42.0" y="750.0" font-size="10" fill="#333333" font-family="Microsoft YaHei">本页交接：先建立「四种资源 + 四个机制」的坐标。下一步（②）把启动命令里的参数按这张坐标分类，看它们各自落在哪一格。</text>
+<rect x="36.0" y="812.0" width="1424.0" height="104.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="826.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">代码锚点（想自己去翻的时候用）</text>
+<text x="42.0" y="840.85" font-size="9" fill="#666666" font-family="Microsoft YaHei">显存五抽屉：vllm/v1/worker/gpu_worker.py:528-642（determine_available_memory）；入门套 ⑦</text>
+<text x="42.0" y="853.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">图池是进程级共用：vllm/compilation/cuda_graph.py:200；图捕获套 ⑦</text>
+<text x="42.0" y="867.85" font-size="11" fill="#333333" font-family="Microsoft YaHei">MTP 的形状影响：vllm/config/vllm.py:679（uniform_decode_query_len）；MTP 套 ⑦</text>
+<text x="42.0" y="882.7" font-size="11" fill="#333333" font-family="Microsoft YaHei">PD 的两侧形状对齐：vllm/v1/lwd_control/pd/envelope.py:215-227；MTP 套 ⑨</text>
+<text x="42.0" y="897.5500000000001" font-size="11" fill="#333333" font-family="Microsoft YaHei">chunked prefill 让形状可变：vllm/config/scheduler.py:116；进程/线程 ⑫</text>
+<rect x="36.0" y="948.0" width="1424.0" height="58.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="962.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">一句话记住这一页：四个机制各自买不同的指标，却花同一份显存/算力/带宽/形状自由度；所以「都打开」不是叠加收益，而是重新分配稀缺资源。</text>
+<text x="36.0" y="1054.0" font-size="11" fill="#333333">图例</text>
+<rect x="148.0" y="1037.0" width="120.0" height="26.0" rx="4" fill="#eceff1" stroke="#607d8b"/>
+<text x="154.0" y="1051.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">客户端</text>
+<rect x="276.0" y="1037.0" width="120.0" height="26.0" rx="4" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="282.0" y="1051.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">边端 edge</text>
+<rect x="404.0" y="1037.0" width="120.0" height="26.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="410.0" y="1051.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 P (prefill)</text>
+<rect x="532.0" y="1037.0" width="120.0" height="26.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="538.0" y="1051.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 D (decode)</text>
+<rect x="660.0" y="1037.0" width="120.0" height="26.0" rx="4" fill="#b0e3e6" stroke="#0e8088"/>
+<text x="666.0" y="1051.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">PD Proxy</text>
+<rect x="788.0" y="1037.0" width="120.0" height="26.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="794.0" y="1051.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">中立/通用</text>
+<rect x="916.0" y="1037.0" width="120.0" height="26.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="922.0" y="1051.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">失败/取消</text>
+<text x="210.0" y="1088.0" font-size="11" fill="#666666">控制面 ZMQ</text>
+<text x="460.0" y="1088.0" font-size="11" fill="#666666">数据面 UCX·Mooncake</text>
+<text x="710.0" y="1088.0" font-size="11" fill="#666666">HTTP</text>
+<path d="M148.0,1086.0 L204.0,1086.0" fill="none" stroke="#9673a6" marker-end="url(#a)"/>
+<path d="M398.0,1086.0 L454.0,1086.0" fill="none" stroke="#d6b656" marker-end="url(#a)"/>
+<path d="M648.0,1086.0 L704.0,1086.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333333"/></marker></defs>
+</svg></div>
+<div class="concl"><b>一句话结论　</b>PD 分离、Mooncake 搬 KV、图捕获、MTP 投机解码——这四个机制各自的收益写在不同的指标上，但它们花的是同一份显存、同一份算力、同一份启动时间和同一份「形状自由度」。</div>
+<details><summary>代码锚点（5 条，可 grep）</summary><pre>显存五抽屉：vllm/v1/worker/gpu_worker.py:528-642（determine_available_memory）；入门套 ⑦
+图池是进程级共用：vllm/compilation/cuda_graph.py:200；图捕获套 ⑦
+MTP 的形状影响：vllm/config/vllm.py:679（uniform_decode_query_len）；MTP 套 ⑦
+PD 的两侧形状对齐：vllm/v1/lwd_control/pd/envelope.py:215-227；MTP 套 ⑨
+chunked prefill 让形状可变：vllm/config/scheduler.py:116；进程/线程 ⑫</pre></details>
+</figure>
+<figure id="p1">
+<p class="ptitle">② 参数地图：本仓 13 个 launcher 里，哪些参数真正被改过</p>
+<p class="psub">一句话：vLLM 有上百个参数，但本仓部署实际只动了十来个；而且改哪几个完全由「硬件规模 + 要不要 MTP + 要不要图」决定。先看清这些，再谈联动。</p>
+<div class="svgwrap"><svg xmlns="http://www.w3.org/2000/svg" width="977"1576" height="856"1382" viewBox="0 0 1576 1382">
+<rect width="1576" height="1382" fill="#ffffff"/>
+<text x="36.0" y="34.0" font-size="11" fill="#333333">② 参数地图：本仓 13 个 launcher 里，哪些参数真正被改过</text>
+<text x="36.0" y="62.0" font-size="11" fill="#666666">一句话：vLLM 有上百个参数，但本仓部署实际只动了十来个；而且改哪几个完全由「硬件规模 + 要不要 MTP + 要不要图」决定。先看清这些，再谈联动。</text>
+<text x="36.0" y="132.0" font-size="11" fill="#333333">第一步：六类参数（本仓实际出现的取值）</text>
+<rect x="36.0" y="150.0" width="180.0" height="40.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="42.0" y="164.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">类别</text>
+<rect x="216.0" y="150.0" width="420.0" height="40.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="222.0" y="164.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">参数</text>
+<rect x="636.0" y="150.0" width="420.0" height="40.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="642.0" y="164.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">本仓实际取值</text>
+<rect x="1056.0" y="150.0" width="400.0" height="40.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="1062.0" y="164.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">它主要影响什么</text>
+<rect x="36.0" y="190.0" width="180.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="204.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">并行</text>
+<rect x="216.0" y="190.0" width="420.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="222.0" y="204.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">tp / dp / pp</text>
+<rect x="636.0" y="190.0" width="420.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="642.0" y="204.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">1、2、8（dp 最多 2）</text>
+<rect x="1056.0" y="190.0" width="400.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1062.0" y="204.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">决定进程数与每卡分到多少权重</text>
+<rect x="36.0" y="230.0" width="180.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="244.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">长度与批量</text>
+<rect x="216.0" y="230.0" width="420.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="222.0" y="244.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">max-model-len / max-num-seqs / max-num-batched-tokens</text>
+<rect x="636.0" y="230.0" width="420.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="642.0" y="244.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">512~65536 / 32 或 128 / 4096 或 8192</text>
+<rect x="1056.0" y="230.0" width="400.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1062.0" y="244.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">直接决定 KV 需求与并发上限</text>
+<rect x="36.0" y="270.0" width="180.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="284.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">显存水位</text>
+<rect x="216.0" y="270.0" width="420.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="222.0" y="284.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">gpu-memory-utilization</text>
+<rect x="636.0" y="270.0" width="420.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="642.0" y="284.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">0.90 / 0.95 / 0.98</text>
+<rect x="1056.0" y="270.0" width="400.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1062.0" y="284.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">越高越能挤 KV，但留给图池与碎片的余量越少</text>
+<rect x="36.0" y="310.0" width="180.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="324.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">投机</text>
+<rect x="216.0" y="310.0" width="420.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="222.0" y="324.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">speculative-config</text>
+<rect x="636.0" y="310.0" width="420.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="642.0" y="324.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">mtp，K=3（有一个包 K=1）</text>
+<rect x="1056.0" y="310.0" width="400.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1062.0" y="324.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">形状变 1+K、多占 lookahead 槽</text>
+<rect x="36.0" y="350.0" width="180.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="364.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">图</text>
+<rect x="216.0" y="350.0" width="420.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="222.0" y="364.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">enforce-eager / compilation-config</text>
+<rect x="636.0" y="350.0" width="420.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="642.0" y="364.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">P 与 edge: eager；D: FULL_DECODE_ONLY</text>
+<rect x="1056.0" y="350.0" width="400.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1062.0" y="364.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">决定有没有图池与启动时间</text>
+<rect x="36.0" y="390.0" width="180.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="404.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">PD/KV</text>
+<rect x="216.0" y="390.0" width="420.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="222.0" y="404.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">kv-transfer-config / additional-config</text>
+<rect x="636.0" y="390.0" width="420.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="642.0" y="404.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">producer/consumer + kv_port</text>
+<rect x="1056.0" y="390.0" width="400.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1062.0" y="404.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">决定 KV 往哪送、端口怎么派生</text>
+<text x="36.0" y="452.0" font-size="11" fill="#333333">第二步：六个「13 个 launcher 里零命中」的参数——别以为它们被调过</text>
+<rect x="36.0" y="470.0" width="1424.0" height="108.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="42.0" y="484.0" font-size="10" fill="#333333" font-family="Microsoft YaHei">--kv-cache-memory / --swap-space / --enable-chunked-prefill / --long-prefill-token-threshold / --scheduling-policy：全部走默认；--enable-expert-parallel 只有 f12（TP=8 的 DeepSeek 包）显式开。</text>
+<text x="42.0" y="497.5" font-size="11" fill="#c0392b" font-family="Microsoft YaHei">这意味着：本仓的 chunked prefill 是默认开启的（当前版本默认 True），没有做任何阈值调整；显存分配也完全交给 gpu-memory-utilization 一个旋钮。</text>
+<text x="36.0" y="600.0" font-size="11" fill="#333333">第三步：三个最典型的取舍（同一个参数，不同包取值差 100 倍）</text>
+<rect x="36.0" y="618.0" width="460.0" height="168.0" rx="4" fill="#fff2cc" stroke="#d6b656"/>
+<text x="42.0" y="632.0" font-size="11" fill="#c0392b" font-family="Microsoft YaHei">max-model-len：65536 / 32768 / 512</text>
+<text x="42.0" y="646.85" font-size="10" fill="#333333" font-family="Microsoft YaHei">TP=2 的包敢报 65536；TP=1 + DP=2 的包退到 32768；而 TP=1 还要开 MTP 的包索性压到 512。</text>
+<text x="42.0" y="660.35" font-size="11" fill="#333333" font-family="Microsoft YaHei">原因：单卡放完整模型后 KV 只剩零头，不压低上下文就起不来。</text>
+<rect x="518.0" y="618.0" width="460.0" height="168.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="524.0" y="632.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">max-num-seqs：128 vs 32</text>
+<text x="524.0" y="646.85" font-size="10" fill="#333333" font-family="Microsoft YaHei">TP=2 的包可以 128；TP=1 + MTP 的包只能 32（MTP 把 KV 吃到只剩几十个块，一个序列一块）。</text>
+<text x="524.0" y="660.35" font-size="11" fill="#333333" font-family="Microsoft YaHei">这是本仓注释里明说的：「64 会在启动时被拒」。</text>
+<rect x="1000.0" y="618.0" width="460.0" height="168.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="1006.0" y="632.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">gpu-memory-utilization：0.90 / 0.95 / 0.98</text>
+<text x="1006.0" y="646.85" font-size="10" fill="#333333" font-family="Microsoft YaHei">LWD 边云包留 0.90（要给主机面与图池留余量）；PD 包用 0.95；DP=2 单卡塞整模型的包拉到 0.98。</text>
+<text x="1006.0" y="660.35" font-size="11" fill="#333333" font-family="Microsoft YaHei">越高越省事，但离 OOM 越近。</text>
+<rect x="36.0" y="826.0" width="1424.0" height="96.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="840.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">把参数映射到 ① 的四格资源</text>
+<text x="42.0" y="854.85" font-size="10" fill="#333333" font-family="Microsoft YaHei">显存 ← gpu-memory-utilization / max-model-len / max-num-seqs / block-size / speculative-config / compilation-config；算力 ← max-num-batched-tokens / chunked prefill；带宽 ← tp（并行度越高通信越多）/ kv-transfer；形状自由度 ← chunked prefill × 投机 K × 图模式。</text>
+<rect x="36.0" y="962.0" width="1424.0" height="46.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="42.0" y="976.0" font-size="10" fill="#333333" font-family="Microsoft YaHei">本页交底：真正被改的只有十来个参数。下一步（③）从最硬的一条联动开始——投机解码的 K 会直接改写「图捕获的桶」。</text>
+<rect x="36.0" y="1038.0" width="1424.0" height="120.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="1052.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">代码锚点（想自己去翻的时候用）</text>
+<text x="42.0" y="1066.85" font-size="9" fill="#666666" font-family="Microsoft YaHei">并行与长度参数（本仓取值）：assets/c_home/bash/pds/30rc_1124/sidecar/cloud_p.sh:22-31、**cloud_d.sh:22-31**</text>
+<text x="42.0" y="1079.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">TP=1 + MTP 的压缩取值：assets/c_home/bash/pds/30rc_1124/dp2_tp1_194_195/cloud_p.sh:40-41、**mooncake_pd2_tp1_195/env.sh:61-64**</text>
+<text x="42.0" y="1093.85" font-size="11" fill="#333333" font-family="Microsoft YaHei">TP=8 / EP / 量化 / block-size：assets/c_home/bash/pds/fix_1120/prefill.sh:102-116</text>
+<text x="42.0" y="1108.6999999999998" font-size="11" fill="#333333" font-family="Microsoft YaHei">显式 cudagraph_capture_sizes 的包：assets/c_home/bash/pds/30rc_1124/mooncake_pd_195/decode.sh:34</text>
+<text x="42.0" y="1123.5499999999997" font-size="11" fill="#333333" font-family="Microsoft YaHei">零命中的默认参数：vllm/config/scheduler.py:116（enable_chunked_prefill 默认 True）、vllm/config/cache.py:71（block_size 默认 16，本仓 f12 显式 128）</text>
+<text x="42.0" y="1138.3999999999996" font-size="11" fill="#333333" font-family="Microsoft YaHei">全部 launcher 都开 async scheduling：各脚本的 --async-scheduling</text>
+<rect x="36.0" y="1192.0" width="1424.0" height="58.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="1206.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">一句话记住这一页：本仓只改十来个参数，核心是「并行 × 长度/批量 × 显存水位 × 是否 MTP × 是否图」；同一参数在不同包差 100 倍，差别全来自「一卡放得下多少」这个物理约束。</text>
+<text x="36.0" y="1298.0" font-size="11" fill="#333333">图例</text>
+<rect x="148.0" y="1281.0" width="120.0" height="26.0" rx="4" fill="#eceff1" stroke="#607d8b"/>
+<text x="154.0" y="1295.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">客户端</text>
+<rect x="276.0" y="1281.0" width="120.0" height="26.0" rx="4" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="282.0" y="1295.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">边端 edge</text>
+<rect x="404.0" y="1281.0" width="120.0" height="26.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="410.0" y="1295.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 P (prefill)</text>
+<rect x="532.0" y="1281.0" width="120.0" height="26.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="538.0" y="1295.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 D (decode)</text>
+<rect x="660.0" y="1281.0" width="120.0" height="26.0" rx="4" fill="#b0e3e6" stroke="#0e8088"/>
+<text x="666.0" y="1295.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">PD Proxy</text>
+<rect x="788.0" y="1281.0" width="120.0" height="26.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="794.0" y="1295.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">中立/通用</text>
+<rect x="916.0" y="1281.0" width="120.0" height="26.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="922.0" y="1295.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">失败/取消</text>
+<text x="210.0" y="1332.0" font-size="11" fill="#666666">控制面 ZMQ</text>
+<text x="460.0" y="1332.0" font-size="11" fill="#666666">数据面 UCX·Mooncake</text>
+<text x="710.0" y="1332.0" font-size="11" fill="#666666">HTTP</text>
+<path d="M148.0,1330.0 L204.0,1330.0" fill="none" stroke="#9673a6" marker-end="url(#a)"/>
+<path d="M398.0,1330.0 L454.0,1330.0" fill="none" stroke="#d6b656" marker-end="url(#a)"/>
+<path d="M648.0,1330.0 L704.0,1330.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333333"/></marker></defs>
+</svg></div>
+<div class="concl"><b>一句话结论　</b>vLLM 有上百个参数，但本仓部署实际只动了十来个；而且改哪几个完全由「硬件规模 + 要不要 MTP + 要不要图」决定。先看清这些，再谈联动。</div>
+<details><summary>代码锚点（1 条，可 grep）</summary><pre>零命中的默认参数：vllm/config/scheduler.py:116（enable_chunked_prefill 默认 True）、vllm/config/cache.py:71（block_size 默认 16，本仓 f12 显式 128）</pre></details>
+</figure>
+<figure id="p2">
+<p class="ptitle">③ 联动一：开了 MTP，图捕获的「桶」必须整批重算</p>
+<p class="psub">一句话：投机解码把 decode 的 query 长度从 1 变成 1+K；而图捕获的桶是一份硬编码的尺寸列表——两者必须对上，对不上要么被自动取整、要么直接报错起不来。</p>
+<div class="svgwrap"><svg xmlns="http://www.w3.org/2000/svg" width="977"1576" height="804"1298" viewBox="0 0 1576 1298">
+<rect width="1576" height="1298" fill="#ffffff"/>
+<text x="36.0" y="34.0" font-size="11" fill="#333333">③ 联动一：开了 MTP，图捕获的「桶」必须整批重算</text>
+<text x="36.0" y="62.0" font-size="11" fill="#666666">一句话：投机解码把 decode 的 query 长度从 1 变成 1+K；而图捕获的桶是一份硬编码的尺寸列表——两者必须对上，对不上要么被自动取整、要么直接报错起不来。</text>
+<text x="36.0" y="132.0" font-size="11" fill="#333333">第一步：一条四步因果链（每一步都能在代码里指到）</text>
+<rect x="36.0" y="152.0" width="340.0" height="118.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="42.0" y="166.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">① 你设 K=3</text>
+<text x="42.0" y="180.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">speculative-config 的 num_speculative_tokens</text>
+<rect x="397.0" y="152.0" width="340.0" height="118.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="403.0" y="166.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">② decode 的 query 长度</text>
+<text x="403.0" y="180.85" font-size="11" fill="#333333" font-family="Microsoft YaHei">变成 1+K = 4</text>
+<text x="403.0" y="195.7" font-size="9" fill="#333333" font-family="Microsoft YaHei">uniform_decode_query_len</text>
+<rect x="758.0" y="152.0" width="340.0" height="118.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="764.0" y="166.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">③ 图桶必须是 4 的倍数</text>
+<text x="764.0" y="180.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">capture size = n×(K+1)</text>
+<rect x="1119.0" y="152.0" width="340.0" height="118.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="1125.0" y="166.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">④ 运行时断言</text>
+<text x="1125.0" y="180.85" font-size="11" fill="#333333" font-family="Microsoft YaHei">padded % 4 == 0</text>
+<text x="1125.0" y="195.7" font-size="9" fill="#333333" font-family="Microsoft YaHei">否则回不到这张图</text>
+<text x="36.0" y="290.0" font-size="11" fill="#333333">第二步：同一组「最大 512」，开/不开 MTP 的桶不一样</text>
+<rect x="36.0" y="310.0" width="700.0" height="176.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="324.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="46.0" y="332.0" font-size="11" fill="#333333">不开投机（K=0，query 长度 = 1）</text>
+<text x="46.0" y="358.0" font-size="11" fill="#333333">桶可以是任意尺寸：1, 2, 4, 8, 16, 32, …, 512因为 query 长度恒为 1，padded token 数就等于请求数。所以「几个请求 → 落到哪个桶」很直观。</text>
+<rect x="796.0" y="310.0" width="664.0" height="176.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="802.0" y="324.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="806.0" y="332.0" font-size="11" fill="#333333">开 MTP（K=3，query 长度 = 4）</text>
+<text x="806.0" y="358.0" font-size="11" fill="#333333">桶必须是 4 的倍数：4, 8, 12, …, 512（实际由代码取整得到）因为一个请求就要占 4 个位置 → padded token 数 = 请求数 × 4。于是「能同时跑几个请求」= 桶大小 ÷ 4——最大的桶 512 只能装 128 个请求。</text>
+<text x="36.0" y="506.0" font-size="11" fill="#333333">第三步：对不上会怎样（三种结果，都不太直观）</text>
+<rect x="36.0" y="526.0" width="620.0" height="40.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="42.0" y="540.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">情形</text>
+<rect x="656.0" y="526.0" width="420.0" height="40.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="662.0" y="540.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">结果</text>
+<rect x="1076.0" y="526.0" width="380.0" height="40.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="1082.0" y="540.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">你能看到什么</text>
+<rect x="36.0" y="566.0" width="620.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="580.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">你显式给了 capture_sizes 且不是 K+1 的倍数</text>
+<rect x="656.0" y="566.0" width="420.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="662.0" y="580.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">引擎帮你向上取整到倍数</text>
+<rect x="1076.0" y="566.0" width="380.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1082.0" y="580.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">启动会看到「尺寸被改写」的日志</text>
+<rect x="36.0" y="606.0" width="620.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="620.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">取整后超过 max_cudagraph_capture_size</text>
+<rect x="656.0" y="606.0" width="420.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="662.0" y="620.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">直接报错，起不来</text>
+<rect x="1076.0" y="606.0" width="380.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1082.0" y="620.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">报错文案会点名「spec-decode 要求的 K+1」</text>
+<rect x="36.0" y="646.0" width="620.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="660.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">运行时批大小没对上倍数</text>
+<rect x="656.0" y="646.0" width="420.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="662.0" y="660.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">那一张图用不了 → 回落到 eager</text>
+<rect x="1076.0" y="646.0" width="380.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1082.0" y="660.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">没有日志，只表现为变慢</text>
+<rect x="36.0" y="722.0" width="1424.0" height="116.0" rx="4" fill="#fff2cc" stroke="#d6b656"/>
+<text x="42.0" y="736.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">本仓的真实组合（可以直接对照）</text>
+<text x="42.0" y="750.85" font-size="10" fill="#333333" font-family="Microsoft YaHei">· 绝大多数包：K=3 + FULL_DECODE_ONLY → 桶由引擎自动取整成 4 的倍数；</text>
+<text x="42.0" y="764.35" font-size="11" fill="#333333" font-family="Microsoft YaHei">· 有一个包（mooncake_pd_195 的 decode）手工写了 25 个 capture_sizes（4, 8, …, 100）——这些数正好都是 4 的倍数，说明写它的人已经按 K+1 对齐过；</text>
+<text x="42.0" y="779.2" font-size="11" fill="#c0392b" font-family="Microsoft YaHei">· 另一个包 K=1（DeepSeek-V4 只抽 1 个 draft）→ query 长度 2 → 桶是 2 的倍数。所以「抄参数」时最容易错的就是只抄 K 不抄桶。</text>
+<rect x="36.0" y="878.0" width="1424.0" height="46.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="42.0" y="892.0" font-size="10" fill="#333333" font-family="Microsoft YaHei">本页交接：K 还牵动另外两样东西——每个请求的 token 预算、以及 KV 的 lookahead 槽。下一步（④）把「显存的三条链」画出来：权重、图池、MTP 各自怎么吃掉 KV。</text>
+<rect x="36.0" y="954.0" width="1424.0" height="120.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="968.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">代码锚点（想自己去翻的时候用）</text>
+<text x="42.0" y="982.85" font-size="9" fill="#666666" font-family="Microsoft YaHei">K → query 长度：vllm/config/vllm.py:679；vllm/v1/worker/gpu_model_runner.py:905</text>
+<text x="42.0" y="995.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">桶按 K+1 对齐（自动取整 + 报错文案）：vllm/config/compilation.py:1503-1518、:1547-1592</text>
+<text x="42.0" y="1009.85" font-size="11" fill="#333333" font-family="Microsoft YaHei">运行时整除断言：vllm/v1/cudagraph_dispatcher.py:144-145</text>
+<text x="42.0" y="1024.7" font-size="11" fill="#333333" font-family="Microsoft YaHei">昇腾侧同款要求：vllm-ascend/docs/.../speculative_decoding.md:155-158、:222；vllm-ascend/vllm_ascend/compilation/compiler_interface.py:73-74</text>
+<text x="42.0" y="1039.55" font-size="11" fill="#333333" font-family="Microsoft YaHei">每个请求的 batched-token 预算：vllm/v1/core/sched/scheduler.py:820、:1327</text>
+<text x="42.0" y="1054.3999999999999" font-size="11" fill="#333333" font-family="Microsoft YaHei">本仓手工 capture_sizes：assets/c_home/bash/pds/30rc_1124/mooncake_pd_195/decode.sh:34</text>
+<rect x="36.0" y="1108.0" width="1424.0" height="58.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="1122.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">一句话记住这一页：K 不只影响「猜几个」——它把 decode 的形状改成 1+K，于是图桶、每请求 token 预算、KV lookahead 三样都要跟着改；只改 K 不改桶，是最常见的配置错。</text>
+<text x="36.0" y="1214.0" font-size="11" fill="#333333">图例</text>
+<rect x="148.0" y="1197.0" width="120.0" height="26.0" rx="4" fill="#eceff1" stroke="#607d8b"/>
+<text x="154.0" y="1211.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">客户端</text>
+<rect x="276.0" y="1197.0" width="120.0" height="26.0" rx="4" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="282.0" y="1211.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">边端 edge</text>
+<rect x="404.0" y="1197.0" width="120.0" height="26.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="410.0" y="1211.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 P (prefill)</text>
+<rect x="532.0" y="1197.0" width="120.0" height="26.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="538.0" y="1211.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 D (decode)</text>
+<rect x="660.0" y="1197.0" width="120.0" height="26.0" rx="4" fill="#b0e3e6" stroke="#0e8088"/>
+<text x="666.0" y="1211.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">PD Proxy</text>
+<rect x="788.0" y="1197.0" width="120.0" height="26.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="794.0" y="1211.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">中立/通用</text>
+<rect x="916.0" y="1197.0" width="120.0" height="26.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="922.0" y="1211.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">失败/取消</text>
+<text x="210.0" y="1248.0" font-size="11" fill="#666666">控制面 ZMQ</text>
+<text x="460.0" y="1248.0" font-size="11" fill="#666666">数据面 UCX·Mooncake</text>
+<text x="710.0" y="1248.0" font-size="11" fill="#666666">HTTP</text>
+<path d="M378.0,211.0 L394.0,211.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<path d="M739.0,211.0 L755.0,211.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<path d="M1100.0,211.0 L1116.0,211.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<path d="M148.0,1246.0 L204.0,1246.0" fill="none" stroke="#9673a6" marker-end="url(#a)"/>
+<path d="M398.0,1246.0 L454.0,1246.0" fill="none" stroke="#d6b656" marker-end="url(#a)"/>
+<path d="M648.0,1246.0 L704.0,1246.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333333"/></marker></defs>
+</svg></div>
+<div class="concl"><b>一句话结论　</b>投机解码把 decode 的 query 长度从 1 变成 1+K；而图捕获的桶是一份硬编码的尺寸列表——两者必须对上，对不上要么被自动取整、要么直接报错起不来。</div>
+<details><summary>代码锚点（5 条，可 grep）</summary><pre>K → query 长度：vllm/config/vllm.py:679；vllm/v1/worker/gpu_model_runner.py:905
+桶按 K+1 对齐（自动取整 + 报错文案）：vllm/config/compilation.py:1503-1518、:1547-1592
+运行时整除断言：vllm/v1/cudagraph_dispatcher.py:144-145
+昇腾侧同款要求：vllm-ascend/docs/.../speculative_decoding.md:155-158、:222；vllm-ascend/vllm_ascend/compilation/compiler_interface.py:73-74
+每个请求的 batched-token 预算：vllm/v1/core/sched/scheduler.py:820、:1327</pre></details>
+</figure>
+<figure id="p3">
+<p class="ptitle">④ 联动二：想给 KV 多留一点，先搞清楚是谁在吃它</p>
+<p class="psub">一句话：可用 KV = 上限 − 权重 − 激活峰值 − 图池 − 碎片；所以「权重变大」「开图捕获」「开 MTP」都会让并发变小——只是路径不同。</p>
+<div class="svgwrap"><svg xmlns="http://www.w3.org/2000/svg" width="977"1576" height="791"1276" viewBox="0 0 1576 1276">
+<rect width="1576" height="1276" fill="#ffffff"/>
+<text x="36.0" y="34.0" font-size="11" fill="#333333">④ 联动二：想给 KV 多留一点，先搞清楚是谁在吃它</text>
+<text x="36.0" y="62.0" font-size="11" fill="#666666">一句话：可用 KV = 上限 − 权重 − 激活峰值 − 图池 − 碎片；所以「权重变大」「开图捕获」「开 MTP」都会让并发变小——只是路径不同。</text>
+<rect x="36.0" y="150.0" width="1424.0" height="92.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="164.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">可用 KV = gpu_memory_utilization × 卡总显存 − 非 KV 部分</text>
+<text x="42.0" y="178.85" font-size="10" fill="#333333" font-family="Microsoft YaHei">其中「非 KV 部分」= 权重 + 激活峰值（profile 量出）+ 图池估算（可选计入）+ 碎片；剩下的全部被切成块 → 块数 ÷ 每请求块数 = 能开多少并发。</text>
+<text x="36.0" y="260.0" font-size="11" fill="#333333">第一步：三条「减少 KV」的路径（本仓都能找到实例）</text>
+<rect x="36.0" y="280.0" width="460.0" height="200.0" rx="4" fill="#fff2cc" stroke="#d6b656"/>
+<text x="42.0" y="294.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="46.0" y="302.0" font-size="11" fill="#333333">链一：权重变大 → KV 变少</text>
+<text x="46.0" y="328.0" font-size="11" fill="#333333">TP=1 时整模型都压在一张卡上：权重占比越高 → 剩余越少 → 块数越少 → 并发越低。本仓表现：TP=1 + MTP 的包只能报 max_num_seqs=32，甚至把 max_model_len 压到 512 才起得来。（TP=2 的包就能报 65536 / 128）</text>
+<rect x="518.0" y="280.0" width="460.0" height="200.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="524.0" y="294.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="528.0" y="302.0" font-size="11" fill="#333333">链二：开图捕获 → KV 变少</text>
+<text x="528.0" y="328.0" font-size="11" fill="#333333">图池是一整块进程级内存（≈各桶峰值取 max），估算时会被从可用显存里扣掉（可开关）。本仓表现：P 与 edge 用 --enforce-eager 正是为了省这块；D 侧要 decode 吞吐，所以接受这块开销。</text>
+<rect x="1000.0" y="280.0" width="460.0" height="200.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="1006.0" y="294.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="1010.0" y="302.0" font-size="11" fill="#333333">链三：开 MTP → KV 变少</text>
+<text x="1010.0" y="328.0" font-size="11" fill="#333333">两块开销：① draft 权重与缓冲（MTP 复用 embedding/lm_head，增量小）；② 每请求多留 K 个 lookahead 槽（草案要往 target 之外写 KV）。本仓注释明说：MTP 把 KV 吃到只剩几十个块。</text>
+<text x="36.0" y="500.0" font-size="11" fill="#333333">第二步：两个「覆盖」关系（设了就生效，别指望叠加）</text>
+<rect x="36.0" y="520.0" width="700.0" height="148.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="42.0" y="534.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="46.0" y="542.0" font-size="11" fill="#333333">kv_cache_memory_bytes 会无视 gpu_memory_utilization</text>
+<text x="46.0" y="568.0" font-size="11" fill="#333333">一旦直接给 KV 分配字节数，引擎会跳过 memory profiling，完全按你给的数切块（日志里会明说「不遵守 gpu_memory_utilization」）。→ 想精确控制就给它；想省心就用百分比。二者只信一个。</text>
+<rect x="796.0" y="520.0" width="664.0" height="148.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="802.0" y="534.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="806.0" y="542.0" font-size="11" fill="#333333">max_model_len 放不下 KV 直接起不来</text>
+<text x="806.0" y="568.0" font-size="11" fill="#333333">报错会告诉你「KV 需要多少、可用多少」，并给出二分搜索出来的「本卡最多能支持多长」。本仓有一个包正是靠这一条把 max_model_len 压到 512 才起得来。</text>
+<rect x="36.0" y="708.0" width="1424.0" height="108.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="42.0" y="722.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">第三步：三个「同时开就互相拆台」的组合</text>
+<text x="42.0" y="736.85" font-size="10" fill="#333333" font-family="Microsoft YaHei">① TP=1 + MTP + 大 max_model_len：权重 + MTP 开销已经吃满，KV 只剩零头 → 起不来。本仓解法是把 mml 压到 512 或干脆不开 MTP。</text>
+<text x="42.0" y="750.35" font-size="11" fill="#333333" font-family="Microsoft YaHei">② FULL_DECODE_ONLY + 小 max_num_seqs：图池按最大桶抓，桶又由 seqs×(1+K)×2 决定 → seqs 太小会让桶太小、图收益变小。</text>
+<text x="42.0" y="765.2" font-size="11" fill="#333333" font-family="Microsoft YaHei">③ 高 gpu_memory_utilization + 图捕获：水位拉到 0.98 时，图池与碎片没有余量 → 捕获阶段容易 OOM（而捕获段没有回退）。</text>
+<rect x="36.0" y="856.0" width="1424.0" height="46.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="42.0" y="870.0" font-size="10" fill="#333333" font-family="Microsoft YaHei">本页交接：显存的三条链讲完。下一步（⑤）转到调度参数——那里有一整条「你没设，引擎替你算」的推导链。</text>
+<rect x="36.0" y="932.0" width="1424.0" height="120.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="946.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">代码锚点（想自己去翻的时候用）</text>
+<text x="42.0" y="960.85" font-size="9" fill="#666666" font-family="Microsoft YaHei">可用 KV 的计算：vllm/v1/worker/gpu_worker.py:619-625；图池估算开关 :588-592</text>
+<text x="42.0" y="973.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">kv_cache_memory_bytes 覆盖：vllm/config/cache.py:228-235；vllm/v1/worker/gpu_worker.py:542-564</text>
+<text x="42.0" y="987.85" font-size="11" fill="#333333" font-family="Microsoft YaHei">max_model_len 放不下的报错与拟合：vllm/v1/core/kv_cache_utils.py:872-909、:921-972（auto fit）</text>
+<text x="42.0" y="1002.7" font-size="11" fill="#333333" font-family="Microsoft YaHei">lookahead 槽：vllm/config/vllm.py:633-658；scheduler.py:744</text>
+<text x="42.0" y="1017.5500000000001" font-size="11" fill="#333333" font-family="Microsoft YaHei">块数随 block_size 反比：vllm/v1/core/kv_cache_utils.py:1747-1751</text>
+<text x="42.0" y="1032.4" font-size="11" fill="#333333" font-family="Microsoft YaHei">本仓取值：assets/c_home/bash/pds/30rc_1124/dp2_tp1_194_195/cloud_p.sh:40-41（seqs 32 / gpu 0.95）、mooncake_pd2_tp1_195/env.sh:61-64（mml 512 / gpu 0.98）</text>
+<rect x="36.0" y="1086.0" width="1424.0" height="58.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="1100.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">一句话记住这一页：想让并发变大，只有三条路——减少权重占用（加 TP）、别开图池（eager）、别开 MTP；而「提高 gpu_memory_utilization」只是把水位线抬高，代价是离 OOM 更近。</text>
+<text x="36.0" y="1192.0" font-size="11" fill="#333333">图例</text>
+<rect x="148.0" y="1175.0" width="120.0" height="26.0" rx="4" fill="#eceff1" stroke="#607d8b"/>
+<text x="154.0" y="1189.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">客户端</text>
+<rect x="276.0" y="1175.0" width="120.0" height="26.0" rx="4" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="282.0" y="1189.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">边端 edge</text>
+<rect x="404.0" y="1175.0" width="120.0" height="26.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="410.0" y="1189.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 P (prefill)</text>
+<rect x="532.0" y="1175.0" width="120.0" height="26.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="538.0" y="1189.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 D (decode)</text>
+<rect x="660.0" y="1175.0" width="120.0" height="26.0" rx="4" fill="#b0e3e6" stroke="#0e8088"/>
+<text x="666.0" y="1189.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">PD Proxy</text>
+<rect x="788.0" y="1175.0" width="120.0" height="26.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="794.0" y="1189.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">中立/通用</text>
+<rect x="916.0" y="1175.0" width="120.0" height="26.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="922.0" y="1189.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">失败/取消</text>
+<rect x="1044.0" y="1175.0" width="240.0" height="26.0" rx="4" fill="#fff2cc" stroke="#d6b656"/>
+<text x="1050.0" y="1189.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">权重/显存压力</text>
+<text x="210.0" y="1226.0" font-size="11" fill="#666666">控制面 ZMQ</text>
+<text x="460.0" y="1226.0" font-size="11" fill="#666666">数据面 UCX·Mooncake</text>
+<text x="710.0" y="1226.0" font-size="11" fill="#666666">HTTP</text>
+<path d="M148.0,1224.0 L204.0,1224.0" fill="none" stroke="#9673a6" marker-end="url(#a)"/>
+<path d="M398.0,1224.0 L454.0,1224.0" fill="none" stroke="#d6b656" marker-end="url(#a)"/>
+<path d="M648.0,1224.0 L704.0,1224.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333333"/></marker></defs>
+</svg></div>
+<div class="concl"><b>一句话结论　</b>可用 KV = 上限 − 权重 − 激活峰值 − 图池 − 碎片；所以「权重变大」「开图捕获」「开 MTP」都会让并发变小——只是路径不同。</div>
+<details><summary>代码锚点（5 条，可 grep）</summary><pre>可用 KV 的计算：vllm/v1/worker/gpu_worker.py:619-625；图池估算开关 :588-592
+kv_cache_memory_bytes 覆盖：vllm/config/cache.py:228-235；vllm/v1/worker/gpu_worker.py:542-564
+max_model_len 放不下的报错与拟合：vllm/v1/core/kv_cache_utils.py:872-909、:921-972（auto fit）
+lookahead 槽：vllm/config/vllm.py:633-658；scheduler.py:744
+块数随 block_size 反比：vllm/v1/core/kv_cache_utils.py:1747-1751</pre></details>
+</figure>
+<figure id="p4">
+<p class="ptitle">⑤ 联动三：max_num_batched_tokens 不是你设的，是引擎算出来的</p>
+<p class="psub">一句话：如果你不设它，引擎会按显存大小 → 用途 → 性能模式 → 是否分块 → 最大长度依次推导；而它又会反过来决定图桶、每步能装多少 token、甚至 max_num_seqs。</p>
+<div class="svgwrap"><svg xmlns="http://www.w3.org/2000/svg" width="977"1576" height="822"1326" viewBox="0 0 1576 1326">
+<rect width="1576" height="1326" fill="#ffffff"/>
+<text x="36.0" y="34.0" font-size="11" fill="#333333">⑤ 联动三：max_num_batched_tokens 不是你设的，是引擎算出来的</text>
+<text x="36.0" y="62.0" font-size="11" fill="#666666">一句话：如果你不设它，引擎会按显存大小 → 用途 → 性能模式 → 是否分块 → 最大长度依次推导；而它又会反过来决定图桶、每步能装多少 token、甚至 max_num_seqs。</text>
+<text x="36.0" y="132.0" font-size="11" fill="#333333">第一步：七步推导（只看「用户没显式设」的情形）</text>
+<rect x="36.0" y="150.0" width="196.0" height="104.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="164.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">① 按显存选默认</text>
+<text x="42.0" y="178.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">大显存 16384 / 中等 8192 / 小 2048</text>
+<rect x="240.0" y="150.0" width="196.0" height="104.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="246.0" y="164.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">② 按用途选默认</text>
+<text x="246.0" y="178.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">纯 LLM 与 API server 取值不同</text>
+<rect x="444.0" y="150.0" width="196.0" height="104.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="450.0" y="164.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">③ 性能模式翻倍</text>
+<text x="450.0" y="178.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">throughput 模式下默认值 ×2</text>
+<rect x="648.0" y="150.0" width="196.0" height="104.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="654.0" y="164.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">④ 关分块则抬高下限</text>
+<text x="654.0" y="178.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">不分块时一步要能装下整条序列</text>
+<rect x="852.0" y="150.0" width="196.0" height="104.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="858.0" y="164.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">⑤ 多模态再抬</text>
+<text x="858.0" y="178.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">至少能装下一个样本的 token</text>
+<rect x="1056.0" y="150.0" width="196.0" height="104.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="1062.0" y="164.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">⑥ 按上限截断</text>
+<text x="1062.0" y="178.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">不超过 seqs × max_model_len</text>
+<rect x="1260.0" y="150.0" width="196.0" height="104.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="1266.0" y="164.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">⑦ 反推 max_num_seqs</text>
+<text x="1266.0" y="178.85" font-size="9" fill="#333333" font-family="Microsoft YaHei">取默认值与 batched 的较小者</text>
+<text x="36.0" y="276.0" font-size="11" fill="#333333">第二步：推导完还有四条硬校验（前两条直接拒绝启动）</text>
+<rect x="36.0" y="294.0" width="560.0" height="36.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="42.0" y="308.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">条件</text>
+<rect x="596.0" y="294.0" width="260.0" height="36.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="602.0" y="308.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">结果</text>
+<rect x="856.0" y="294.0" width="600.0" height="36.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="862.0" y="308.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">为什么</text>
+<rect x="36.0" y="330.0" width="560.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="344.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">batched </text>
+<rect x="596.0" y="330.0" width="260.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="602.0" y="344.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">ValueError</text>
+<rect x="856.0" y="330.0" width="600.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="862.0" y="344.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">不分块就必须一步装下整条序列</text>
+<rect x="36.0" y="366.0" width="560.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="380.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">batched </text>
+<rect x="596.0" y="366.0" width="260.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="602.0" y="380.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">ValueError</text>
+<rect x="856.0" y="366.0" width="600.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="862.0" y="380.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">一步连一个请求一个 token 都装不下</text>
+<rect x="36.0" y="402.0" width="560.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="416.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">batched &gt; seqs × max_model_len</text>
+<rect x="596.0" y="402.0" width="260.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="602.0" y="416.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">只警告</text>
+<rect x="856.0" y="402.0" width="600.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="862.0" y="416.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">配置过松，不会炸</text>
+<rect x="36.0" y="438.0" width="560.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="452.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">long_prefill_token_threshold &gt; max_model_len</text>
+<rect x="596.0" y="438.0" width="260.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="602.0" y="452.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">ValueError</text>
+<rect x="856.0" y="438.0" width="600.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="862.0" y="452.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">阈值比模型长度还大没意义</text>
+<text x="36.0" y="492.0" font-size="11" fill="#333333">第三步：这个参数反过来决定四样东西（联动闭环）</text>
+<rect x="36.0" y="510.0" width="700.0" height="168.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="42.0" y="524.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="46.0" y="532.0" font-size="11" fill="#333333">① 图桶的上限</text>
+<text x="46.0" y="558.0" font-size="11" fill="#333333">capture size 的候选先生成、再被 max_num_batched_tokens 截断；你把这个数调小 → 桶的上限跟着变小 → 大 batch 就落回 eager。本仓实例：一个包把 batched 设成 4096（TP=8 的 DeepSeek），桶上限自然更小。</text>
+<rect x="796.0" y="510.0" width="664.0" height="168.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="802.0" y="524.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="806.0" y="532.0" font-size="11" fill="#333333">② 每步能装多少 token</text>
+<text x="806.0" y="558.0" font-size="11" fill="#333333">这就是「一步的 token 预算」——chunked prefill 切块、投机验证占 1+K，都从这里扣。调小 → 延迟更平滑但吞吐降；调大 → 吞吐高但长 prefill 会让 decode 卡顿。</text>
+<rect x="36.0" y="718.0" width="700.0" height="148.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="732.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="46.0" y="740.0" font-size="11" fill="#333333">③ max_num_seqs（当它没被显式设时）</text>
+<text x="46.0" y="766.0" font-size="11" fill="#333333">取「默认值」与 max_num_batched_tokens 的较小者；所以你把 batched 压小，seqs 会跟着被压小——两个一起变，容易误判是谁的原因。</text>
+<rect x="796.0" y="718.0" width="664.0" height="148.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="802.0" y="732.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="806.0" y="740.0" font-size="11" fill="#333333">④ 投机解码的预算</text>
+<text x="806.0" y="766.0" font-size="11" fill="#333333">开了 MTP 后每个请求要占 1+K 个位置，还要扣 draft 的额外槽，所以「同一份 batched 预算能装几个请求」会明显变少。</text>
+<rect x="36.0" y="906.0" width="1424.0" height="46.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="42.0" y="920.0" font-size="10" fill="#333333" font-family="Microsoft YaHei">本页交接：调度参数是一条完整的推导链。下一步（⑥）走到边云 PD 那边——那里有一批更硬的约束（两侧块大小必须相等、P 侧请求被强制改写）。</text>
+<rect x="36.0" y="982.0" width="1424.0" height="120.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="996.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">代码锚点（想自己去翻的时候用）</text>
+<text x="42.0" y="1010.85" font-size="9" fill="#666666" font-family="Microsoft YaHei">七步推导：vllm/engine/arg_utils.py:2948-2957（入口）、:2730-2788（按显存/用途）、:2966-2970（throughput ×2）、:2976-2981（关分块抬高）、:2983-2998（多模态）、:3000-3006（截断）、:3014-3016（反推 seqs）</text>
+<text x="42.0" y="1023.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">四条硬校验：vllm/config/scheduler.py:296-307、:309-314、:316-322、:324-329</text>
+<text x="42.0" y="1037.85" font-size="11" fill="#333333" font-family="Microsoft YaHei">桶被 batched 截断：vllm/config/vllm.py:2348-2349、:2364-2366</text>
+<text x="42.0" y="1052.6999999999998" font-size="11" fill="#333333" font-family="Microsoft YaHei">每步 token 预算：vllm/v1/core/sched/scheduler.py:588-591、:670-672</text>
+<text x="42.0" y="1067.5499999999997" font-size="11" fill="#333333" font-family="Microsoft YaHei">本仓实例：assets/c_home/bash/pds/fix_1120/prefill.sh:108（batched 4096）、其余包 8192</text>
+<rect x="36.0" y="1136.0" width="1424.0" height="58.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="1150.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">一句话记住这一页：max_num_batched_tokens 是「一步的 token 预算」，默认值由引擎按显存/用途/模式/分块依次推导，推导完还会反推 max_num_seqs、截断图桶、扣掉投机占位——看清它，才能解释「为什么我没改却变了」。</text>
+<text x="36.0" y="1242.0" font-size="11" fill="#333333">图例</text>
+<rect x="148.0" y="1225.0" width="120.0" height="26.0" rx="4" fill="#eceff1" stroke="#607d8b"/>
+<text x="154.0" y="1239.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">客户端</text>
+<rect x="276.0" y="1225.0" width="120.0" height="26.0" rx="4" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="282.0" y="1239.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">边端 edge</text>
+<rect x="404.0" y="1225.0" width="120.0" height="26.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="410.0" y="1239.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 P (prefill)</text>
+<rect x="532.0" y="1225.0" width="120.0" height="26.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="538.0" y="1239.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 D (decode)</text>
+<rect x="660.0" y="1225.0" width="120.0" height="26.0" rx="4" fill="#b0e3e6" stroke="#0e8088"/>
+<text x="666.0" y="1239.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">PD Proxy</text>
+<rect x="788.0" y="1225.0" width="120.0" height="26.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="794.0" y="1239.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">中立/通用</text>
+<rect x="916.0" y="1225.0" width="120.0" height="26.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="922.0" y="1239.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">失败/取消</text>
+<text x="210.0" y="1276.0" font-size="11" fill="#666666">控制面 ZMQ</text>
+<text x="460.0" y="1276.0" font-size="11" fill="#666666">数据面 UCX·Mooncake</text>
+<text x="710.0" y="1276.0" font-size="11" fill="#666666">HTTP</text>
+<path d="M233.0,202.0 L239.0,202.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<path d="M437.0,202.0 L443.0,202.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<path d="M641.0,202.0 L647.0,202.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<path d="M845.0,202.0 L851.0,202.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<path d="M1049.0,202.0 L1055.0,202.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<path d="M1253.0,202.0 L1259.0,202.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<path d="M148.0,1274.0 L204.0,1274.0" fill="none" stroke="#9673a6" marker-end="url(#a)"/>
+<path d="M398.0,1274.0 L454.0,1274.0" fill="none" stroke="#d6b656" marker-end="url(#a)"/>
+<path d="M648.0,1274.0 L704.0,1274.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333333"/></marker></defs>
+</svg></div>
+<div class="concl"><b>一句话结论　</b>如果你不设它，引擎会按显存大小 → 用途 → 性能模式 → 是否分块 → 最大长度依次推导；而它又会反过来决定图桶、每步能装多少 token、甚至 max_num_seqs。</div>
+<details><summary>代码锚点（4 条，可 grep）</summary><pre>七步推导：vllm/engine/arg_utils.py:2948-2957（入口）、:2730-2788（按显存/用途）、:2966-2970（throughput ×2）、:2976-2981（关分块抬高）、:2983-2998（多模态）、:3000-3006（截断）、:3014-3016（反推 seqs）
+四条硬校验：vllm/config/scheduler.py:296-307、:309-314、:316-322、:324-329
+桶被 batched 截断：vllm/config/vllm.py:2348-2349、:2364-2366
+每步 token 预算：vllm/v1/core/sched/scheduler.py:588-591、:670-672</pre></details>
+</figure>
+<figure id="p5">
+<p class="ptitle">⑥ 联动四：开了 PD 之后，一批参数从「建议」变成「必须」</p>
+<p class="psub">一句话：PD 要求 P 与 D 在块大小、并行度、拓扑上对齐，否则连不上或算错；而且 P 侧收到的请求会被引擎强制改写（max_tokens=1 等）。</p>
+<div class="svgwrap"><svg xmlns="http://www.w3.org/2000/svg" width="977"1576" height="903"1458" viewBox="0 0 1576 1458">
+<rect width="1576" height="1458" fill="#ffffff"/>
+<text x="36.0" y="34.0" font-size="11" fill="#333333">⑥ 联动四：开了 PD 之后，一批参数从「建议」变成「必须」</text>
+<text x="36.0" y="62.0" font-size="11" fill="#666666">一句话：PD 要求 P 与 D 在块大小、并行度、拓扑上对齐，否则连不上或算错；而且 P 侧收到的请求会被引擎强制改写（max_tokens=1 等）。</text>
+<text x="36.0" y="132.0" font-size="11" fill="#333333">第一步：五条「两侧必须一致」（不一致会在启动或首个请求时报错）</text>
+<rect x="36.0" y="150.0" width="260.0" height="40.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="42.0" y="164.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">项</text>
+<rect x="296.0" y="150.0" width="620.0" height="40.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="302.0" y="164.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">要求</text>
+<rect x="916.0" y="150.0" width="540.0" height="40.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="922.0" y="164.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">踩中时的表现</text>
+<rect x="36.0" y="190.0" width="260.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="204.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">块大小（hash 粒度）</text>
+<rect x="296.0" y="190.0" width="620.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="302.0" y="204.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">两侧 block_size × DCP 必须相等</text>
+<rect x="916.0" y="190.0" width="540.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="922.0" y="204.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">「PD manifest and cloud hash block sizes differ」</text>
+<rect x="36.0" y="230.0" width="260.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="244.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">P/D 的 TP</text>
+<rect x="296.0" y="230.0" width="620.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="302.0" y="244.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">要么相等，要么满足「P ≥ D 且能整除」（否则切片优化静默关闭）</text>
+<rect x="916.0" y="230.0" width="540.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="922.0" y="244.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">kv_connector_extra_config 里的 dp_size/tp_size 要写部署级真实值</text>
+<rect x="36.0" y="270.0" width="260.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="284.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">拓扑规模</text>
+<rect x="296.0" y="270.0" width="620.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="302.0" y="284.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">edge 必须 DP=1；cloud 的 DP 必须等于拓扑里写的 DP 数</text>
+<rect x="916.0" y="270.0" width="540.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="922.0" y="284.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">引擎启动时校验，不符直接 ValueError</text>
+<rect x="36.0" y="310.0" width="260.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="324.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">LWD 并行白名单</text>
+<rect x="296.0" y="310.0" width="620.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="302.0" y="324.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">不支持 PP / PCP / DCP / 弹性 EP /跨 DP 的 embedding</text>
+<rect x="916.0" y="310.0" width="540.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="922.0" y="324.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">配置期就 fail-fast</text>
+<rect x="36.0" y="350.0" width="260.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="364.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">KV 端口与 rank</text>
+<rect x="296.0" y="350.0" width="620.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="302.0" y="364.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">每个 DP/TP 组合的 kv_port 不能撞</text>
+<rect x="916.0" y="350.0" width="540.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="922.0" y="364.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">用 data_parallel_index 派生，不是 data_parallel_rank</text>
+<text x="36.0" y="412.0" font-size="11" fill="#333333">第二步：PD 会强制改写请求字段（用户传的会被覆盖）</text>
+<rect x="36.0" y="430.0" width="1424.0" height="104.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="42.0" y="444.0" font-size="10" fill="#333333" font-family="Microsoft YaHei">P 侧（prefill 实例）收到请求后，引擎会把它改成：max_tokens=1、min_tokens=1、ignore_eos=True、抑制用户可见输出，并设置 KV 传输标记（远端 prefill/decode 各一套）。</text>
+<text x="42.0" y="457.5" font-size="11" fill="#333333" font-family="Microsoft YaHei">D 侧相反：打开「远端 prefill」并跳过本地前缀缓存读取（因为 KV 是别人给的，读本地缓存会错）。</text>
+<text x="42.0" y="472.35" font-size="11" fill="#c0392b" font-family="Microsoft YaHei">含义：P 实例不产出用户可见 token，它只负责把 KV 算出来交出去。</text>
+<rect x="36.0" y="574.0" width="700.0" height="152.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="42.0" y="588.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="46.0" y="596.0" font-size="11" fill="#333333">长度预算：PD 各段必须装得下</text>
+<text x="46.0" y="622.0" font-size="11" fill="#333333">P 需要 required = 交接点 + 1 个位置；D 需要 n + m（输入 + 输出）。超过 max_model_len 直接报「PD stage input/output length exceeds the model budget」。这就是为什么 PD 包里 max_model_len 要从「最长 prompt + 生成长度」反推。</text>
+<rect x="796.0" y="574.0" width="664.0" height="152.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="802.0" y="588.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="806.0" y="596.0" font-size="11" fill="#333333">与 MTP 的叠加（本仓真实约束）</text>
+<text x="806.0" y="622.0" font-size="11" fill="#333333">D 侧一次要算 1+K 个位置 → 尾段长度必须能对齐 1+K；MTP 层还有自己独立的 KV（作为额外层单独编号，只传一次）；所以「开 PD」和「开 MTP」各自都要求对齐，两者叠加时对齐点更多。</text>
+<text x="36.0" y="748.0" font-size="11" fill="#333333">第三步：本仓三种 PD 包的差异（同一个模型，参数差很多）</text>
+<rect x="36.0" y="766.0" width="340.0" height="38.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="42.0" y="780.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">包</text>
+<rect x="376.0" y="766.0" width="620.0" height="38.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="382.0" y="780.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">关键参数</text>
+<rect x="996.0" y="766.0" width="460.0" height="38.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="1002.0" y="780.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">为什么这么配</text>
+<rect x="36.0" y="804.0" width="340.0" height="38.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="818.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">sidecar / in_process</text>
+<rect x="376.0" y="804.0" width="620.0" height="38.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="382.0" y="818.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">TP=2，mml 65536，seqs 128</text>
+<rect x="996.0" y="804.0" width="460.0" height="38.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1002.0" y="818.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">TP=2 放得下模型 → 敢报长上下文</text>
+<rect x="36.0" y="842.0" width="340.0" height="38.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="856.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">dp2_tp1_194_195</text>
+<rect x="376.0" y="842.0" width="620.0" height="38.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="382.0" y="856.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">TP=1 + DP=2，mml 32768，seqs 32</text>
+<rect x="996.0" y="842.0" width="460.0" height="38.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1002.0" y="856.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">一卡一副本 → 上下文与并发都得压</text>
+<rect x="36.0" y="880.0" width="340.0" height="38.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="894.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">mooncake_pd2_tp1_195</text>
+<rect x="376.0" y="880.0" width="620.0" height="38.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="382.0" y="894.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">TP=1 + DP=2，mml 512，seqs 32，gpu 0.98</text>
+<rect x="996.0" y="880.0" width="460.0" height="38.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1002.0" y="894.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">为了「一卡塞下模型 + 开 MTP」把上下文压到极小</text>
+<rect x="36.0" y="918.0" width="340.0" height="38.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="932.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">mooncake_pd_195</text>
+<rect x="376.0" y="918.0" width="620.0" height="38.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="382.0" y="932.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">TP=2，seqs 128，D 侧手写 25 个 capture_sizes</text>
+<rect x="996.0" y="918.0" width="460.0" height="38.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1002.0" y="932.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">保留了参考实现的手工桶（都是 4 的倍数，对齐 K+1）</text>
+<rect x="36.0" y="956.0" width="340.0" height="38.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="970.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">fix_1120</text>
+<rect x="376.0" y="956.0" width="620.0" height="38.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="382.0" y="970.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">TP=8 + 专家并行 + 量化 + block 128，K=1</text>
+<rect x="996.0" y="956.0" width="460.0" height="38.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1002.0" y="970.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">DeepSeek 大模型必须切 8 卡；只抽 1 个 draft</text>
+<rect x="36.0" y="1030.0" width="1424.0" height="46.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="42.0" y="1044.0" font-size="10" fill="#333333" font-family="Microsoft YaHei">本页交接：PD 的硬约束讲完。下一步（⑦）把最容易混淆的一件事说清——「enforce-eager」其实有两个作用域。</text>
+<rect x="36.0" y="1106.0" width="1424.0" height="128.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="1120.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">代码锚点（想自己去翻的时候用）</text>
+<text x="42.0" y="1134.85" font-size="9" fill="#666666" font-family="Microsoft YaHei">块大小必须相等：vllm/v1/lwd_control/pd/cloud_runtime.py:219-221；vllm/v1/core/kv_cache_utils.py:717-741（hash_block_size = block_size × DCP）</text>
+<text x="42.0" y="1147.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">P/D TP 关系与切片：vllm-ascend/.../kv_pool/ascend_store/metadata.py:80-113；sfa_pd_rd2h/worker.py:743-756</text>
+<text x="42.0" y="1161.85" font-size="11" fill="#333333" font-family="Microsoft YaHei">LWD 并行白名单与 DP 校验：vllm/distributed/lwd/lwd_parallel_groups.py:216-261；vllm/v1/engine/core.py:1336-1350</text>
+<text x="42.0" y="1176.6999999999998" font-size="11" fill="#333333" font-family="Microsoft YaHei">P 侧请求改写：vllm/v1/lwd_control/pd/cloud_runtime.py:358-383</text>
+<text x="42.0" y="1191.5499999999997" font-size="11" fill="#333333" font-family="Microsoft YaHei">长度预算：cloud_runtime.py:210-229</text>
+<text x="42.0" y="1206.3999999999996" font-size="11" fill="#333333" font-family="Microsoft YaHei">拓扑必填项：vllm/config/lwd/topology.py:426-458</text>
+<text x="42.0" y="1221.2499999999995" font-size="11" fill="#333333" font-family="Microsoft YaHei">本仓参数：各包 cloud_{p,d}.sh / decode.sh（见 ⑨ 页汇总）</text>
+<rect x="36.0" y="1268.0" width="1424.0" height="58.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="1282.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">一句话记住这一页：PD 把「块大小、并行度、拓扑规模、端口」从建议变成硬约束，并强制改写 P 侧请求；本仓三种 PD 包参数差得多，差别全在「一卡能不能放下整模型」。</text>
+<text x="36.0" y="1374.0" font-size="11" fill="#333333">图例</text>
+<rect x="148.0" y="1357.0" width="120.0" height="26.0" rx="4" fill="#eceff1" stroke="#607d8b"/>
+<text x="154.0" y="1371.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">客户端</text>
+<rect x="276.0" y="1357.0" width="120.0" height="26.0" rx="4" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="282.0" y="1371.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">边端 edge</text>
+<rect x="404.0" y="1357.0" width="120.0" height="26.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="410.0" y="1371.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 P (prefill)</text>
+<rect x="532.0" y="1357.0" width="120.0" height="26.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="538.0" y="1371.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 D (decode)</text>
+<rect x="660.0" y="1357.0" width="120.0" height="26.0" rx="4" fill="#b0e3e6" stroke="#0e8088"/>
+<text x="666.0" y="1371.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">PD Proxy</text>
+<rect x="788.0" y="1357.0" width="120.0" height="26.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="794.0" y="1371.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">中立/通用</text>
+<rect x="916.0" y="1357.0" width="120.0" height="26.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="922.0" y="1371.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">失败/取消</text>
+<text x="210.0" y="1408.0" font-size="11" fill="#666666">控制面 ZMQ</text>
+<text x="460.0" y="1408.0" font-size="11" fill="#666666">数据面 UCX·Mooncake</text>
+<text x="710.0" y="1408.0" font-size="11" fill="#666666">HTTP</text>
+<path d="M148.0,1406.0 L204.0,1406.0" fill="none" stroke="#9673a6" marker-end="url(#a)"/>
+<path d="M398.0,1406.0 L454.0,1406.0" fill="none" stroke="#d6b656" marker-end="url(#a)"/>
+<path d="M648.0,1406.0 L704.0,1406.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333333"/></marker></defs>
+</svg></div>
+<div class="concl"><b>一句话结论　</b>PD 要求 P 与 D 在块大小、并行度、拓扑上对齐，否则连不上或算错；而且 P 侧收到的请求会被引擎强制改写（max_tokens=1 等）。</div>
+<details><summary>代码锚点（6 条，可 grep）</summary><pre>块大小必须相等：vllm/v1/lwd_control/pd/cloud_runtime.py:219-221；vllm/v1/core/kv_cache_utils.py:717-741（hash_block_size = block_size × DCP）
+P/D TP 关系与切片：vllm-ascend/.../kv_pool/ascend_store/metadata.py:80-113；sfa_pd_rd2h/worker.py:743-756
+LWD 并行白名单与 DP 校验：vllm/distributed/lwd/lwd_parallel_groups.py:216-261；vllm/v1/engine/core.py:1336-1350
+P 侧请求改写：vllm/v1/lwd_control/pd/cloud_runtime.py:358-383
+长度预算：cloud_runtime.py:210-229
+拓扑必填项：vllm/config/lwd/topology.py:426-458</pre></details>
+</figure>
+<figure id="p6">
+<p class="ptitle">⑦ 联动五：两个 enforce-eager，一个管 target 一个管 draft</p>
+<p class="psub">一句话：命令行 --enforce-eager 关的是整个 target 模型的编译与图；投机配置里的 enforce_eager 关的是只有 draft 那个小头——两者互不校验，也互不告警。</p>
+<div class="svgwrap"><svg xmlns="http://www.w3.org/2000/svg" width="977"1576" height="822"1326" viewBox="0 0 1576 1326">
+<rect width="1576" height="1326" fill="#ffffff"/>
+<text x="36.0" y="34.0" font-size="11" fill="#333333">⑦ 联动五：两个 enforce-eager，一个管 target 一个管 draft</text>
+<text x="36.0" y="62.0" font-size="11" fill="#666666">一句话：命令行 --enforce-eager 关的是整个 target 模型的编译与图；投机配置里的 enforce_eager 关的是只有 draft 那个小头——两者互不校验，也互不告警。</text>
+<text x="36.0" y="132.0" font-size="11" fill="#333333">第一步：逐项对照（看这三行就够）</text>
+<rect x="36.0" y="150.0" width="220.0" height="40.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="42.0" y="164.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<rect x="256.0" y="150.0" width="620.0" height="40.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="262.0" y="164.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">--enforce-eager</text>
+<rect x="876.0" y="150.0" width="580.0" height="40.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="882.0" y="164.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">spec.enforce_eager</text>
+<rect x="36.0" y="190.0" width="220.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="204.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">写在哪</text>
+<rect x="256.0" y="190.0" width="620.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="262.0" y="204.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">--enforce-eager（命令行）</text>
+<rect x="876.0" y="190.0" width="580.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="882.0" y="204.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">speculative-config 的 enforce_eager 字段</text>
+<rect x="36.0" y="230.0" width="220.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="244.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">影响谁</text>
+<rect x="256.0" y="230.0" width="620.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="262.0" y="244.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">target：编译模式与图模式全置 NONE，capture sizes 清空</text>
+<rect x="876.0" y="230.0" width="580.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="882.0" y="244.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">只影响 draft：drafter 不用图，走 eager</text>
+<rect x="36.0" y="270.0" width="220.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="284.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">会不会传给对方</text>
+<rect x="256.0" y="270.0" width="620.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="262.0" y="284.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">会——构造 draft 时继承 target 的 enforce_eager</text>
+<rect x="876.0" y="270.0" width="580.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="882.0" y="284.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">不会回传给 target</text>
+<rect x="36.0" y="310.0" width="220.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="324.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">同时给的后果</text>
+<rect x="256.0" y="310.0" width="620.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="262.0" y="324.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">target 已全局 NONE → draft 的这个字段变成冗余无效</text>
+<rect x="876.0" y="310.0" width="580.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="882.0" y="324.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">无校验、无告警，静默生效</text>
+<text x="36.0" y="372.0" font-size="11" fill="#333333">第二步：四种组合的实际效果（本仓用的是第 4 种）</text>
+<rect x="36.0" y="390.0" width="340.0" height="132.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="42.0" y="404.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">target eager + draft eager</text>
+<text x="42.0" y="418.85" font-size="10" fill="#333333" font-family="Microsoft YaHei">全 eager：启动最快、稳态最慢</text>
+<text x="42.0" y="432.35" font-size="9" fill="#333333" font-family="Microsoft YaHei">调试用</text>
+<rect x="388.0" y="390.0" width="340.0" height="132.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="394.0" y="404.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">target eager + draft 不 eager</text>
+<text x="394.0" y="418.85" font-size="10" fill="#333333" font-family="Microsoft YaHei">实际仍是全 eager（target 已全局 NONE）</text>
+<text x="394.0" y="432.35" font-size="9" fill="#333333" font-family="Microsoft YaHei">无意义组合</text>
+<rect x="740.0" y="390.0" width="340.0" height="132.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="746.0" y="404.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">target 用图 + draft 用图</text>
+<text x="746.0" y="418.85" font-size="10" fill="#333333" font-family="Microsoft YaHei">最快，但形状/后端限制多</text>
+<text x="746.0" y="432.35" font-size="9" fill="#333333" font-family="Microsoft YaHei">保守场景可用</text>
+<rect x="1092.0" y="390.0" width="340.0" height="132.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="1098.0" y="404.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">target 用图 + draft eager</text>
+<text x="1098.0" y="418.85" font-size="10" fill="#333333" font-family="Microsoft YaHei">decode 侧推荐：图赢了提交开销，draft 反正很小</text>
+<text x="1098.0" y="432.35" font-size="9" fill="#333333" font-family="Microsoft YaHei">本仓 D 侧</text>
+<rect x="36.0" y="562.0" width="1424.0" height="116.0" rx="4" fill="#fff2cc" stroke="#d6b656"/>
+<text x="42.0" y="576.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">第三步：本仓的实例（一眼看懂「为什么会这么配」）</text>
+<text x="42.0" y="590.85" font-size="10" fill="#333333" font-family="Microsoft YaHei">· D 侧：不加 --enforce-eager，并给 FULL_DECODE_ONLY；同时 speculative-config 里写 enforce_eager: true → target 跑图、draft 跑 eager。</text>
+<text x="42.0" y="604.35" font-size="9" fill="#333333" font-family="Microsoft YaHei">· P 侧与 edge：直接加 --enforce-eager（P 只跑一次就交接，省启动时间更划算；edge 的 forward 本来就被劫持）。</text>
+<text x="42.0" y="616.5" font-size="11" fill="#333333" font-family="Microsoft YaHei">· 有一个包（mooncake_pd_195）的 decode 侧没有 enforce-eager，还手写了 capture_sizes。</text>
+<rect x="36.0" y="718.0" width="1424.0" height="140.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="42.0" y="732.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="46.0" y="740.0" font-size="11" fill="#333333">一个容易踩的坑：以为「draft eager」就不影响 target 的图</text>
+<text x="46.0" y="766.0" font-size="11" fill="#333333">反过来的方向才会互相牵连：target 一旦 eager，全局图模式就是 NONE，draft 想用图也用不了。而 draft eager 只是「draft 自己不用图」，target 的图照常工作——这正是本仓 D 侧的选择。另外：某些模型族（例如 GLM 系列）会被平台强制把 draft 切成 eager 并打 warning，那时你的配置会被覆盖，别以为是自己的参数写错了。</text>
+<rect x="36.0" y="898.0" width="1424.0" height="46.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="42.0" y="912.0" font-size="10" fill="#333333" font-family="Microsoft YaHei">本页交接：两个 eager 分清了。下一步（⑧）看「引擎在什么情况下会主动给你降级」——降级链是这条联动脉络里唯一会打日志的部分。</text>
+<rect x="36.0" y="974.0" width="1424.0" height="128.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="988.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">代码锚点（想自己去翻的时候用）</text>
+<text x="42.0" y="1002.85" font-size="9" fill="#666666" font-family="Microsoft YaHei">target 侧：vllm/config/model.py:242-249；生效点 vllm/config/vllm.py:1591-1597、:1823-1829（capture sizes 清零）</text>
+<text x="42.0" y="1015.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">draft 侧字段：vllm/config/speculative.py:378-379；只有三处读它：vllm/v1/worker/gpu_model_runner.py:6214、vllm/v1/spec_decode/llm_base_proposer.py:430-439、extract_hidden_states.py:249</text>
+<text x="42.0" y="1029.85" font-size="11" fill="#333333" font-family="Microsoft YaHei">target → draft 的继承：vllm/config/speculative.py:1289</text>
+<text x="42.0" y="1044.6999999999998" font-size="11" fill="#333333" font-family="Microsoft YaHei">昇腾 xlite 回填差异：vllm-ascend/vllm_ascend/platform.py:1208-1211</text>
+<text x="42.0" y="1059.5499999999997" font-size="11" fill="#333333" font-family="Microsoft YaHei">GLM 强制 draft eager：vllm-ascend/.../spec_decode/llm_base_proposer.py:271-290</text>
+<text x="42.0" y="1074.3999999999996" font-size="11" fill="#333333" font-family="Microsoft YaHei">本仓实例：assets/c_home/bash/pds/30rc_1124/sidecar/cloud_d.sh:30-31（spec enforce_eager + FULL_DECODE_ONLY）与 cloud_p.sh:26（--enforce-eager）</text>
+<rect x="36.0" y="1136.0" width="1424.0" height="58.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="1150.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">一句话记住这一页：命令行那个管整个 target，JSON 里那个只管 draft；「target 用图 + draft eager」是 D 侧的常规选择，但 target 一旦 eager，draft 想用图也用不了。</text>
+<text x="36.0" y="1242.0" font-size="11" fill="#333333">图例</text>
+<rect x="148.0" y="1225.0" width="120.0" height="26.0" rx="4" fill="#eceff1" stroke="#607d8b"/>
+<text x="154.0" y="1239.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">客户端</text>
+<rect x="276.0" y="1225.0" width="120.0" height="26.0" rx="4" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="282.0" y="1239.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">边端 edge</text>
+<rect x="404.0" y="1225.0" width="120.0" height="26.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="410.0" y="1239.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 P (prefill)</text>
+<rect x="532.0" y="1225.0" width="120.0" height="26.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="538.0" y="1239.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 D (decode)</text>
+<rect x="660.0" y="1225.0" width="120.0" height="26.0" rx="4" fill="#b0e3e6" stroke="#0e8088"/>
+<text x="666.0" y="1239.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">PD Proxy</text>
+<rect x="788.0" y="1225.0" width="120.0" height="26.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="794.0" y="1239.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">中立/通用</text>
+<rect x="916.0" y="1225.0" width="120.0" height="26.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="922.0" y="1239.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">失败/取消</text>
+<rect x="1044.0" y="1225.0" width="240.0" height="26.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="1050.0" y="1239.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">draft/投机侧</text>
+<text x="210.0" y="1276.0" font-size="11" fill="#666666">控制面 ZMQ</text>
+<text x="460.0" y="1276.0" font-size="11" fill="#666666">数据面 UCX·Mooncake</text>
+<text x="710.0" y="1276.0" font-size="11" fill="#666666">HTTP</text>
+<path d="M148.0,1274.0 L204.0,1274.0" fill="none" stroke="#9673a6" marker-end="url(#a)"/>
+<path d="M398.0,1274.0 L454.0,1274.0" fill="none" stroke="#d6b656" marker-end="url(#a)"/>
+<path d="M648.0,1274.0 L704.0,1274.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333333"/></marker></defs>
+</svg></div>
+<div class="concl"><b>一句话结论　</b>命令行 --enforce-eager 关的是整个 target 模型的编译与图；投机配置里的 enforce_eager 关的是只有 draft 那个小头——两者互不校验，也互不告警。</div>
+<details><summary>代码锚点（5 条，可 grep）</summary><pre>target 侧：vllm/config/model.py:242-249；生效点 vllm/config/vllm.py:1591-1597、:1823-1829（capture sizes 清零）
+draft 侧字段：vllm/config/speculative.py:378-379；只有三处读它：vllm/v1/worker/gpu_model_runner.py:6214、vllm/v1/spec_decode/llm_base_proposer.py:430-439、extract_hidden_states.py:249
+target → draft 的继承：vllm/config/speculative.py:1289
+昇腾 xlite 回填差异：vllm-ascend/vllm_ascend/platform.py:1208-1211
+GLM 强制 draft eager：vllm-ascend/.../spec_decode/llm_base_proposer.py:271-290</pre></details>
+</figure>
+<figure id="p7">
+<p class="ptitle">⑧ 降级链：引擎会「悄悄退一步」，但这次它会打日志</p>
+<p class="psub">一句话：当 attention 后端撑不住你要的图模式时，引擎按 FULL → FULL_AND_PIECEWISE / FULL_DECODE_ONLY → PIECEWISE → NONE 逐级降，并在日志里说一句；只有「连降级都救不了」才拒绝启动。</p>
+<div class="svgwrap"><svg xmlns="http://www.w3.org/2000/svg" width="977"1576" height="767"1238" viewBox="0 0 1576 1238">
+<rect width="1576" height="1238" fill="#ffffff"/>
+<text x="36.0" y="34.0" font-size="11" fill="#333333">⑧ 降级链：引擎会「悄悄退一步」，但这次它会打日志</text>
+<text x="36.0" y="62.0" font-size="11" fill="#666666">一句话：当 attention 后端撑不住你要的图模式时，引擎按 FULL → FULL_AND_PIECEWISE / FULL_DECODE_ONLY → PIECEWISE → NONE 逐级降，并在日志里说一句；只有「连降级都救不了」才拒绝启动。</text>
+<text x="36.0" y="132.0" font-size="11" fill="#333333">第一步：五级降级（每级的触发条件与结果）</text>
+<rect x="36.0" y="150.0" width="520.0" height="40.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="42.0" y="164.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">触发</text>
+<rect x="556.0" y="150.0" width="520.0" height="40.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="562.0" y="164.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">引擎怎么改</text>
+<rect x="1076.0" y="150.0" width="380.0" height="40.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="1082.0" y="164.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">表现</text>
+<rect x="36.0" y="190.0" width="520.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="204.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">你要 FULL，后端完全不支持（NEVER）</text>
+<rect x="556.0" y="190.0" width="520.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="562.0" y="204.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">直接报错，让你改 PIECEWISE</text>
+<rect x="1076.0" y="190.0" width="380.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1082.0" y="204.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">拒绝启动</text>
+<rect x="36.0" y="230.0" width="520.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="244.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">你要 FULL，后端只支持部分形状</text>
+<rect x="556.0" y="230.0" width="520.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="562.0" y="244.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">降成 FULL_AND_PIECEWISE 或 FULL_DECODE_ONLY</text>
+<rect x="1076.0" y="230.0" width="380.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1082.0" y="244.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">warning</text>
+<rect x="36.0" y="270.0" width="520.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="284.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">decode 要 FULL，后端 NEVER</text>
+<rect x="556.0" y="270.0" width="520.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="562.0" y="284.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">降成 PIECEWISE 或 NONE</text>
+<rect x="1076.0" y="270.0" width="380.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1082.0" y="284.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">warning</text>
+<rect x="36.0" y="310.0" width="520.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="324.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">decode 要 FULL + K&gt;1，后端只支持更弱档</text>
+<rect x="556.0" y="310.0" width="520.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="562.0" y="324.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">降成 PIECEWISE 或 NONE</text>
+<rect x="1076.0" y="310.0" width="380.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1082.0" y="324.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">warning（点名 spec-decode）</text>
+<rect x="36.0" y="350.0" width="520.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="364.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">PIECEWISE 也不可用</text>
+<rect x="556.0" y="350.0" width="520.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="562.0" y="364.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">去掉 piecewise（→ NONE 或 FULL）</text>
+<rect x="1076.0" y="350.0" width="380.0" height="40.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1082.0" y="364.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">warning once</text>
+<text x="36.0" y="412.0" font-size="11" fill="#333333">第二步：三条「拒绝启动」（降级也救不了）</text>
+<rect x="36.0" y="430.0" width="460.0" height="160.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="42.0" y="444.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="46.0" y="452.0" font-size="11" fill="#333333">① 后端 NEVER + 你非要 FULL</text>
+<text x="46.0" y="478.0" font-size="11" fill="#333333">连降级后的结果里仍带 FULL → 直接 ValueError。处置：换 attention 后端，或改用 PIECEWISE。</text>
+<rect x="518.0" y="430.0" width="460.0" height="160.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="524.0" y="444.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="528.0" y="452.0" font-size="11" fill="#333333">② SP 的 TP 与 K+1 互不整除</text>
+<text x="528.0" y="478.0" font-size="11" fill="#333333">序列并行下桶要取 LCM(K+1, TP)，凑不出来就报错。处置：调 K、关 SP、或改 TP。</text>
+<rect x="1000.0" y="430.0" width="460.0" height="160.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="1006.0" y="444.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="1010.0" y="452.0" font-size="11" fill="#333333">③ Mamba 类模型 max_num_seqs &gt; 块数</text>
+<text x="1010.0" y="478.0" font-size="11" fill="#333333">线性注意力需要每序列一个 state 块，块不够直接报错。处置：降 max_num_seqs 或提 gpu_memory_utilization。</text>
+<text x="36.0" y="612.0" font-size="11" fill="#333333">第三步：反过来——遇到症状时该先动哪个参数（决策树）</text>
+<rect x="36.0" y="630.0" width="1424.0" height="148.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="644.0" font-size="10" fill="#333333" font-family="Microsoft YaHei">症状 A：启动就 OOM / 报 KV 不够 → ① 降 max_model_len 或 max_num_seqs；② 抬 gpu_memory_utilization（0.90→0.95→0.98）；③ 关掉一项大头（MTP 或图）。</text>
+<text x="42.0" y="657.5" font-size="11" fill="#333333" font-family="Microsoft YaHei">症状 B：单请求很慢（TPOT 高） → ① 确认 D 侧图真的在跑（看 journal 有无 replay 日志）；② 确认 MTP 接受率（&lt;1.3 就关）；③ 再看是不是桶太小。</text>
+<text x="42.0" y="672.35" font-size="11" fill="#333333" font-family="Microsoft YaHei">症状 C：吞吐上不去 → ① 看并发是否被 seqs/KV 卡住；② 看 chunked prefill 是否在切长 prefill；③ 看是否因形状不整齐掉回 eager。</text>
+<text x="42.0" y="687.2" font-size="11" fill="#333333" font-family="Microsoft YaHei">症状 D：延迟抖动 → ① 长 prefill 挤占 decode（调小 batched 或开分块阈值）；② 图桶不命中造成的偶发回退。</text>
+<rect x="36.0" y="818.0" width="1424.0" height="46.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="42.0" y="832.0" font-size="10" fill="#333333" font-family="Microsoft YaHei">本页交接：决策树是基于前七页的因果。下一步（⑨）用本仓三套真实部署包，把「为什么它这么配」逐条对上。</text>
+<rect x="36.0" y="894.0" width="1424.0" height="120.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="908.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">代码锚点（想自己去翻的时候用）</text>
+<text x="42.0" y="922.85" font-size="9" fill="#666666" font-family="Microsoft YaHei">降级实现：vllm/config/compilation.py:1382-1545（五级：:1402-1417、:1419-1426、:1429-1453、:1455-1473、:1475-1487、:1489-1501）</text>
+<text x="42.0" y="935.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">后端支持度枚举：vllm/v1/attention/backend.py:559-573</text>
+<text x="42.0" y="949.85" font-size="11" fill="#333333" font-family="Microsoft YaHei">SP × K+1 的 LCM 与硬错：vllm/config/compilation.py:1551-1564</text>
+<text x="42.0" y="964.7" font-size="11" fill="#333333" font-family="Microsoft YaHei">Mamba 块数硬错：vllm/config/compilation.py:1527-1542</text>
+<text x="42.0" y="979.5500000000001" font-size="11" fill="#333333" font-family="Microsoft YaHei">昇腾侧再降级：vllm-ascend/vllm_ascend/platform.py:1231-1246、:1346-1352</text>
+<text x="42.0" y="994.4000000000001" font-size="11" fill="#333333" font-family="Microsoft YaHei">软件兜底（connector/pooling/encoder-decoder 各自改成 PIECEWISE）：vllm/config/vllm.py:1796-1821、:1773-1781、:1782-1794</text>
+<rect x="36.0" y="1048.0" width="1424.0" height="58.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="1062.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">一句话记住这一页：降级链是这条联动脉络里唯一会主动说话的部分——看到「falling back / not supported with … backend」就说明你的图被降了；而「静默掉出」（形状不命中桶）永远不会有日志。</text>
+<text x="36.0" y="1154.0" font-size="11" fill="#333333">图例</text>
+<rect x="148.0" y="1137.0" width="120.0" height="26.0" rx="4" fill="#eceff1" stroke="#607d8b"/>
+<text x="154.0" y="1151.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">客户端</text>
+<rect x="276.0" y="1137.0" width="120.0" height="26.0" rx="4" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="282.0" y="1151.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">边端 edge</text>
+<rect x="404.0" y="1137.0" width="120.0" height="26.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="410.0" y="1151.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 P (prefill)</text>
+<rect x="532.0" y="1137.0" width="120.0" height="26.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="538.0" y="1151.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 D (decode)</text>
+<rect x="660.0" y="1137.0" width="120.0" height="26.0" rx="4" fill="#b0e3e6" stroke="#0e8088"/>
+<text x="666.0" y="1151.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">PD Proxy</text>
+<rect x="788.0" y="1137.0" width="120.0" height="26.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="794.0" y="1151.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">中立/通用</text>
+<rect x="916.0" y="1137.0" width="120.0" height="26.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="922.0" y="1151.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">失败/取消</text>
+<text x="210.0" y="1188.0" font-size="11" fill="#666666">控制面 ZMQ</text>
+<text x="460.0" y="1188.0" font-size="11" fill="#666666">数据面 UCX·Mooncake</text>
+<text x="710.0" y="1188.0" font-size="11" fill="#666666">HTTP</text>
+<path d="M148.0,1186.0 L204.0,1186.0" fill="none" stroke="#9673a6" marker-end="url(#a)"/>
+<path d="M398.0,1186.0 L454.0,1186.0" fill="none" stroke="#d6b656" marker-end="url(#a)"/>
+<path d="M648.0,1186.0 L704.0,1186.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333333"/></marker></defs>
+</svg></div>
+<div class="concl"><b>一句话结论　</b>当 attention 后端撑不住你要的图模式时，引擎按 FULL → FULL_AND_PIECEWISE / FULL_DECODE_ONLY → PIECEWISE → NONE 逐级降，并在日志里说一句；只有「连降级都救不了」才拒绝启动。</div>
+<details><summary>代码锚点（6 条，可 grep）</summary><pre>降级实现：vllm/config/compilation.py:1382-1545（五级：:1402-1417、:1419-1426、:1429-1453、:1455-1473、:1475-1487、:1489-1501）
+后端支持度枚举：vllm/v1/attention/backend.py:559-573
+SP × K+1 的 LCM 与硬错：vllm/config/compilation.py:1551-1564
+Mamba 块数硬错：vllm/config/compilation.py:1527-1542
+昇腾侧再降级：vllm-ascend/vllm_ascend/platform.py:1231-1246、:1346-1352
+软件兜底（connector/pooling/encoder-decoder 各自改成 PIECEWISE）：vllm/config/vllm.py:1796-1821、:1773-1781、:1782-1794</pre></details>
+</figure>
+<figure id="p8">
+<p class="ptitle">⑨ 五套真实部署包：逐个参数对上「为什么」</p>
+<p class="psub">一句话：同一个模型，本仓有五种配法——差别几乎全部来自「一卡放不放得下整模型」这一件事。</p>
+<div class="svgwrap"><svg xmlns="http://www.w3.org/2000/svg" width="1029"1660" height="850"1372" viewBox="0 0 1660 1372">
+<rect width="1660" height="1372" fill="#ffffff"/>
+<text x="36.0" y="34.0" font-size="11" fill="#333333">⑨ 五套真实部署包：逐个参数对上「为什么」</text>
+<text x="36.0" y="62.0" font-size="11" fill="#666666">一句话：同一个模型，本仓有五种配法——差别几乎全部来自「一卡放不放得下整模型」这一件事。</text>
+<text x="36.0" y="130.0" font-size="11" fill="#333333">第一步：五套配方总表（数值全部来自脚本实测）</text>
+<rect x="36.0" y="148.0" width="300.0" height="44.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="42.0" y="162.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">包</text>
+<rect x="336.0" y="148.0" width="140.0" height="44.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="342.0" y="162.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">TP/DP</text>
+<rect x="476.0" y="148.0" width="200.0" height="44.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="482.0" y="162.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">max-model-len</text>
+<rect x="676.0" y="148.0" width="190.0" height="44.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="682.0" y="162.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">max-num-seqs</text>
+<rect x="866.0" y="148.0" width="150.0" height="44.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="872.0" y="162.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">gpu-mem</text>
+<rect x="1016.0" y="148.0" width="90.0" height="44.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="1022.0" y="162.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">K</text>
+<rect x="1106.0" y="148.0" width="250.0" height="44.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="1112.0" y="162.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">图（D 侧）</text>
+<rect x="1356.0" y="148.0" width="264.0" height="44.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="1362.0" y="162.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">其它</text>
+<rect x="36.0" y="192.0" width="300.0" height="44.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="206.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">sidecar / in_process</text>
+<rect x="336.0" y="192.0" width="140.0" height="44.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="342.0" y="206.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">2 / 1</text>
+<rect x="476.0" y="192.0" width="200.0" height="44.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="482.0" y="206.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">65536</text>
+<rect x="676.0" y="192.0" width="190.0" height="44.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="682.0" y="206.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">128</text>
+<rect x="866.0" y="192.0" width="150.0" height="44.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="872.0" y="206.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">0.90</text>
+<rect x="1016.0" y="192.0" width="90.0" height="44.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1022.0" y="206.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">3</text>
+<rect x="1106.0" y="192.0" width="250.0" height="44.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1112.0" y="206.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">D: FULL_DECODE_ONLY</text>
+<rect x="1356.0" y="192.0" width="264.0" height="44.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1362.0" y="206.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">P/edge: eager</text>
+<rect x="36.0" y="236.0" width="300.0" height="44.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="250.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">dp2_tp1_194_195</text>
+<rect x="336.0" y="236.0" width="140.0" height="44.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="342.0" y="250.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">1 / 2</text>
+<rect x="476.0" y="236.0" width="200.0" height="44.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="482.0" y="250.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">32768</text>
+<rect x="676.0" y="236.0" width="190.0" height="44.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="682.0" y="250.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">32</text>
+<rect x="866.0" y="236.0" width="150.0" height="44.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="872.0" y="250.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">0.95</text>
+<rect x="1016.0" y="236.0" width="90.0" height="44.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1022.0" y="250.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">3</text>
+<rect x="1106.0" y="236.0" width="250.0" height="44.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1112.0" y="250.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">D: FULL_DECODE_ONLY</text>
+<rect x="1356.0" y="236.0" width="264.0" height="44.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1362.0" y="250.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">P/edge: eager</text>
+<rect x="36.0" y="280.0" width="300.0" height="44.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="294.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">mooncake_pd2_tp1_195</text>
+<rect x="336.0" y="280.0" width="140.0" height="44.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="342.0" y="294.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">1 / 2</text>
+<rect x="476.0" y="280.0" width="200.0" height="44.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="482.0" y="294.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">512</text>
+<rect x="676.0" y="280.0" width="190.0" height="44.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="682.0" y="294.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">32</text>
+<rect x="866.0" y="280.0" width="150.0" height="44.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="872.0" y="294.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">0.98</text>
+<rect x="1016.0" y="280.0" width="90.0" height="44.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1022.0" y="294.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">3</text>
+<rect x="1106.0" y="280.0" width="250.0" height="44.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1112.0" y="294.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">D: FULL_DECODE_ONLY</text>
+<rect x="1356.0" y="280.0" width="264.0" height="44.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1362.0" y="294.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">—</text>
+<rect x="36.0" y="324.0" width="300.0" height="44.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="338.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">mooncake_pd_195</text>
+<rect x="336.0" y="324.0" width="140.0" height="44.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="342.0" y="338.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">2 / 1</text>
+<rect x="476.0" y="324.0" width="200.0" height="44.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="482.0" y="338.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">65536</text>
+<rect x="676.0" y="324.0" width="190.0" height="44.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="682.0" y="338.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">128</text>
+<rect x="866.0" y="324.0" width="150.0" height="44.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="872.0" y="338.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">0.95</text>
+<rect x="1016.0" y="324.0" width="90.0" height="44.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1022.0" y="338.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">3</text>
+<rect x="1106.0" y="324.0" width="250.0" height="44.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1112.0" y="338.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">D: FULL_DECODE_ONLY + 手写 25 档桶</text>
+<rect x="1356.0" y="324.0" width="264.0" height="44.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1362.0" y="338.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">P: eager</text>
+<rect x="36.0" y="368.0" width="300.0" height="44.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="382.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">fix_1120</text>
+<rect x="336.0" y="368.0" width="140.0" height="44.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="342.0" y="382.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">8 / 1</text>
+<rect x="476.0" y="368.0" width="200.0" height="44.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="482.0" y="382.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">65536</text>
+<rect x="676.0" y="368.0" width="190.0" height="44.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="682.0" y="382.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">128</text>
+<rect x="866.0" y="368.0" width="150.0" height="44.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="872.0" y="382.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">0.90</text>
+<rect x="1016.0" y="368.0" width="90.0" height="44.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1022.0" y="382.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">1</text>
+<rect x="1106.0" y="368.0" width="250.0" height="44.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1112.0" y="382.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">D: FULL_DECODE_ONLY</text>
+<rect x="1356.0" y="368.0" width="264.0" height="44.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1362.0" y="382.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">P: eager + EP + 量化 + block 128</text>
+<text x="36.0" y="434.0" font-size="11" fill="#333333">第二步：四条「为什么」（这才是配方的价值）</text>
+<rect x="36.0" y="452.0" width="1424.0" height="116.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="466.0" font-size="10" fill="#333333" font-family="Microsoft YaHei">① 为什么 TP=2 的包敢报 65536，而 TP=1 的包只敢报 32768 甚至 512：TP=2 把权重切成两半，单卡剩余显存多 → 能装长上下文的 KV；TP=1 要在一张卡里放下整模型，剩余只够短上下文。</text>
+<text x="42.0" y="479.5" font-size="11" fill="#333333" font-family="Microsoft YaHei">② 为什么 TP=1 + MTP 的包把 max_num_seqs 压到 32：MTP 又多占一份 draft 开销与 lookahead 槽，KV 只剩几十个块，一个序列一块 → 32 是上限。</text>
+<text x="42.0" y="494.35" font-size="11" fill="#333333" font-family="Microsoft YaHei">③ 为什么 gpu-memory-utilization 有 0.90 / 0.95 / 0.98 三档：LWD 边云要留主机面与图池余量 → 0.90；普通 PD → 0.95；一卡塞整模型且还想开 MTP → 只能拉到 0.98 挤出来。</text>
+<text x="42.0" y="509.20000000000005" font-size="11" fill="#333333" font-family="Microsoft YaHei">④ 为什么只有 fix_1120 显式给 block-size 128 + 量化 + 专家并行：DeepSeek 那套要按组对齐块大小、要 8 卡放专家、要 int8 压 KV —— 三者是同一个目的。</text>
+<text x="36.0" y="590.0" font-size="11" fill="#333333">第三步：抄配方时最容易犯的两个错</text>
+<rect x="36.0" y="608.0" width="700.0" height="160.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="42.0" y="622.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="46.0" y="630.0" font-size="11" fill="#333333">错法一：只抄 K，不抄桶</text>
+<text x="46.0" y="656.0" font-size="11" fill="#333333">K=3 意味着 decode 的 query 长度是 4，图桶必须是 4 的倍数。抄了 K 却把自己以前的桶列表一起抄过来（那些是 K=0 时代的数）→桶被自动取整或直接报错；更糟的是运行时静默回 eager。</text>
+<rect x="796.0" y="608.0" width="664.0" height="160.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="802.0" y="622.0" font-size="11" fill="#333333" font-family="Microsoft YaHei"></text>
+<text x="806.0" y="630.0" font-size="11" fill="#333333">错法二：只抄 max_model_len，不抄 seqs/gpu-mem</text>
+<text x="806.0" y="656.0" font-size="11" fill="#333333">这三者是一条链：mml 大 → KV 需求大 → seqs 必须小，或 gpu-mem 必须高。只把 mml 抄大而 seqs、gpu-mem 不动 → 启动时报「KV 不够」并给出可支持的估计值。</text>
+<rect x="36.0" y="808.0" width="1424.0" height="96.0" rx="4" fill="#fff2cc" stroke="#d6b656"/>
+<text x="42.0" y="822.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">另外两个实测发现（值得单独记）</text>
+<text x="42.0" y="836.85" font-size="10" fill="#333333" font-family="Microsoft YaHei">① 有两套包（sidecar 与 in_process）四个脚本逐字节相同——它们是同一个配置的两种目录布局，画图/对比时应合并成一个节点。</text>
+<text x="42.0" y="850.35" font-size="11" fill="#333333" font-family="Microsoft YaHei">② 有 6 个脚本是 0 字节空壳（rdma/tcp 下的三件套），目录名里的规模参数不代表任何生效配置——别从目录名推参数。</text>
+<rect x="36.0" y="944.0" width="1424.0" height="46.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="42.0" y="958.0" font-size="10" fill="#333333" font-family="Microsoft YaHei">本页交接：配方看完了。下一步（⑩）给一张一页纸速查表 + 五道自测题。</text>
+<rect x="36.0" y="1020.0" width="1424.0" height="128.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="1034.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">代码锚点（想自己去翻的时候用）</text>
+<text x="42.0" y="1048.85" font-size="9" fill="#666666" font-family="Microsoft YaHei">sidecar：assets/c_home/bash/pds/30rc_1124/sidecar/cloud_p.sh:22-31、cloud_d.sh:22-31</text>
+<text x="42.0" y="1061.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">dp2：assets/c_home/bash/pds/30rc_1124/dp2_tp1_194_195/cloud_p.sh:33-41</text>
+<text x="42.0" y="1075.85" font-size="11" fill="#333333" font-family="Microsoft YaHei">m2（mml 512 / gpu 0.98）：assets/c_home/bash/pds/30rc_1124/mooncake_pd2_tp1_195/env.sh:61-64</text>
+<text x="42.0" y="1090.6999999999998" font-size="11" fill="#333333" font-family="Microsoft YaHei">m1（手写桶）：assets/c_home/bash/pds/30rc_1124/mooncake_pd_195/decode.sh:34</text>
+<text x="42.0" y="1105.5499999999997" font-size="11" fill="#333333" font-family="Microsoft YaHei">f12（TP=8/EP/量化/block 128）：assets/c_home/bash/pds/fix_1120/prefill.sh:102-116</text>
+<text x="42.0" y="1120.3999999999996" font-size="11" fill="#333333" font-family="Microsoft YaHei">桶必须按 K+1 对齐：vllm/config/compilation.py:1547-1592</text>
+<text x="42.0" y="1135.2499999999995" font-size="11" fill="#333333" font-family="Microsoft YaHei">mml 放不下的报错：vllm/v1/core/kv_cache_utils.py:872-909</text>
+<rect x="36.0" y="1182.0" width="1424.0" height="58.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="1196.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">一句话记住这一页：五套配方的差异归根到底是「一卡放不放得下」：放不下就加 TP、压上下文、压并发；放得下就敢开长上下文与高并发。抄参数要连带抄它的三个邻居（K 与桶、mml 与 seqs、gpu-mem）。</text>
+<text x="36.0" y="1288.0" font-size="11" fill="#333333">图例</text>
+<rect x="148.0" y="1271.0" width="120.0" height="26.0" rx="4" fill="#eceff1" stroke="#607d8b"/>
+<text x="154.0" y="1285.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">客户端</text>
+<rect x="276.0" y="1271.0" width="120.0" height="26.0" rx="4" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="282.0" y="1285.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">边端 edge</text>
+<rect x="404.0" y="1271.0" width="120.0" height="26.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="410.0" y="1285.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 P (prefill)</text>
+<rect x="532.0" y="1271.0" width="120.0" height="26.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="538.0" y="1285.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 D (decode)</text>
+<rect x="660.0" y="1271.0" width="120.0" height="26.0" rx="4" fill="#b0e3e6" stroke="#0e8088"/>
+<text x="666.0" y="1285.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">PD Proxy</text>
+<rect x="788.0" y="1271.0" width="120.0" height="26.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="794.0" y="1285.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">中立/通用</text>
+<rect x="916.0" y="1271.0" width="120.0" height="26.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="922.0" y="1285.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">失败/取消</text>
+<text x="210.0" y="1322.0" font-size="11" fill="#666666">控制面 ZMQ</text>
+<text x="460.0" y="1322.0" font-size="11" fill="#666666">数据面 UCX·Mooncake</text>
+<text x="710.0" y="1322.0" font-size="11" fill="#666666">HTTP</text>
+<path d="M148.0,1320.0 L204.0,1320.0" fill="none" stroke="#9673a6" marker-end="url(#a)"/>
+<path d="M398.0,1320.0 L454.0,1320.0" fill="none" stroke="#d6b656" marker-end="url(#a)"/>
+<path d="M648.0,1320.0 L704.0,1320.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333333"/></marker></defs>
+</svg></div>
+<div class="concl"><b>一句话结论　</b>同一个模型，本仓有五种配法——差别几乎全部来自「一卡放不放得下整模型」这一件事。</div>
+<details><summary>代码锚点（2 条，可 grep）</summary><pre>桶必须按 K+1 对齐：vllm/config/compilation.py:1547-1592
+mml 放不下的报错：vllm/v1/core/kv_cache_utils.py:872-909</pre></details>
+</figure>
+<figure id="p9">
+<p class="ptitle">⑩ 一页纸：改 A 会连累谁（速查）+ 五道自测</p>
+<p class="psub">用途：调参或排障时先扫这张表，确认你改的那个参数是不是还会顺手改掉别人。</p>
+<div class="svgwrap"><svg xmlns="http://www.w3.org/2000/svg" width="977"1576" height="995"1606" viewBox="0 0 1576 1606">
+<rect width="1576" height="1606" fill="#ffffff"/>
+<text x="36.0" y="34.0" font-size="11" fill="#333333">⑩ 一页纸：改 A 会连累谁（速查）+ 五道自测</text>
+<text x="36.0" y="62.0" font-size="11" fill="#666666">用途：调参或排障时先扫这张表，确认你改的那个参数是不是还会顺手改掉别人。</text>
+<text x="36.0" y="128.0" font-size="11" fill="#333333">第一张表：静默改写（有 warning 或干脆没日志）</text>
+<rect x="36.0" y="146.0" width="420.0" height="36.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="42.0" y="160.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">你改的</text>
+<rect x="456.0" y="146.0" width="720.0" height="36.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="462.0" y="160.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">被连带改的</text>
+<rect x="1176.0" y="146.0" width="284.0" height="36.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="1182.0" y="160.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">提示</text>
+<rect x="36.0" y="182.0" width="420.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="196.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">设了 K</text>
+<rect x="456.0" y="182.0" width="720.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="462.0" y="196.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">query 长度 1+K → 图桶全部向上取整到 K+1 的倍数</text>
+<rect x="1176.0" y="182.0" width="284.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1182.0" y="196.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">启动无感</text>
+<rect x="36.0" y="218.0" width="420.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="232.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">调小 max-num-batched-tokens</text>
+<rect x="456.0" y="218.0" width="720.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="462.0" y="232.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">图桶上限跟着缩；max-num-seqs 也可能被反推变小</text>
+<rect x="1176.0" y="218.0" width="284.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1182.0" y="232.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">可能 warning</text>
+<rect x="36.0" y="254.0" width="420.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="268.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">关 chunked prefill</text>
+<rect x="456.0" y="254.0" width="720.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="462.0" y="268.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">max-num-batched-tokens 被抬到 ≥ max-model-len</text>
+<rect x="1176.0" y="254.0" width="284.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1182.0" y="268.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">无日志</text>
+<rect x="36.0" y="290.0" width="420.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="304.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">性能模式设 throughput</text>
+<rect x="456.0" y="290.0" width="720.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="462.0" y="304.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">batched 与 seqs 的默认值各 ×2（仅当你没显式设）</text>
+<rect x="1176.0" y="290.0" width="284.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1182.0" y="304.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">无日志</text>
+<rect x="36.0" y="326.0" width="420.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="340.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">开序列并行 + TP&gt;1</text>
+<rect x="456.0" y="326.0" width="720.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="462.0" y="340.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">桶里非 TP 倍数的项被删；batched 上取整到 TP×PCP</text>
+<rect x="1176.0" y="326.0" width="284.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1182.0" y="340.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">warning</text>
+<rect x="36.0" y="362.0" width="420.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="376.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">block_size 改大</text>
+<rect x="456.0" y="362.0" width="720.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="462.0" y="376.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">KV 块数按比例减少；PD 两侧块粒度对不上会失败</text>
+<rect x="1176.0" y="362.0" width="284.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1182.0" y="376.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">启动期报错</text>
+<text x="36.0" y="412.0" font-size="11" fill="#333333">第二张表：强制覆盖（你写的不算）</text>
+<rect x="36.0" y="430.0" width="420.0" height="36.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="42.0" y="444.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">你改的</text>
+<rect x="456.0" y="430.0" width="720.0" height="36.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="462.0" y="444.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">被覆盖的</text>
+<rect x="1176.0" y="430.0" width="284.0" height="36.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="1182.0" y="444.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">提示</text>
+<rect x="36.0" y="466.0" width="420.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="480.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">给了 --kv-cache-memory-bytes</text>
+<rect x="456.0" y="466.0" width="720.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="462.0" y="480.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">gpu-memory-utilization 被忽略，跳过显存画像</text>
+<rect x="1176.0" y="466.0" width="284.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1182.0" y="480.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">info 日志明说</text>
+<rect x="36.0" y="502.0" width="420.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="516.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">给了 kv-offloading-size</text>
+<rect x="456.0" y="502.0" width="720.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="462.0" y="516.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">kv_connector 被改写，kv_role 被锁成 kv_both</text>
+<rect x="1176.0" y="502.0" width="284.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1182.0" y="516.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">info</text>
+<rect x="36.0" y="538.0" width="420.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="552.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">P 侧收到 PD 请求</text>
+<rect x="456.0" y="538.0" width="720.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="462.0" y="552.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">max_tokens=1 / ignore_eos / 抑制用户输出</text>
+<rect x="1176.0" y="538.0" width="284.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1182.0" y="552.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">无日志</text>
+<rect x="36.0" y="574.0" width="420.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="588.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">target 加了 --enforce-eager</text>
+<rect x="456.0" y="574.0" width="720.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="462.0" y="588.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">编译与图全 NONE；draft 的 enforce_eager 变冗余</text>
+<rect x="1176.0" y="574.0" width="284.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1182.0" y="588.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">warning once</text>
+<rect x="36.0" y="610.0" width="420.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="624.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">GLM 族开投机</text>
+<rect x="456.0" y="610.0" width="720.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="462.0" y="624.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">draft 被强制切成 eager</text>
+<rect x="1176.0" y="610.0" width="284.0" height="36.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="1182.0" y="624.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">warning</text>
+<text x="36.0" y="660.0" font-size="11" fill="#333333">第三张表：直接拒绝启动（会点名原因）</text>
+<rect x="36.0" y="678.0" width="620.0" height="32.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="42.0" y="692.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">情形</text>
+<rect x="656.0" y="678.0" width="804.0" height="32.0" rx="4" fill="#efe9dd" stroke="#9673a6"/>
+<text x="662.0" y="692.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">为什么</text>
+<rect x="36.0" y="710.0" width="620.0" height="32.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="724.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">batched </text>
+<rect x="656.0" y="710.0" width="804.0" height="32.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="662.0" y="724.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">一步装不下整条序列</text>
+<rect x="36.0" y="742.0" width="620.0" height="32.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="756.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">SP 的 TP 与 K+1 互不整除</text>
+<rect x="656.0" y="742.0" width="804.0" height="32.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="662.0" y="756.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">桶取不到公倍数</text>
+<rect x="36.0" y="774.0" width="620.0" height="32.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="788.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">attention 后端 NEVER 却要 FULL 图</text>
+<rect x="656.0" y="774.0" width="804.0" height="32.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="662.0" y="788.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">换后端或改 PIECEWISE</text>
+<rect x="36.0" y="806.0" width="620.0" height="32.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="820.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">Mamba 类模型 seqs &gt; 块数</text>
+<rect x="656.0" y="806.0" width="804.0" height="32.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="662.0" y="820.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">每序列要一个 state 块</text>
+<rect x="36.0" y="838.0" width="620.0" height="32.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="852.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">PD 两侧块大小不一致</text>
+<rect x="656.0" y="838.0" width="804.0" height="32.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="662.0" y="852.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">KV 无法按同一粒度对齐</text>
+<rect x="36.0" y="870.0" width="620.0" height="32.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="884.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">K &gt; MTP 层数且不整除</text>
+<rect x="656.0" y="870.0" width="804.0" height="32.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="662.0" y="884.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">同一层复用次数对不上</text>
+<rect x="36.0" y="902.0" width="620.0" height="32.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="916.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">max_model_len 的 KV 超过可用</text>
+<rect x="656.0" y="902.0" width="804.0" height="32.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="662.0" y="916.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">报错会给「本卡最多支持多长」</text>
+<text x="36.0" y="950.0" font-size="11" fill="#333333">五道自测（答不上就回 ③④⑤⑥⑦ 对应页）</text>
+<rect x="36.0" y="968.0" width="1424.0" height="132.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="982.0" font-size="10" fill="#333333" font-family="Microsoft YaHei">① 你把 K 从 0 改成 3，为什么「图捕获突然不生效了」？先查哪两处？</text>
+<text x="42.0" y="995.5" font-size="11" fill="#333333" font-family="Microsoft YaHei">② 同一个模型，为什么有的包敢报 max_model_len=65536、有的只敢报 512？</text>
+<text x="42.0" y="1010.35" font-size="11" fill="#333333" font-family="Microsoft YaHei">③ 你没设 max_num_batched_tokens，它凭什么变成 8192？谁会跟着它变？</text>
+<text x="42.0" y="1025.2" font-size="11" fill="#333333" font-family="Microsoft YaHei">④ 「调大 gpu-memory-utilization」是不是等于「能开更多并发」？为什么？</text>
+<text x="42.0" y="1040.05" font-size="11" fill="#333333" font-family="Microsoft YaHei">⑤ 两个 enforce-eager，哪一个会让 target 的图一起没掉？为什么？</text>
+<rect x="36.0" y="1140.0" width="1424.0" height="96.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="42.0" y="1154.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">读完之后你应该能回答的一句总结</text>
+<text x="42.0" y="1168.85" font-size="10" fill="#333333" font-family="Microsoft YaHei">「本仓的每个参数都能用三句话解释清：它花的是谁的钱、它被谁悄悄改过、它会把哪个机制弄失效。」——这就是这一套图想训练的能力。</text>
+<rect x="36.0" y="1270.0" width="1424.0" height="112.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="1284.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">代码锚点（想自己去翻的时候用）</text>
+<text x="42.0" y="1298.85" font-size="9" fill="#666666" font-family="Microsoft YaHei">静默改写：vllm/engine/arg_utils.py:2966-3016（默认值推导）；vllm/config/vllm.py:2348-2349、:2404-2412（桶裁剪）；vllm/config/compilation.py:1547-1592（K+1 对齐）</text>
+<text x="42.0" y="1311.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">强制覆盖：vllm/config/cache.py:228-235 + vllm/v1/worker/gpu_worker.py:542-564；vllm/config/vllm.py:1052-1073（kv_offloading）；vllm/v1/lwd_control/pd/cloud_runtime.py:358-383（P 侧改写）</text>
+<text x="42.0" y="1325.85" font-size="11" fill="#333333" font-family="Microsoft YaHei">拒绝启动：vllm/config/scheduler.py:296-329；vllm/config/compilation.py:1402-1417、:1527-1542、:1551-1564；vllm/v1/core/kv_cache_utils.py:872-909</text>
+<text x="42.0" y="1340.6999999999998" font-size="11" fill="#333333" font-family="Microsoft YaHei">eager 两个作用域：vllm/config/vllm.py:1591-1597、:1823-1829；vllm/config/speculative.py:378-379、:1289</text>
+<rect x="36.0" y="1416.0" width="1424.0" height="58.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="42.0" y="1430.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">一句话记住这一套：参数不是孤立的——改一个数，引擎可能替你改三个，也可能让某个机制静默失效；所以每次改完，都要问：桶还对不对、KV 还够不够、图还在不在。</text>
+<text x="36.0" y="1522.0" font-size="11" fill="#333333">图例</text>
+<rect x="148.0" y="1505.0" width="120.0" height="26.0" rx="4" fill="#eceff1" stroke="#607d8b"/>
+<text x="154.0" y="1519.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">客户端</text>
+<rect x="276.0" y="1505.0" width="120.0" height="26.0" rx="4" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="282.0" y="1519.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">边端 edge</text>
+<rect x="404.0" y="1505.0" width="120.0" height="26.0" rx="4" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="410.0" y="1519.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 P (prefill)</text>
+<rect x="532.0" y="1505.0" width="120.0" height="26.0" rx="4" fill="#d5e8d4" stroke="#82b366"/>
+<text x="538.0" y="1519.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">云 D (decode)</text>
+<rect x="660.0" y="1505.0" width="120.0" height="26.0" rx="4" fill="#b0e3e6" stroke="#0e8088"/>
+<text x="666.0" y="1519.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">PD Proxy</text>
+<rect x="788.0" y="1505.0" width="120.0" height="26.0" rx="4" fill="#efe9dd" stroke="#a1887f"/>
+<text x="794.0" y="1519.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">中立/通用</text>
+<rect x="916.0" y="1505.0" width="120.0" height="26.0" rx="4" fill="#f8cecc" stroke="#b85450"/>
+<text x="922.0" y="1519.0" font-size="11" fill="#333333" font-family="Microsoft YaHei">失败/取消</text>
+<text x="210.0" y="1556.0" font-size="11" fill="#666666">控制面 ZMQ</text>
+<text x="460.0" y="1556.0" font-size="11" fill="#666666">数据面 UCX·Mooncake</text>
+<text x="710.0" y="1556.0" font-size="11" fill="#666666">HTTP</text>
+<path d="M148.0,1554.0 L204.0,1554.0" fill="none" stroke="#9673a6" marker-end="url(#a)"/>
+<path d="M398.0,1554.0 L454.0,1554.0" fill="none" stroke="#d6b656" marker-end="url(#a)"/>
+<path d="M648.0,1554.0 L704.0,1554.0" fill="none" stroke="#666666" marker-end="url(#a)"/>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333333"/></marker></defs>
+</svg></div>
+<div class="concl"><b>一句话结论　</b>这一套：参数不是孤立的——改一个数，引擎可能替你改三个，也可能让某个机制静默失效；所以每次改完，都要问：桶还对不对、KV 还够不够、图还在不在。</div>
+<details><summary>代码锚点（4 条，可 grep）</summary><pre>静默改写：vllm/engine/arg_utils.py:2966-3016（默认值推导）；vllm/config/vllm.py:2348-2349、:2404-2412（桶裁剪）；vllm/config/compilation.py:1547-1592（K+1 对齐）
+强制覆盖：vllm/config/cache.py:228-235 + vllm/v1/worker/gpu_worker.py:542-564；vllm/config/vllm.py:1052-1073（kv_offloading）；vllm/v1/lwd_control/pd/cloud_runtime.py:358-383（P 侧改写）
+拒绝启动：vllm/config/scheduler.py:296-329；vllm/config/compilation.py:1402-1417、:1527-1542、:1551-1564；vllm/v1/core/kv_cache_utils.py:872-909
+eager 两个作用域：vllm/config/vllm.py:1591-1597、:1823-1829；vllm/config/speculative.py:378-379、:1289</pre></details>
+</figure></body></html>
