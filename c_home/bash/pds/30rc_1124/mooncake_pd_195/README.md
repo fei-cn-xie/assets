@@ -91,8 +91,8 @@ curl -s http://76.76.26.195:9060/v1/chat/completions \
 | MTP 方法 | `"method":"mtp"` | **`"method":"qwen3_5_mtp"`**（模型专用 proposer） |
 | 通信网卡 | `GLOO/TP/HCCL_SOCKET_IFNAME=lo` | **真实网卡 `enp189s0f0`** + `HCCL_IF_IP` |
 | 执行后端 | 未指定 | **`--distributed-executor-backend mp`** |
-| decode 图捕获 | 只有 `cudagraph_mode` | 另加 **`cudagraph_capture_sizes`**（4…100） |
-| 显存占比 | 0.90 | **0.95** |
+| decode 图捕获 | `FULL_DECODE_ONLY` + 显式档位（4…100） | **相同**（两边都用 25 档显式列表） |
+| 显存占比 | 0.95 | **0.95**（两边一致） |
 | 前缀缓存 | 依赖默认 | **显式 `--enable-prefix-caching`** |
 | P 的 MTP | 去掉了 | **恢复**（参考在 P 上也带 drafts） |
 | 多余参数 | `--master-addr/--master-port`、`--additional-config`、`--pipeline-parallel-size`、HCCL 超时 | 全部去掉（参考里都没有） |
