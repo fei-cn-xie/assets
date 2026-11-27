@@ -93,6 +93,20 @@ curl -s http://76.76.26.231:9060/v1/chat/completions \
   -d '{"model":"qwen3.6","messages":[{"role":"user","content":"你好"}],"max_tokens":32}'
 ```
 
+## CPU 绑定：两套默认一致，无需额外配置
+
+`enable_cpu_binding` 在 `AscendConfig` 里的默认值就是 **True**
+（`vllm_ascend/ascend_config.py:565`），worker 在 `worker.py:962` 据此做 topo-affinity 绑定。
+边云包在 `--additional-config` 里显式写了 `true`，等价于默认值，因此：
+
+- 集中式（不传 `--additional-config`）与边云式（传 `true`）**CPU 亲和性相同**
+- 不需要为了公平对比在集中式包上补这个键
+- `platform.py:890-901` 只在用户传 `--numa-bind` 时才会额外注入该键（Ascend 不支持 NUMA 探测）
+
+在 a3（231）上，绑定的 board/chip 解析由 `npu-smi info -m` 的 `Chip ID`/`Chip Logic ID` 列完成
+（`cpu_binding.py:87-129`），`ASCEND_RT_VISIBLE_DEVICES` 依然按 **chip logic id** 计数，
+所以本包的 `0-7` / `8-15` 写法在 a2 与 a3 上都成立。
+
 ## 性能对比时要注意的三件事
 
 1. **必须同一个代码分支**：dense 模型的 DP>1 依赖 `fix/lwd-multidp-dense-pd`
