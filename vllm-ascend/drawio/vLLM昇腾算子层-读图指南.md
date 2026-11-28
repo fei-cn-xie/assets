@@ -97,7 +97,7 @@ python ops/build.py                      # 重建 ../vLLM昇腾算子层.drawio
 python checkdrawio.py ../vLLM昇腾算子层.drawio
 python render_check.py ../vLLM昇腾算子层.drawio -o /tmp/r --scale 0.7
 python color_audit.py ../vLLM昇腾算子层.drawio
-python makebook.py && python checkbook.py   # 刷新单卷版（12 套 / 136 页）
+python verify_all.py   # 一次跑完 12 套的结构 / 渲染 / 配色校验
 ```
 
 配色遵守同目录 `README.md`；本套图里：**橙＝路由/决策与旁路流，绿＝算子计算，

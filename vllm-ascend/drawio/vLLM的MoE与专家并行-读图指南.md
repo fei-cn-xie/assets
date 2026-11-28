@@ -118,7 +118,7 @@ python moe/build.py                      # 重建 ../vLLM的MoE与专家并行.d
 python checkdrawio.py ../vLLM的MoE与专家并行.drawio
 python render_check.py ../vLLM的MoE与专家并行.drawio -o /tmp/r --scale 0.7
 python color_audit.py ../vLLM的MoE与专家并行.drawio
-python makebook.py && python checkbook.py   # 刷新单卷版
+python verify_all.py   # 一次跑完 12 套的结构 / 渲染 / 配色校验
 ```
 
 配色遵守同目录 `README.md`；本套图里：**橙＝路由/决策侧，绿＝专家计算侧，
