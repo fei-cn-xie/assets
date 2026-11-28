@@ -1,0 +1,84 @@
+# LWD edge/cloud PD topology for feat/pd-sep-lwd-v0.30.0 on the 194/195 pair.
+#
+# Translated from the curl-verified reference
+# private_home/vllm_script/pds_comm_1117/v30_rc/pd_host_topology.yaml
+# (branch debug/pd-empty-response-trace). Values are kept identical; only the
+# coordination schema changed between those two branches:
+#
+#   debug branch (v30_rc)                feat branch (this file)
+#   ----------------------------------   ---------------------------------------
+#   coordination.control_url: <url>      coordination.pd_proxy_url: <url>
+#   coordination.listen_port: 8100       dp[].coord_port: 8100
+#   (control_url_map)                    (removed)
+#
+# feat REJECTS control_url / control_url_map / listen_port with a migration
+# error (vllm/config/lwd/topology.py), and requires coord_port on every cloud DP
+# whose coordination is enabled. Everything else - addresses, ctrl_port,
+# data_port, buffers, sidecar deployment, instance links - is unchanged.
+#
+# Both hosts must run this exact file: LwdTopology hashes it and every process
+# logs "[LWD][config] ... digest=<16 hex>"; differing digests mean stale copies.
+deployment:
+  mode: 0
+  scene: lwd_cluster
+  edges_num: 1
+  clouds_num: 2
+  data_plane_comm: host
+  data_plane_host:
+    # PD requires an explicit shared UP block; 256 MiB is the v30_rc value
+    # (memory estimate: pools x 4 x (up + down) <= 12 GiB per rank).
+    up_buffer_size: 256
+    down_buffer_size: 32
+    # sidecar = one transport daemon per host, spawned by the first engine
+    # process (ctl socket /tmp/lwd-host-comm-<uid>.sock, memfd + SPSC rings).
+    # This is what v30_rc validated on this hardware; in_process is the code
+    # default and only needs this one word changed (both peers must match).
+    deployment: sidecar
+  pd:
+    enabled: true
+    max_inflight_windows: 4
+    request_ttl_s: 1800.0
+feature_ctrl:
+  enable_early_recv: true
+edges:
+  - id: 0
+    dp:
+      # The edge never listens: no ctrl_port, no data_port, no coord_port.
+      - dp_idx: 0
+        addr: 76.76.26.194
+    coordination:
+      enabled: true
+      # v30_rc's control_url, renamed: the edge hands each request to the PD
+      # proxy listening on 76.76.26.195:8102.
+      pd_proxy_url: http://76.76.26.195:8102/v1/chat/completions
+      tenant_key_file: /vllm-workspace/lwd_tenant.key
+      consumer_id: edge-0
+clouds:
+  - id: 0
+    stage_role: prefill
+    dp:
+      # v30_rc's coordination.listen_port 8100, moved onto the DP as coord_port.
+      # ctrl_port = control plane (6100), data_port = UCX listener (7200),
+      # coord_port = PD registration HTTP endpoint the proxy posts to (8100).
+      - dp_idx: 0
+        addr: 76.76.26.195
+        ctrl_port: 6100
+        data_port: 7200
+        coord_port: 8100
+    coordination:
+      enabled: true
+  - id: 1
+    stage_role: decode
+    dp:
+      # v30_rc's coordination.listen_port 8101 -> coord_port 8101 here.
+      - dp_idx: 0
+        addr: 76.76.26.195
+        ctrl_port: 6101
+        data_port: 7201
+        coord_port: 8101
+    coordination:
+      enabled: true
+# lwd_cluster requires a full mesh: the single edge reaches both clouds.
+instance_links:
+  - {edge: 0, cloud: 0}
+  - {edge: 0, cloud: 1}
