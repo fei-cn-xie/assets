@@ -1,54 +1,108 @@
+# MS Service Profiler 埋点配置（vLLM / vllm-ascend，feat/pd-sep-lwd-v0.30.0 之后的 LWD 实现）
+#
+# 用途：A/B 对照采集，定位"边云式 PD（sidecar）相对集中式 PD 的 TTFT 劣化"。
+#   A：assets/c_home/profiling/launch/sidecar         （边云式：194 边端 + 195 两个云实例）
+#   B：assets/c_home/profiling/launch/mooncake_pd_195 （集中式：195 P/D 各 TP=2）
+#
+# 约定（与上游 service_profiling_guide.md 一致）：
+#   * symbol  必须存在于当前代码中；本文件所有条目都按当前分支静态校验过
+#     （模块文件存在 + 类存在 + 方法存在）
+#   * handler 省略时使用默认包装器，仅记录 span 起止（TTFT 分解只需要时间戳，
+#     所以 LWD 专有埋点一律不带 handler，避免依赖特定 msserviceprofiler 版本）
+#   * min_version / max_version 省略表示不设版本门限。这里刻意都不写：
+#     仓里没有 tag，写死版本号会让埋点被静默跳过
+#   * name/domain 只用于展示分组；domain 取值沿用手上的习惯标签
+#
+# 分组说明：
+#   [1] 请求生命周期与调度     —— A/B 两套共有
+#   [2] 模型执行 / 采样 / MTP  —— A/B 两套共有
+#   [3] PD 的 KV 传输          —— A/B 两套共有（集中式也走 Mooncake）
+#   [4] 边端（仅边云式）
+#   [5] 云端（仅边云式）
+#   [6] host 数据面（仅边云式，UCX）
+#   [7] LWD 控制面 proxy（仅边云式）
+#
+# 已删除的旧埋点（v0.23 时代、当前代码已不存在，留着只会产生 patch 告警）：
+#   vllm_ascend.core.scheduler:AscendScheduler.schedule
+#   vllm_ascend.core.pd_separated_scheduler:PDSeparatedScheduler.*
+#   vllm_ascend.worker.worker:NPUWorker._execute_model_{edge,cloud}[_draft]*
+#   vllm_ascend.worker.model_runner_v1:NPUModelRunner._run_edge_cloud_draft_*_segment
+#   vllm_ascend.worker.model_runner_v1:NPUModelRunner._stash_pending_edge_cloud_draft_context
+#   vllm_ascend.patch.platform.patch_engine_core:_maybe_publish_pre_out / _drain_pd_channel_inbox
+#   vllm_ascend.utils:ProfileExecuteDuration.capture_async
+#   vllm.engine.async_llm_engine:AsyncLLMEngine.add_request（v0 引擎）
+#
+# 另外删除两条有副作用的旧条目：
+#   * NPUModelRunner.execute_model 的 meta_handlers:init_data_parallel_worker —— 与
+#     下面 [2] 的同一 symbol 重复 patch，后者会把前者覆盖
+#   * vllm.model_executor.models.*:*.embed_multimodal —— 本次是纯文本负载，只会增加开销
+#   * vllm.v1.utils:record_function_or_nullcontext —— 调用极频繁，开销大且对 TTFT 分解无帮助
 
-# ===== Batch / Scheduler =====
+# ===== [1] 请求生命周期与调度（A/B 共有）=====
 
-- symbol: vllm.v1.core.sched.scheduler:Scheduler.schedule
-  min_version: "0.9.1"
-  handler: ms_service_profiler.patcher.vllm.handlers.v1.batch_handlers:schedule
-  name: batchFrameworkProcessing
+- symbol: vllm.v1.engine.async_llm:AsyncLLM.add_request
+  name: apiAddRequest
+  domain: Request
+  handler: ms_service_profiler.patcher.vllm.handlers.v1.request_handlers:add_request_async
 
-- symbol: vllm_ascend.core.scheduler:AscendScheduler.schedule
-  min_version: "0.9.1"
-  handler: ms_service_profiler.patcher.vllm.handlers.v1.batch_handlers:schedule
-  name: batchFrameworkProcessing
+- symbol: vllm.v1.engine.output_processor:OutputProcessor.process_outputs
+  name: processOutputs
+  domain: Request
+  handler: ms_service_profiler.patcher.vllm.handlers.v1.request_handlers:process_outputs
 
 - symbol: vllm.v1.core.sched.scheduler:Scheduler.add_request
-  min_version: "0.9.1"
+  name: schedAddRequest
+  domain: Schedule
   handler: ms_service_profiler.patcher.vllm.handlers.v1.batch_handlers:add_request
 
-# ===== KV Cache =====
-- symbol: vllm.v1.core.kv_cache_manager:KVCacheManager.free
-  min_version: "0.9.1"
-  handler: ms_service_profiler.patcher.vllm.handlers.v1.kvcache_handlers:free
+- symbol: vllm.v1.core.sched.scheduler:Scheduler.schedule
+  name: batchFrameworkProcessing
+  domain: Schedule
+  handler: ms_service_profiler.patcher.vllm.handlers.v1.batch_handlers:schedule
+
+- symbol: vllm.v1.core.sched.scheduler:Scheduler.update_from_output
+  name: schedUpdateFromOutput
+  domain: Schedule
+
+- symbol: vllm.v1.engine.core:EngineCore.step
+  name: engineStep
+  domain: EngineCore
+
+- symbol: vllm.v1.engine.core:DPEngineCoreProc.add_request
+  name: dpEngineAddRequest
+  domain: EngineCore
+  handler: ms_service_profiler.patcher.vllm.handlers.v1.meta_handlers:init_data_parallel
 
 - symbol: vllm.v1.core.kv_cache_manager:KVCacheManager.get_computed_blocks
-  min_version: "0.9.1"
+  name: kvGetComputedBlocks
+  domain: KVCache
   handler: ms_service_profiler.patcher.vllm.handlers.v1.kvcache_handlers:get_computed_blocks
 
-# ===== Model Execute =====
-- symbol: vllm.model_executor.layers.logits_processor:LogitsProcessor.forward
-  min_version: "0.9.1"
-  handler: ms_service_profiler.patcher.vllm.handlers.v1.model_handlers:compute_logits
-  name: computing_logits
+- symbol: vllm.v1.core.kv_cache_manager:KVCacheManager.free
+  name: kvFree
+  domain: KVCache
+  handler: ms_service_profiler.patcher.vllm.handlers.v1.kvcache_handlers:free
 
-- symbol: vllm.v1.sample.sampler:Sampler.forward
-  min_version: "0.9.1"
-  handler: ms_service_profiler.patcher.vllm.handlers.v1.model_handlers:sampler_forward
-  name: sample
+# ===== [2] 模型执行 / 采样 / MTP（A/B 共有）=====
 
 - symbol: vllm.v1.executor.abstract:Executor.execute_model
-  min_version: "0.9.1"
-  handler: ms_service_profiler.patcher.vllm.handlers.v1.model_handlers:execute_model
   name: modelExec
+  domain: Execute
+  handler: ms_service_profiler.patcher.vllm.handlers.v1.model_handlers:execute_model
 
 - symbol: vllm.v1.executor.multiproc_executor:MultiprocExecutor.execute_model
-  min_version: "0.9.1"
+  name: modelExecMp
+  domain: Execute
   handler: ms_service_profiler.patcher.vllm.handlers.v1.model_handlers:execute_model
-  name: modelExec
+
+- symbol: vllm_ascend.worker.worker:NPUWorker.execute_model
+  name: npuWorkerExecuteModel
+  domain: Execute
 
 - symbol: vllm_ascend.worker.model_runner_v1:NPUModelRunner.execute_model
   name: NPUModelRunner.execute_model
-  handler: ms_service_profiler.patcher.vllm.handlers.v1.model_handlers:execute_model_runner
   domain: Execute
+  handler: ms_service_profiler.patcher.vllm.handlers.v1.model_handlers:execute_model_runner
 
 - symbol: vllm_ascend.worker.model_runner_v1:NPUModelRunner._update_states
   name: NPUModelRunner._update_states
@@ -58,420 +112,184 @@
   name: NPUModelRunner._prepare_inputs
   domain: Execute
 
-- symbol: "vllm.model_executor.models.*:*.embed_multimodal"
-  name: multimodalEmbedding
-  domain: Multimodal
+- symbol: vllm.model_executor.layers.logits_processor:LogitsProcessor.forward
+  name: computing_logits
+  domain: Execute
+  handler: ms_service_profiler.patcher.vllm.handlers.v1.model_handlers:compute_logits
 
-- symbol: vllm_ascend.utils:ProfileExecuteDuration.capture_async
-  min_version: "0.9.1"
-  max_version: "0.14.0rc1"
-  handler: ms_service_profiler.patcher.vllm.handlers.v1.model_handlers:capture_async
+- symbol: vllm.v1.sample.sampler:Sampler.forward
+  name: sample
+  domain: Execute
+  handler: ms_service_profiler.patcher.vllm.handlers.v1.model_handlers:sampler_forward
 
-- symbol: vllm.v1.utils:record_function_or_nullcontext
-  min_version: "0.15.0rc1"
-  handler: ms_service_profiler.patcher.vllm.handlers.v1.model_handlers:record_function_or_nullcontext
-
-# ===== MTP / NPUModelRunner =====
+# MTP（本次 A/B 都开 draft，劣化对比里要看到 draft 链的耗时）
 - symbol: vllm_ascend.worker.model_runner_v1:NPUModelRunner.propose_draft_token_ids
-  min_version: "0.9.1"
+  name: proposeDraftTokenIds
+  domain: Execute
   handler: ms_service_profiler.patcher.vllm.handlers.v1.mtp_handlers:propose_draft_token_ids_npu
 
 - symbol: vllm_ascend.sample.rejection_sampler:rejection_sample
-  min_version: "0.9.1"
+  name: rejectionSample
+  domain: Execute
   handler: ms_service_profiler.patcher.vllm.handlers.v1.mtp_handlers:capture_rejection_output
 
-# ===== Request Lifecycle =====
-- symbol: vllm.v1.engine.async_llm:AsyncLLM.add_request
-  min_version: "0.9.1"
-  handler: ms_service_profiler.patcher.vllm.handlers.v1.request_handlers:add_request_async
+# ===== [3] PD 的 KV 传输（A/B 共有）=====
 
-- symbol: vllm.engine.async_llm_engine:AsyncLLMEngine.add_request
-  min_version: "0.9.1"
-  max_version: "0.11.0"
-  handler: ms_service_profiler.patcher.vllm.handlers.v1.request_handlers:add_request_async
+# 生产侧：逐层保存 + 完成时把句柄交给对端
+- symbol: vllm_ascend.distributed.kv_transfer.kv_p2p.mooncake_connector:MooncakeConnector.save_kv_layer
+  name: kvSaveLayer
+  domain: Communication
 
-- symbol: vllm.v1.engine.output_processor:OutputProcessor.process_outputs
-  min_version: "0.9.1"
-  handler: ms_service_profiler.patcher.vllm.handlers.v1.request_handlers:process_outputs
+- symbol: vllm_ascend.distributed.kv_transfer.kv_p2p.mooncake_connector:MooncakeConnector.wait_for_save
+  name: kvWaitForSave
+  domain: Communication
 
-# ===== Meta =====
+- symbol: vllm_ascend.distributed.kv_transfer.kv_p2p.mooncake_connector:MooncakeConnector.get_finished
+  name: kvProducerGetFinished
+  domain: Communication
 
-- symbol: vllm.v1.engine.core:DPEngineCoreProc.add_request
-  min_version: "0.9.1"
-  handler: ms_service_profiler.patcher.vllm.handlers.v1.meta_handlers:init_data_parallel
+# 消费侧：拿到句柄后加载 KV，以及完成轮询
+- symbol: vllm_ascend.distributed.kv_transfer.kv_p2p.mooncake_connector:MooncakeConnectorWorker.start_load_kv
+  name: kvStartLoad
+  domain: Communication
 
-- symbol: vllm_ascend.worker.model_runner_v1:NPUModelRunner.execute_model
-  min_version: "0.9.1"
-  handler: ms_service_profiler.patcher.vllm.handlers.v1.meta_handlers:init_data_parallel_worker
+- symbol: vllm_ascend.distributed.kv_transfer.kv_p2p.mooncake_connector:MooncakeConnectorWorker.get_finished
+  name: kvConsumerGetFinished
+  domain: Communication
 
+# ===== [4] 边端（仅边云式）=====
 
-# ===== Edge-Cloud PD Separation Execute Domain =====
-
-# ---- Edge Side: Cardinal ----
-- symbol: vllm_ascend.worker.worker:NPUWorker._execute_model_edge_head
-  name: edgeHead
-  domain: Execute
-  min_version: "0.23.0"
-  attributes:
-  - name: batchType
-    expr: args[1] | attr batch_type | attr value | str
-  - name: hiddenChannel
-    expr: args[1] | attr hidden_channel | attr value | str
-  - name: numTokens
-    expr: args[1] | attr total_num_scheduled_tokens | str
-  - name: headToken
-    expr: args[1] | attr head_token | str
-
-- symbol: vllm_ascend.worker.worker:NPUWorker._execute_model_edge_tail
-  name: edgeTail
-  domain: Execute
-  min_version: "0.23.0"
-  attributes:
-  - name: batchType
-    expr: args[1] | attr batch_type | attr value | str
-  - name: hiddenChannel
-    expr: args[1] | attr hidden_channel | attr value | str
-  - name: numTokens
-    expr: args[1] | attr total_num_scheduled_tokens | str
-  - name: headToken
-    expr: args[1] | attr head_token | str
-
-# ---- Edge Side: Draft ----
-- symbol: vllm_ascend.worker.worker:NPUWorker._execute_model_edge_draft_head
-  name: edgeDraftHead
-  domain: Execute
-  min_version: "0.23.0"
-  attributes:
-  - name: batchType
-    expr: args[1] | attr batch_type | attr value | str
-  - name: hiddenChannel
-    expr: args[1] | attr hidden_channel | attr value | str
-  - name: numTokens
-    expr: args[1] | attr total_num_scheduled_tokens | str
-  - name: headToken
-    expr: args[1] | attr head_token | str
-  - name: draftStepIdx
-    expr: args[1] | attr draft_step_idx | str
-
-- symbol: vllm_ascend.worker.worker:NPUWorker._execute_model_edge_draft_tail
-  name: edgeDraftTail
-  domain: Execute
-  min_version: "0.23.0"
-  attributes:
-  - name: batchType
-    expr: args[1] | attr batch_type | attr value | str
-  - name: hiddenChannel
-    expr: args[1] | attr hidden_channel | attr value | str
-  - name: numTokens
-    expr: args[1] | attr total_num_scheduled_tokens | str
-  - name: headToken
-    expr: args[1] | attr head_token | str
-  - name: draftStepIdx
-    expr: args[1] | attr draft_step_idx | str
-
-# ---- Cloud Side: Cardinal ----
-- symbol: vllm_ascend.worker.worker:NPUWorker._execute_model_cloud
-  name: cloudMiddle
-  domain: Execute
-  min_version: "0.23.0"
-  attributes:
-  - name: batchType
-    expr: args[1] | attr batch_type | attr value | str
-  - name: hiddenChannel
-    expr: args[1] | attr hidden_channel | attr value | str
-  - name: numTokens
-    expr: args[1] | attr total_num_scheduled_tokens | str
-  - name: headToken
-    expr: args[1] | attr head_token | str
-
-# ---- Cloud Side: Draft ----
-- symbol: vllm_ascend.worker.worker:NPUWorker._execute_model_cloud_draft
-  name: cloudDraftMiddle
-  domain: Execute
-  min_version: "0.23.0"
-  attributes:
-  - name: batchType
-    expr: args[1] | attr batch_type | attr value | str
-  - name: hiddenChannel
-    expr: args[1] | attr hidden_channel | attr value | str
-  - name: numTokens
-    expr: args[1] | attr total_num_scheduled_tokens | str
-  - name: headToken
-    expr: args[1] | attr head_token | str
-  - name: draftStepIdx
-    expr: args[1] | attr draft_step_idx | str
-
-# ---- Draft Segment Compute (ModelRunner layer) ----
-- symbol: vllm_ascend.worker.model_runner_v1:NPUModelRunner._run_edge_cloud_draft_first_segment
-  name: DraftFirstSeg
-  domain: Execute
-  min_version: "0.23.0"
-  attributes:
-  - name: batchType
-    expr: args[1] | attr batch_type | attr value | str
-  - name: hiddenChannel
-    expr: args[1] | attr hidden_channel | attr value | str
-  - name: numTokens
-    expr: args[1] | attr total_num_scheduled_tokens | str
-  - name: headToken
-    expr: args[1] | attr head_token | str
-  - name: draftStepIdx
-    expr: args[1] | attr draft_step_idx | str
-  - name: draftTaskId
-    expr: args[1] | attr draft_task_id | str
-
-- symbol: vllm_ascend.worker.model_runner_v1:NPUModelRunner._run_edge_cloud_draft_last_segment
-  name: DraftLastSeg
-  domain: Execute
-  min_version: "0.23.0"
-  attributes:
-  - name: batchType
-    expr: args[1] | attr batch_type | attr value | str
-  - name: hiddenChannel
-    expr: args[1] | attr hidden_channel | attr value | str
-  - name: numTokens
-    expr: args[1] | attr total_num_scheduled_tokens | str
-  - name: headToken
-    expr: args[1] | attr head_token | str
-  - name: draftStepIdx
-    expr: args[1] | attr draft_step_idx | str
-  - name: draftTaskId
-    expr: args[1] | attr draft_task_id | str
-
-- symbol: vllm_ascend.worker.model_runner_v1:NPUModelRunner._run_edge_cloud_draft_middle_segment
-  name: DraftMiddleSeg
-  domain: Execute
-  min_version: "0.23.0"
-  attributes:
-  - name: batchType
-    expr: args[1] | attr batch_type | attr value | str
-  - name: hiddenChannel
-    expr: args[1] | attr hidden_channel | attr value | str
-  - name: numTokens
-    expr: args[1] | attr total_num_scheduled_tokens | str
-  - name: headToken
-    expr: args[1] | attr head_token | str
-  - name: draftStepIdx
-    expr: args[1] | attr draft_step_idx | str
-  - name: draftTaskId
-    expr: args[1] | attr draft_task_id | str
-  - name: numAccepted
-    expr: args[1] | attr num_accepted_tokens | str
-
-# Draft intermediate tensors 持久化拷贝（D2D，ACLGraph 地址稳定化）
-# - symbol: vllm_ascend.worker.model_runner_v1:NPUModelRunner._sync_edge_cloud_draft_intermediate_tensors
-#   name: draftSyncBuffers
-#   domain: Execute
-#   min_version: "0.23.0"
-#   attributes:
-#   - name: numTokens
-#     expr: args[1] | str
-
-
-# # 新增
-# - symbol: vllm_ascend.worker.model_runner_v1:NPUModelRunner._preprocess
-#   name: model_runner_preprocess
-#   domain: Execute
-#   min_version: "0.23.0"
-#   attributes:
-#   - name: batchType
-#     expr: args[1] | attr batch_type | attr value | str
-#   - name: hiddenChannel
-#     expr: args[1] | attr hidden_channel | attr value | str
-#   - name: numTokens
-#     expr: args[1] | attr total_num_scheduled_tokens | str
-#   - name: headToken
-#     expr: args[1] | attr head_token | str
-#   - name: draftStepIdx
-#     expr: args[1] | attr draft_step_idx | str
-
-# - symbol: vllm_ascend.worker.model_runner_v1:NPUModelRunner._preprocess
-#   name: model_runner_preprocess
-#   domain: Execute
-#   min_version: "0.23.0"
-#   attributes:
-#   - name: batchType
-#     expr: args[1] | attr batch_type | attr value | str
-#   - name: hiddenChannel
-#     expr: args[1] | attr hidden_channel | attr value | str
-#   - name: numTokens
-#     expr: args[1] | attr total_num_scheduled_tokens | str
-#   - name: headToken
-#     expr: args[1] | attr head_token | str
-#   - name: draftStepIdx
-#     expr: args[1] | attr draft_step_idx | str
-
-# - symbol: vllm_ascend.worker.model_runner_v1:NPUModelRunner.sync_and_slice_intermediate_tensors
-#   name: model_runner_syncintermediate_tensors
-#   domain: Execute
-#   min_version: "0.23.0"
-#   attributes:
-#   - name: batchType
-#     expr: args[1] | attr batch_type | attr value | str
-#   - name: hiddenChannel
-#     expr: args[1] | attr hidden_channel | attr value | str
-#   - name: numTokens
-#     expr: args[1] | attr total_num_scheduled_tokens | str
-#   - name: headToken
-#     expr: args[1] | attr head_token | str
-#   - name: draftStepIdx
-#     expr: args[1] | attr draft_step_idx | str
-
-# - symbol: vllm_ascend.worker.model_runner_v1:NPUModelRunneforward
-#   name: model_runner_edge_cloud_forward
-#   domain: Execute
-#   min_version: "0.23.0"
-#   attributes:
-#   - name: batchType
-#     expr: args[1] | attr batch_type | attr value | str
-#   - name: hiddenChannel
-#     expr: args[1] | attr hidden_channel | attr value | str
-#   - name: numTokens
-#     expr: args[1] | attr total_num_scheduled_tokens | str
-#   - name: headToken
-#     expr: args[1] | attr head_token | str
-#   - name: draftStepIdx
-#     expr: args[1] | attr draft_step_idx | str
-
-# - symbol: vllm_ascend.worker.model_runner_v1:NPUModelRunner._edge_cloud_forward_edge
-#   name: model_runner_edge_cloud_forward_edge
-#   domain: Execute
-#   min_version: "0.23.0"
-#   attributes:
-#   - name: batchType
-#     expr: args[1] | attr batch_type | attr value | str
-#   - name: hiddenChannel
-#     expr: args[1] | attr hidden_channel | attr value | str
-#   - name: numTokens
-#     expr: args[1] | attr total_num_scheduled_tokens | str
-#   - name: headToken
-#     expr: args[1] | attr head_token | str
-#   - name: draftStepIdx
-#     expr: args[1] | attr draft_step_idx | str
-
-# - symbol: vllm_ascend.worker.model_runner_v1:NPUModelRunner._edge_cloud_forward_cloud
-#   name: model_runner_edge_cloud_forward_cloud
-#   domain: Execute
-#   min_version: "0.23.0"
-#   attributes:
-#   - name: batchType
-#     expr: args[1] | attr batch_type | attr value | str
-#   - name: hiddenChannel
-#     expr: args[1] | attr hidden_channel | attr value | str
-#   - name: numTokens
-#     expr: args[1] | attr total_num_scheduled_tokens | str
-#   - name: headToken
-#     expr: args[1] | attr head_token | str
-#   - name: draftStepIdx
-#     expr: args[1] | attr draft_step_idx | str
-
-# - symbol: vllm_ascend.worker.model_runner_v1:NPUModelRunner._build_edge_cloud_draft_attn_metadata
-#   name: draftAttnMetadata
-#   domain: Execute
-#   min_version: "0.23.0"
-
-
-# - symbol: vllm_ascend.worker.model_runner_v1:NPUModelRunner._compute_edge_cloud_draft_token_ids
-#   name: draftComputeTokenids
-#   domain: Execute
-#   min_version: "0.23.0"
-
-
-  # ---- ① IPC 返回：EngineCore 收到 Draft 结果 ----
-  # - symbol: vllm.v1.executor.multiproc_executor:FutureWrapper.result
-  #   name: ipcCollectResult
-  #   domain: Execute
-  #   min_version: "0.23.0"
-  #   attributes:
-  #   - name: batchType
-  #     expr: kwargs['batch_type'] | str
-
-# ---- ④ Scheduler 输出处理（rejection verify + 请求状态更新）----
-- symbol: vllm_ascend.core.pd_separated_scheduler:PDSeparatedScheduler.update_from_output
-  name: updateFromOutput
+# 边端 EngineCore：step 是"embed → 发 UP → 收 DOWN → 采样"的基本单位
+- symbol: vllm.v1.lwd_control.control_edge_scheduler.lwd_edge_engine:LwdEdgeEngineCore.step
+  name: edgeStep
   domain: EngineCore
-  min_version: "0.23.0"
-  attributes:
-  - name: batchType
-    expr: args[1] | attr batch_type | attr value | str
 
-#   # ---- ⑤ Draft 链推进 + finalize ----
-# - symbol: vllm_ascend.patch.platform.patch_engine_core._advance_edge_cloud_draft
-#   name: advanceDraft
-#   domain: Schedule
-#   min_version: "0.23.0"
-#   attributes:
-#   - name: batchType
-#     expr: args[1] | attr batch_type | attr value | str
-
-
-# - symbol: vllm_ascend.compilation.acl_graph:ACLGraphWrapper.__call__
-#   name: acl_graph
-#   domain: Execute
-#   min_version: "0.23.0"
-
-# - symbol: vllm_ascend.worker.model_runner_v1:EdgeCloudSegment.forward
-#   name: Lwdforward
-#   domain: Execute
-#   min_version: "0.23.0"
-
-
-  # ---- ⑪ 调度决策 ----
-  # - symbol: vllm_ascend.core.pd_separated_scheduler:PDSeparatedScheduler.schedule
-  #   name: schedule
-  #   domain: Schedule
-  #   min_version: "0.23.0"
-  #   attributes:
-  #   - name: prefillState
-  #     expr: args[0] | attr _prefill_state | attr value | str
-
-  # # ---- ⑫ PRE_OUT 发布（ZMQ 发送到云侧）----
-- symbol: vllm_ascend.patch.platform.patch_engine_core._maybe_publish_pre_out
-  name: publishPreOut
+- symbol: vllm.v1.lwd_control.control_edge_scheduler.lwd_edge_engine:LwdEdgeEngineCore.add_request
+  name: edgeAddRequest
   domain: EngineCore
-  min_version: "0.23.0"
 
-  # ---- 云侧返回通道排空（POST_OUT ZMQ 接收）----
-- symbol: vllm_ascend.patch.platform.patch_engine_core._drain_pd_channel_inbox
-  name: drainPdChannel
-  domain: EngineCore
-  min_version: "0.23.0"
+- symbol: vllm.v1.lwd_control.control_edge_scheduler.lwd_edge_engine:LwdEdgeEngineCore._lwd_send_to_cloud
+  name: edgeSendToCloud
+  domain: Communication
 
+# 边端调度：请求路由 / embed 调度 / unembed 调度 / 输出回收
+- symbol: vllm.v1.lwd_control.control_edge_scheduler.lwd_edge_scheduler:LwdEdgeScheduler._lwd_route_request
+  name: edgeRouteRequest
+  domain: Schedule
 
-# - symbol: vllm_ascend.patch.platform.patch_engine_core._merge_pending_worker_cleanup
-#   name: schedule
-#   domain: Schedule
-#   min_version: "0.23.0"
-#   attributes:
-#   - name: batchType
-#     expr: args[1] | attr batch_type | attr value | str
+- symbol: vllm.v1.lwd_control.control_edge_scheduler.lwd_edge_scheduler:LwdEdgeScheduler._lwd_schedule_embed
+  name: edgeScheduleEmbed
+  domain: Schedule
 
+- symbol: vllm.v1.lwd_control.control_edge_scheduler.lwd_edge_scheduler:LwdEdgeScheduler._lwd_schedule_unembed
+  name: edgeScheduleUnembed
+  domain: Schedule
 
-  # ---- Worker irecv 完成报告排空 ----
-  # - symbol: vllm.v1.engine.core:EngineCore._drain_irecv_completions
-  #   name: drainIrecvCompletions
-  #   domain: Schedule
-  #   min_version: "0.23.0"
+- symbol: vllm.v1.lwd_control.control_edge_scheduler.lwd_edge_scheduler:LwdEdgeScheduler.update_from_output
+  name: edgeUpdateFromOutput
+  domain: Schedule
 
-  # ---- EngineCore 主循环单步（含 schedule + execute + update）----
-  # - symbol: vllm.v1.engine.core:EngineCoreProc._process_engine_step
-  #   name: engineStep
-  #   domain: Schedule
-  #   min_version: "0.23.0"
+# 云 → 边 的 DOWN 结果接收线程（TTFT 里"等云端"的落点）
+- symbol: vllm.v1.lwd_control.control_edge_scheduler.lwd_edge_down_receiver:LwdEdgeDownReceiver.submit
+  name: edgeDownSubmit
+  domain: Communication
 
-
-- symbol: vllm_ascend.worker.worker:NPUWorker.execute_model
-  name: NPUWorker.execute_model
-  domain: EngineCore
-  min_version: "0.23.0"
-  attributes:
-  - name: batchType
-    expr: args[1] | attr batch_type | attr value | str
-
-- symbol: vllm_ascend.worker.model_runner_v1:NPUModelRunner._stash_pending_edge_cloud_draft_context
-  name: NPUModelRunner._stash_pending_edge_cloud_draft_context
+# 边端 worker：embed / unembed 两段实际计算
+- symbol: vllm_ascend.worker.lwd_edge_model.lwd_edge_worker:LwdEdgeWorker.execute_model
+  name: edgeWorkerExecuteModel
   domain: Execute
-  min_version: "0.23.0"
-  attributes:
-  - name: batchType
-    expr: args[1] | attr batch_type | attr value | str
+
+- symbol: vllm_ascend.worker.lwd_edge_model.lwd_edge_model_runner:LwdEdgeModelRunner.execute_lwd_embed
+  name: edgeExecuteEmbed
+  domain: Execute
+
+- symbol: vllm_ascend.worker.lwd_edge_model.lwd_edge_model_runner:LwdEdgeModelRunner.execute_lwd_unembed
+  name: edgeExecuteUnembed
+  domain: Execute
+
+# ===== [5] 云端（仅边云式）=====
+
+# 云端 EngineCore：step / 接请求 / 收边端消息
+- symbol: vllm.v1.lwd_control.control_cloud_scheduler.lwd_cloud_engine:LwdCloudEngineCoreMixin.step
+  name: cloudStep
+  domain: EngineCore
+
+- symbol: vllm.v1.lwd_control.control_cloud_scheduler.lwd_cloud_engine:LwdCloudEngineCoreMixin.add_request
+  name: cloudAddRequest
+  domain: EngineCore
+
+- symbol: vllm.v1.lwd_control.control_cloud_scheduler.lwd_cloud_engine:LwdCloudEngineCoreMixin._lwd_handle_edge_message
+  name: cloudHandleEdgeMessage
+  domain: Communication
+
+# 云端调度：prefill 窗口收集 / 下发 / 输出更新
+- symbol: vllm.v1.lwd_control.control_cloud_scheduler.lwd_cloud_scheduler:LwdCloudScheduler._lwd_schedule_step
+  name: cloudScheduleStep
+  domain: Schedule
+
+- symbol: vllm.v1.lwd_control.control_cloud_scheduler.lwd_cloud_scheduler:LwdCloudScheduler._lwd_dispatch_windows
+  name: cloudDispatchWindows
+  domain: Schedule
+
+- symbol: vllm.v1.lwd_control.control_cloud_scheduler.lwd_cloud_scheduler:LwdCloudScheduler.update_from_output
+  name: cloudUpdateFromOutput
+  domain: Schedule
+
+# 云端 worker / runner：UP 批次收割决定"云端从何时开始算"
+- symbol: vllm_ascend.worker.lwd_cloud_model.lwd_cloud_worker:LwdCloudWorker.execute_model
+  name: cloudWorkerExecuteModel
+  domain: Execute
+
+- symbol: vllm_ascend.worker.lwd_cloud_model.lwd_cloud_worker:LwdCloudWorker.start_early_irecv
+  name: cloudStartEarlyRecv
+  domain: Communication
+
+- symbol: vllm_ascend.worker.lwd_cloud_model.lwd_cloud_worker:LwdCloudWorker.lwd_early_recv_done_handle
+  name: cloudEarlyRecvDone
+  domain: Communication
+
+- symbol: vllm_ascend.worker.lwd_cloud_model.lwd_cloud_model_runner:LwdCloudModelRunner._lwd_harvest_up_batches
+  name: cloudHarvestUpBatches
+  domain: Execute
+
+- symbol: vllm_ascend.worker.lwd_cloud_model.lwd_cloud_model_runner:LwdCloudModelRunner._lwd_stage_window
+  name: cloudStageWindow
+  domain: Execute
+
+- symbol: vllm_ascend.worker.lwd_cloud_model.lwd_cloud_model_runner:LwdCloudModelRunner._sample
+  name: cloudSample
+  domain: Execute
+
+# ===== [6] host 数据面（仅边云式，UCX）=====
+
+# 每个 (dp,tp) 的 IO 对象：提交发送/接收与就绪等待，是"UP/DOWN 搬运"的最内层
+- symbol: vllm_ascend.distributed.lwd_data_plane.host.ucx_io:LwdNpuUcxChannelIo.submit_send
+  name: hostUcxSubmitSend
+  domain: Communication
+
+- symbol: vllm_ascend.distributed.lwd_data_plane.host.ucx_io:LwdNpuUcxChannelIo.submit_recv
+  name: hostUcxSubmitRecv
+  domain: Communication
+
+- symbol: vllm_ascend.distributed.lwd_data_plane.host.ucx_io:LwdNpuUcxChannelIo.wait_ready
+  name: hostUcxWaitReady
+  domain: Communication
+
+- symbol: vllm_ascend.distributed.lwd_data_plane.host.lwd_host_channels:lwd_get_host_io
+  name: hostGetIo
+  domain: Communication
+
+# ===== [7] LWD 控制面 proxy（仅边云式）=====
+
+# 集中式的 proxy 是 examples 脚本（__main__），无法按符号 patch；这一节只有 A 侧有
+- symbol: vllm.v1.lwd_control.pd.proxy:LwdPdProxy.register
+  name: proxyRegister
+  domain: Request
+
+- symbol: vllm.v1.lwd_control.pd.proxy:LwdPdProxy._execute
+  name: proxyExecute
+  domain: Request
+
+- symbol: vllm.v1.lwd_control.pd.proxy:LwdPdProxy._produce
+  name: proxyProduce
+  domain: Request
