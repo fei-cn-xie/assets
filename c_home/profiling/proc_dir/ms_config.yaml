@@ -38,6 +38,13 @@
 #   * vllm.model_executor.models.*:*.embed_multimodal —— 本次是纯文本负载，只会增加开销
 #   * vllm.v1.utils:record_function_or_nullcontext —— 调用极频繁，开销大且对 TTFT 分解无帮助
 
+# 注意：vllm 的 batch_handlers:schedule 与 model_handlers:execute_model 依赖
+# classify_requests()，而它无条件 len(prompt_token_ids)；LWD fork 的 scheduled_new_reqs
+# 不带该字段（None），因此这两类 handler 在本仓的边云式/集中式部署上都会每步抛
+# TypeError（"Hook execution failed (1/N)"）。这两处已改为无 handler 的纯时间戳埋点。
+# mtp_handlers:propose_draft_token_ids_npu 自己也调 classify_requests，但它包了
+# try/except，可以保留。
+
 # ===== [1] 请求生命周期与调度（A/B 共有）=====
 
 - symbol: vllm.v1.engine.async_llm:AsyncLLM.add_request
@@ -55,10 +62,13 @@
   domain: Schedule
   handler: ms_service_profiler.patcher.vllm.handlers.v1.batch_handlers:add_request
 
+# handler 已移除：batch_handlers:schedule 会调用 classify_requests()，后者无条件执行
+# len(new_req.prompt_token_ids)，而 LWD fork 里 scheduled_new_reqs 的 prompt_token_ids 是
+# None（边/云端的请求由控制面信封构造），于是每步抛 TypeError 并打印 "Hook execution failed"。
+# 去掉 handler 后由默认包装器只记录 span 起止，TTFT 分解只需要时间戳。
 - symbol: vllm.v1.core.sched.scheduler:Scheduler.schedule
   name: batchFrameworkProcessing
   domain: Schedule
-  handler: ms_service_profiler.patcher.vllm.handlers.v1.batch_handlers:schedule
 
 - symbol: vllm.v1.core.sched.scheduler:Scheduler.update_from_output
   name: schedUpdateFromOutput
@@ -85,15 +95,15 @@
 
 # ===== [2] 模型执行 / 采样 / MTP（A/B 共有）=====
 
+# handler 已移除：model_handlers:execute_model 同样经过 classify_requests()，
+# 在 LWD fork 上每步抛 TypeError（一次执行模型就打一整套 traceback，污染采集）。
 - symbol: vllm.v1.executor.abstract:Executor.execute_model
   name: modelExec
   domain: Execute
-  handler: ms_service_profiler.patcher.vllm.handlers.v1.model_handlers:execute_model
 
 - symbol: vllm.v1.executor.multiproc_executor:MultiprocExecutor.execute_model
   name: modelExecMp
   domain: Execute
-  handler: ms_service_profiler.patcher.vllm.handlers.v1.model_handlers:execute_model
 
 - symbol: vllm_ascend.worker.worker:NPUWorker.execute_model
   name: npuWorkerExecuteModel
