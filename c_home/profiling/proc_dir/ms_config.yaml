@@ -65,10 +65,25 @@
 # handler 已移除：batch_handlers:schedule 会调用 classify_requests()，后者无条件执行
 # len(new_req.prompt_token_ids)，而 LWD fork 里 scheduled_new_reqs 的 prompt_token_ids 是
 # None（边/云端的请求由控制面信封构造），于是每步抛 TypeError 并打印 "Hook execution failed"。
-# 去掉 handler 后由默认包装器只记录 span 起止，TTFT 分解只需要时间戳。
+#
+# 但 handler 同时负责给这个 span 写 res_list/rid_list/token_id_list —— 解析端
+# ProcessorReq.parse_batch 硬依赖它们（processor_req.py:120-124 对三列做 .apply(len)），
+# 缺了就会在解析时抛 "object of type 'float' has no len()"，整条 pipeline:service 失败、
+# 所有导出器（含 --span）都拿不到数据。切掉抓包一侧的 handler 反而转成了排障时的解析崩溃。
+#
+# 因此这里用默认埋点自己补一个 rid 属性：ProcessorRes.process_each_df 会由 rid 生成
+# res_list/rid_list/token_id_list，列表非空即满足过滤条件。
+# 用【静态列表字面量】而不是动态表达式，原因：_safe_eval_expr 在动态取值失败时会返回 None，
+# 而 make_default_time_hook 只在值非 None 时才 prof.attr(...)（dynamic_hook.py:692-694），
+# 一旦取不到就又退回 NaN 崩溃。静态字面量不可能失败。
+# 代价：边云式数据的 batch_id 会退化成同一个值，批次粒度的时间线不可用 —— 逐请求的
+# TTFT/ITL 分析请用 chrome_tracing.json / profiler.db 里的 span，不要用 batch.csv。
 - symbol: vllm.v1.core.sched.scheduler:Scheduler.schedule
   name: batchFrameworkProcessing
   domain: Schedule
+  attributes:
+  - name: rid
+    expr: "['lwd']"
 
 - symbol: vllm.v1.core.sched.scheduler:Scheduler.update_from_output
   name: schedUpdateFromOutput
