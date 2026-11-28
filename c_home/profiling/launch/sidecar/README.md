@@ -168,5 +168,13 @@ msserviceprofiler parse --input-path=./ --output-path output
 - profiler 会引入额外开销，**采集到的 TTFT/TPOT 不能当作性能数据**，只用于定位差异来源；
 - 采集期间日志级别仍是 ERROR（这两个包继承了基准包的设置），排查问题时可
   `VLLM_LOGGING_LEVEL=INFO VLLM_LWD_LOG_LEVEL=INFO` 临时提级；
-- `PROFILING_SYMBOLS_PATH` 指向全量符号表；若只想看模型执行与采样，仓里还有精简版
-  `proc_dir/ms_config_pds.yaml`，覆盖同名变量即可。
+- `PROFILING_SYMBOLS_PATH` 指向 `proc_dir/ms_config.yaml`，该文件已按当前 vllm / vllm-ascend
+  代码重写：
+  - **54 条埋点全部静态校验过**（模块文件 + 类 + 方法在 `fix/lwd-multidp-dense-pd` 上存在），
+    删掉了 16 条 v0.23 时代的失效埋点（`pd_separated_scheduler`、`_execute_model_edge_*` 等）；
+  - 不写 `min_version` / `max_version`：仓里没有 tag，写死版本号会让埋点被静默跳过；
+  - 分组：[1] 请求生命周期与调度 [2] 模型执行/采样/MTP [3] PD 的 KV 传输（A/B 共有）
+    [4] 边端 [5] 云端 [6] host 数据面 UCX [7] LWD proxy（[4]-[7] 只有 A 侧有）；
+  - 只有通用 span 带 `handler`（batch/kvcache/model/request/mtp），LWD 专有埋点一律用默认包装器，
+    只记录起止时间戳——TTFT 分解只需要时间戳，这样不依赖 `msserviceprofiler` 的版本细节；
+  - 若只想看模型执行与采样，仓里还有精简版 `proc_dir/ms_config_pds.yaml`，覆盖同名变量即可。
