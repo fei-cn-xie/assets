@@ -156,17 +156,34 @@ sed -i 's/"enable":\s*0/"enable": 1/' /workspace/assets/c_home/profiling/ms_prof
 **时间戳子目录**；A/B 两套共用它，靠时间戳区分即可。解析：
 
 ```bash
-cd /bash_dir/profiling/prof_dir/<时间戳目录>
-msserviceprofiler parse --input-path=./ --output-path output
-# output/ 下有 chrome_tracing.json、profiler.db、request.csv、kvcache.csv、batch.csv
+# 用本仓的包装脚本（原因见下）
+python3 /workspace/assets/c_home/profiling/parse_profiling.py \
+    --input-path /bash_dir/profiling/prof_dir/<时间戳目录> \
+    --output-path /bash_dir/profiling/prof_dir/output/<A 或 B>
+
+# 产物：request.csv / request_status.csv / batch.csv / kvcache.csv /
+#       chrome_tracing.json / profiler.db
 ```
+
+> **为什么不用 `msserviceprofiler parse` 原命令**：CANN 9.2.1 自带的
+> `ms_service_profiler` 里，任务注册表 `regist_map` 只在 `@Task.register` 被 import
+> 时填充，而它的 parse 入口没有 import `data_source` / `pipeline` / `plugins` 三个包，
+> 结果是 `python3 -m ms_service_profiler.parse ...` 秒退、只产出一个空的
+> `profiler.db`（无 csv、无 chrome_tracing.json、且不报错）。
+> `parse_profiling.py` 先 import 这三个包补齐注册表，再走完全相同的解析路径。
+> 先用 `--check-only` 可以只验证环境：
+>
+> ```bash
+> python3 /workspace/assets/c_home/profiling/parse_profiling.py \
+>     --input-path /bash_dir/profiling/prof_dir/<时间戳目录> --check-only
+> ```
 
 ### A/B 采集流程
 
 1. 停掉另一套部署（两套共用 195 的 NPU 0-3，边云式另用 194 的 NPU 4）；
 2. 拉起本套（命令与基准包相同，见上）；
 3. 注入**同一份**负载（输入/输出长度、并发档位、请求数都要与 A 侧一致）；
-4. 记录本次时间戳子目录，`msserviceprofiler parse` 导出；
+4. 记录本次时间戳子目录，用 `parse_profiling.py` 导出；
 5. 换另一套重复 2-4；
 6. 对比 `request.csv` 里的 TTFT/队列等待，以及 `batch.csv` / `kvcache.csv` 的调度与搬运时间。
 
